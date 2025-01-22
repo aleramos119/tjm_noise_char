@@ -42,18 +42,9 @@ psi0 = qt.tensor([qt.basis(2, 0) for _ in range(N)])# # Time vector
 qt_paulis = [sx, sy, sz]
 qt_obs=qt.tensor([np.random.choice(qt_paulis) for i in range(L)])
 
-dims=qt_obs.dims
 
-tens_obs=qt_obs.full().reshape(dims[0]+dims[1])
 
-tt_obs=TT(tens_obs,max_rank=1)
-
-# error=[]
-
-# for i in range(1,20):
-#     tt_obs=TT(tens_obs,max_rank=i)
-#     error.append([i,np.linalg.norm(tt_obs.full()-tens_obs)])
-
+#%%
 
 
 #%%
@@ -93,6 +84,20 @@ jump_parameter_list = [[np.sqrt(0.1), np.sqrt(0.1)] for _ in range(L)]
 
 #%%
 
+dims=qt_obs.dims
+
+tens_obs=qt_obs.full().reshape(dims[0]+dims[1])
+
+tt_obs=TT(tens_obs,threshold=1e-12)
+
+print(tt_obs)   
+
+
+# error=[]
+
+# for i in range(1,20):
+#     tt_obs=TT(tens_obs,max_rank=i)
+#     error.append([i,np.linalg.norm(tt_obs.full()-tens_obs)])
 
 
 #%%
