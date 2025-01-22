@@ -9,6 +9,8 @@ import qutip as qt
 import matplotlib.pyplot as plt
 import random
 
+%matplotlib qt
+
 #%%
 
 #%%
@@ -36,6 +38,24 @@ psi0 = qt.tensor([qt.basis(2, 0) for _ in range(N)])# # Time vector
 #%%
 
 
+
+qt_paulis = [sx, sy, sz]
+qt_obs=qt.tensor([np.random.choice(qt_paulis) for i in range(L)])
+
+dims=qt_obs.dims
+
+tens_obs=qt_obs.full().reshape(dims[0]+dims[1])
+
+tt_obs=TT(tens_obs,max_rank=1)
+
+# error=[]
+
+# for i in range(1,20):
+#     tt_obs=TT(tens_obs,max_rank=i)
+#     error.append([i,np.linalg.norm(tt_obs.full()-tens_obs)])
+
+
+
 #%%
 T = 2
 timesteps = 20
@@ -44,7 +64,7 @@ print(t)
 # Define Z measurement operator for the fifth qubit
 
 sz_fifth = qt.tensor([sx if n==operator_site else qt.qeye(2) for n in range(N)])#Exact Lindblad solution
-result_lindblad = qt.mesolve(H, psi0, t, c_ops, [sz_fifth], progress_bar=True)
+result_lindblad = qt.mesolve(H, psi0, t, c_ops, [qt_obs], progress_bar=True)
 print(result_lindblad.expect[0][-1])
 
 
@@ -55,9 +75,6 @@ X = np.array([[0, 1], [1, 0]])
 Y = np.array([[0, -1j], [1j, 0]])
 Z = np.array([[1, 0], [0, -1]])
 
-paulis = [X, Y, Z]
-
-
 I = np.eye(2)
 g = 0.5
 J = 1
@@ -66,7 +83,8 @@ cores[0] = tt.build_core([[-g * X, - J * Z, I]])
 for i in range(1, L - 1):
     cores[i] = tt.build_core([[I, 0, 0], [Z, 0, 0], [-g * X, - J * Z, I]])
 cores[-1] = tt.build_core([I, Z, -g*X])
-hamiltonian = TT(cores)# jump operators and parameters
+hamiltonian = TT(cores)
+# jump operators and parameters
 L_1 = np.array([[0, 1], [0, 0]])
 L_2 = np.array([[1, 0], [0, -1]])
 jump_operator_list = [[L_1, L_2] for _ in range(L)]
@@ -78,6 +96,11 @@ jump_parameter_list = [[np.sqrt(0.1), np.sqrt(0.1)] for _ in range(L)]
 
 
 #%%
+
+
+
+
+
 # initial state
 rank = 6
 
@@ -103,25 +126,62 @@ for k in range(num_trajectories):
     observable.cores[operator_site]=tt.build_core([X])
 
 
-    exp_vals[0] += initial_state.transpose(conjugate=True)@observable@initial_state
+    exp_vals[0] += initial_state.transpose(conjugate=True)@tt_obs@initial_state
     for i in range(timesteps):
         initial_state = ode.tjm(hamiltonian, jump_operator_list, jump_parameter_list, initial_state, time_step, 1)[-1]
         #initial_state = ode.tdvp(hamiltonian, initial_state, time_step, 1)[-1]
-        exp_vals[i+1] += initial_state.transpose(conjugate=True)@observable@initial_state
+        exp_vals[i+1] += initial_state.transpose(conjugate=True)@tt_obs@initial_state
 
 exp_vals = (1/num_trajectories)*exp_vals
 
+
+#%%
 
 plt.plot(exp_vals)
 plt.plot(result_lindblad.expect[0])
 plt.legend(['scikit_tt', 'qutip'])
 
 
-##%
+#%%
+observable
+
+
+#%%
 
 
 
 
 # %%
+
+qt_paulis = [sx, sy, sz]
+qt_obs=qt.tensor([np.random.choice(qt_paulis) for i in range(L)])
+
+# tt_obs=TT(qt_obs.data)
+
+# %%
+
+# %%
+dims=qt_obs.dims
+
+tens_obs=qt_obs.full().reshape(dims[0]+dims[1])
+
+tt_obs=TT(tens_obs)
+
+# %%
+
+tt_obs
+
+#%%
+hamiltonian
+
+# %%
+N=[2,3,4,5]
+Mat=np.random.rand(np.prod(N),np.prod(N))
+
+print(Mat.shape)
+
+Mat=Mat.reshape(N+N)
+
+print(Mat.shape)
 
 # %%
