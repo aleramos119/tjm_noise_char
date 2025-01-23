@@ -109,7 +109,7 @@ print(tt_obs)
 # initial state
 rank = 6
 
-num_trajectories = 500
+num_trajectories = 100
 exp_vals = np.zeros(timesteps+1)
 
 for k in range(num_trajectories):
