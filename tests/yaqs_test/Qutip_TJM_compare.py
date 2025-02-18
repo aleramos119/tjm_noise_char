@@ -42,8 +42,6 @@ def qutip_traj(sim_params_class: SimulationParameters):
 
     '''QUTIP Initialization + Simulation'''
 
-#region
-
     # Define Pauli matrices
     sx = qt.sigmax()
     sy = qt.sigmay()
@@ -60,14 +58,17 @@ def qutip_traj(sim_params_class: SimulationParameters):
 
     # Construct collapse operators
     c_ops = []
+    gammas = []
 
     # Relaxation operators
     for i in range(L):
         c_ops.append(np.sqrt(gamma_rel) * qt.tensor([qt.destroy(2) if n==i else qt.qeye(2) for n in range(L)]))
+        gammas.append(gamma_rel)
 
     # Dephasing operators
     for i in range(L):
         c_ops.append(np.sqrt(gamma_deph) * qt.tensor([sz if n==i else qt.qeye(2) for n in range(L)]))
+        gammas.append(gamma_deph)
 
     # Initial state
     psi0 = qt.tensor([qt.basis(2, 0) for _ in range(L)])
@@ -79,14 +80,41 @@ def qutip_traj(sim_params_class: SimulationParameters):
 
     obs_list = sx_list  + sy_list + sz_list
 
-    # Exact Lindblad solution
-    result_lindblad = qt.mesolve(H, psi0, t, c_ops, obs_list, progress_bar=True)
-    real_exp_vals = []
-    for site in range(len(obs_list)):
-        real_exp_vals.append(result_lindblad.expect[site])
 
+    # Create new set of observables by multiplying every operator in obs_list with every operator in c_ops
+    A_kn_list= []
+    for i,c_op in enumerate(c_ops):
+        for obs in obs_list:
+            A_kn_list.append(  (1/gammas[i]) * (c_op.dag()*obs*c_op  -  0.5*obs*c_op.dag()*c_op  -  0.5*c_op.dag()*c_op*obs)   )
+
+
+
+    new_obs_list = obs_list + A_kn_list
+
+
+
+
+    n_obs= len(obs_list)
+    n_jump= len(c_ops)
+
+
+    # Exact Lindblad solution
+    result_lindblad = qt.mesolve(H, psi0, t, c_ops, new_obs_list, progress_bar=True)
+
+    exp_vals = []
+    for i in range(len(new_obs_list)):
+        exp_vals.append(result_lindblad.expect[i])
     
-    return t, real_exp_vals
+
+    # Separate original and new expectation values
+    original_exp_vals = exp_vals[:n_obs]
+    new_exp_vals = exp_vals[n_obs:]
+
+    # Reshape new_exp_vals to be a list of lists with dimensions n_jump times n_obs
+    A_kn_exp_vals = [new_exp_vals[i * n_obs:(i + 1) * n_obs] for i in range(n_jump)]
+
+    return t, original_exp_vals, A_kn_exp_vals
+    
 
 
 
