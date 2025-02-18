@@ -192,9 +192,8 @@ def tjm(sim_params_class: SimulationParameters, N=1000):
     return t, tjm_exp_vals
 
 
-#%%
 
-def loss_function(sim_params, qt_exp_vals):
+def loss_function(sim_params, ref_traj):
     """
     Calculates the squared distance between corresponding entries of QuTiP and TJM expectation values.
 
@@ -209,159 +208,145 @@ def loss_function(sim_params, qt_exp_vals):
     # Run the TJM simulation with the given noise parameters
 
     start_time = time.time()
-    tjm_exp_vals, _ = tjm(sim_params)  
+    t, exp_vals_traj, d_On_d_gk = qutip_traj(sim_params)  
     end_time = time.time()
     tjm_time = end_time - start_time
-    print(f"TJM time -> {tjm_time:.4f}")
+    # print(f"TJM time -> {tjm_time:.4f}")
     
     # Initialize loss
     loss = 0.0
     
     # Ensure both lists have the same structure
-    if len(qt_exp_vals) != len(tjm_exp_vals):
+    if len(ref_traj) != len(exp_vals_traj):
         raise ValueError("Mismatch in the number of sites between qt_exp_vals and tjm_exp_vals.")
 
     # Compute squared distance for each site
-    for qt_vals, tjm_vals in zip(qt_exp_vals, tjm_exp_vals):
-        loss += np.sum((np.array(qt_vals) - np.array(tjm_vals)) ** 2)
+    for ref_vals, tjm_vals in zip(ref_traj, exp_vals_traj):
+        loss += np.sum((np.array(ref_vals) - np.array(tjm_vals)) ** 2)
     
-    return loss, tjm_exp_vals
 
+    n_jump = len(d_On_d_gk)
+    n_obs = len(d_On_d_gk[0])
+    n_t = len(d_On_d_gk[0][0])
+
+    n_gr = n_jump//2
+
+
+    dJ_d_gr = 0
+    dJ_d_gd = 0
+
+
+    for i in range(n_obs):
+        for j in range(n_t):
+            # I have to add all the derivatives with respect to the same gamma_relaxation and gamma_dephasing
+            for k in range(n_gr):
+                dJ_d_gr += 2*(exp_vals_traj[i][j] - ref_traj[i][j]) * d_On_d_gk[k][i][j]
+                dJ_d_gd += 2*(exp_vals_traj[i][j] - ref_traj[i][j]) * d_On_d_gk[n_gr + k][i][j]
+
+
+
+
+    return loss, exp_vals_traj, np.array([dJ_d_gr, dJ_d_gd])
+
+
+
+
+
+def gradient_descent(sim_params, ref_traj, learning_rate=0.01, max_iterations=100, tolerance=1e-6):
+    """
+    Performs gradient descent to minimize the loss function.
+
+    Args:
+        sim_params (SimulationParameters): Initial simulation parameters.
+        ref_traj (list): Reference trajectory for comparison.
+        learning_rate (float): Learning rate for gradient descent.
+        max_iterations (int): Maximum number of iterations.
+        tolerance (float): Tolerance for convergence.
+
+    Returns:
+        SimulationParameters: Optimized simulation parameters.
+        list: Loss history.
+    """
+    loss_history = []
+
+    gr_history = []
+    gd_history = []
+
+    gr_history.append(sim_params.gamma_rel)
+    gd_history.append(sim_params.gamma_deph)
+
+
+
+    dJ_dgr_history = []
+    dJ_dgd_history = []
+
+
+    for iteration in range(max_iterations):
+        # Calculate loss and gradients
+        loss, exp_vals_traj, dJ_dg = loss_function(sim_params, ref_traj)
+        loss_history.append(loss)
+
+        # Check for convergence
+        if loss < tolerance:
+            print(f"Converged after {iteration} iterations.")
+            break
+
+        
+        sim_params.gamma_rel -= learning_rate * dJ_dg[0]
+        sim_params.gamma_deph -= learning_rate * dJ_dg[1]
+
+
+        dJ_dgr_history.append(dJ_dg[0])
+
+        dJ_dgd_history.append(dJ_dg[1])
+ 
+
+
+
+        gr_history.append(sim_params.gamma_rel)
+        gd_history.append(sim_params.gamma_deph)
+        
+
+        print(f"!!!!!!! Iteration {iteration}: Loss = {loss}")
+
+    return loss_history, gr_history, gd_history, dJ_dgr_history, dJ_dgd_history
 
 
 
 
 #%%
 
+# Generate reference trajectory
 sim_params = SimulationParameters()
 
+t, qt_ref_traj, A_kn_exp_vals=qutip_traj(sim_params)
+
 
 #%%
 
-## Run both simulations with the same set of parameters
-t, qt_exp_vals, A_kn_exp_vals=qutip_traj(sim_params)
+# Perform gradient descent
 
-# t_traj, tjm_exp_vals=tjm(sim_params)
-#
+initial_params = SimulationParameters()
+initial_params.gamma_rel = 0.15
+initial_params.gamma_deph = 0.13
+
+
+loss_history, gr_history, gd_history, dJ_dgr_history, dJ_dgd_history = gradient_descent(initial_params, qt_ref_traj, learning_rate=0.1, max_iterations=200)
+
+
+
 #%%
-A_kn_exp_vals[1][2]
-#%%
-for i in range(len(A_kn_exp_vals)):
-    for j in range(len(A_kn_exp_vals[i])):
-        if max(abs(A_kn_exp_vals[i][j]))>0.01:
-            plt.plot(t,A_kn_exp_vals[i][j],label=f'observable {j} jump {i}')
+plt.plot(np.log(loss_history), label='log(J)')
 plt.legend()
-#%%
-
-
-# Initialize loss
-loss = 0.0
-
-# Ensure both lists have the same structure
-if len(qt_exp_vals) != len(tjm_exp_vals):
-    raise ValueError("Mismatch in the number of sites between qt_exp_vals and tjm_exp_vals.")
-
-# Compute squared distance for each site
-i=0
-for qt_vals, tjm_vals in zip(qt_exp_vals, tjm_exp_vals):
-    print(i,np.array(qt_vals).shape,np.array(qt_vals).shape,((np.array(qt_vals) - np.array(tjm_vals)) ** 2).shape)
-    loss += np.sum((np.array(qt_vals) - np.array(tjm_vals)) ** 2)
-    i+=1
-
 
 #%%
-np.array(zip(qt_exp_vals, tjm_exp_vals)).shape
-
-#%%
-    # L = 5
-    # T = 5
-    # dt = 0.1
-    # J = 1
-    # g = 0.5
-    # gamma = 0.1
-
-
-
-    # sample_timesteps = True
-    # N = 1000
-    # threshold = 1e-6
-    # max_bond_dim = 4
-    # order = 2
-    # measurements = [Observable('x', site) for site in range(L)] # + [Observable('y', site) for site in range(L)] + [Observable('z', site) for site in range(L)]
-
-    # sim_params = PhysicsSimParams(measurements, T, dt, sample_timesteps, N, max_bond_dim, threshold, order)
-
-
-
-
-    # t = np.arange(0, sim_params.T + sim_params.dt, sim_params.dt)
-
-    # # Define Pauli matrices
-    # sx = qt.sigmax()
-    # sy = qt.sigmay()
-    # sz = qt.sigmaz()
-
-    # # Construct the Ising Hamiltonian
-    # H = 0
-    # for i in range(L-1):
-    #     H += -J * qt.tensor([sz if n==i or n==i+1 else qt.qeye(2) for n in range(L)])
-    # for i in range(L):
-    #     H += -g * qt.tensor([sx if n==i else qt.qeye(2) for n in range(L)])
-
-    # # Construct collapse operators
-    # c_ops = []
-
-    # # Relaxation operators
-    # for i in range(L):
-    #     c_ops.append(np.sqrt(gamma) * qt.tensor([qt.destroy(2) if n==i else qt.qeye(2) for n in range(L)]))
-
-    # # Dephasing operators
-    # for i in range(L):
-    #     c_ops.append(np.sqrt(gamma) * qt.tensor([sz if n==i else qt.qeye(2) for n in range(L)]))
-
-    # # Initial state
-    # psi0 = qt.tensor([qt.basis(2, 0) for _ in range(L)])
-
-    # # Define measurement operators
-    # sx_list = [qt.tensor([sx if n == i else qt.qeye(2) for n in range(L)]) for i in range(L)]
-
-    # # Exact Lindblad solution
-    # result_lindblad = qt.mesolve(H, psi0, t, c_ops, sx_list, progress_bar=True)
-    # qutip_results = []
-    # for site in range(len(sx_list)):
-    #     qutip_results.append(result_lindblad.expect[site])
-
-    # H_0 = MPO()
-    # H_0.init_Ising(L, 2, J, g)
-
-    # # Define the initial state
-    # state = MPS(L, state='zeros')
-
-    # # Define the noise model
-    # noise_model = NoiseModel(['relaxation', 'dephasing'], [gamma, gamma])
-
-    # Simulator.run(state, H_0, sim_params, noise_model)
-
-    # tjm_results = []
-    # for observable in sim_params.observables:
-    #     tjm_results.append(observable.results)
-
-
-
-
-    
-
-
-
-
-    # Plot results
-plt.figure(figsize=(10,8))
-for i in range(len(tjm_results)):
-    plt.plot(t, qutip_results[i], label=f'exp val qutip obs {i}')
-    plt.plot(t, tjm_results[i], label=f'exp val tjm obs {i}')
-    plt.plot(t, qutip_results[i]-tjm_results[i], label = f'observable {i}')
-plt.xlabel('times')
-plt.ylabel('expectation value')
+plt.plot(gr_history, label='gamma_relaxation')
+plt.plot(gd_history, label='gamma_dephasing')
+plt.axhline(y=0.1, color='r', linestyle='--', label='gamma_reference')
 plt.legend()
-plt.show()
+
+
+# %%
+len(A_kn_exp_vals[0])
+
 # %%
