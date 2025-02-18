@@ -15,6 +15,8 @@ import time
 
 
 
+#%%
+
 
 @dataclass
 class SimulationParameters:
@@ -26,6 +28,29 @@ class SimulationParameters:
     gamma_rel: float = 0.1
     gamma_deph: float = 0.1
 
+
+
+#%%
+
+# t = np.arange(0, 1 + 0.1, 0.1)
+
+# trapezoidal(A_kn_exp_vals[0][0],t) 
+
+#%%
+
+
+def trapezoidal(y, x):
+
+    integral = np.zeros(len(y))
+
+    integral[0] = 0
+
+    for i in range(1,len(y)):
+        integral[i] = integral[i-1] + 0.5*(x[i] - x[i-1])*(y[i] + y[i-1])
+
+    return integral
+
+    
 
 def qutip_traj(sim_params_class: SimulationParameters):
 
@@ -112,8 +137,11 @@ def qutip_traj(sim_params_class: SimulationParameters):
 
     # Reshape new_exp_vals to be a list of lists with dimensions n_jump times n_obs
     A_kn_exp_vals = [new_exp_vals[i * n_obs:(i + 1) * n_obs] for i in range(n_jump)]
+    
+    d_On_d_gk = [ [trapezoidal(A_kn_exp_vals[i][j],t)  for j in range(n_obs)] for i in range(n_jump) ]
 
-    return t, original_exp_vals, A_kn_exp_vals
+
+    return t, original_exp_vals, d_On_d_gk
     
 
 
@@ -163,8 +191,6 @@ def tjm(sim_params_class: SimulationParameters, N=1000):
 
     return t, tjm_exp_vals
 
-#%%
-sim_params = SimulationParameters()
 
 #%%
 
@@ -213,10 +239,18 @@ sim_params = SimulationParameters()
 #%%
 
 ## Run both simulations with the same set of parameters
-t, qt_exp_vals=qutip_traj(sim_params)
+t, qt_exp_vals, A_kn_exp_vals=qutip_traj(sim_params)
 
-t_traj, tjm_exp_vals=tjm(sim_params)
-
+# t_traj, tjm_exp_vals=tjm(sim_params)
+#
+#%%
+A_kn_exp_vals[1][2]
+#%%
+for i in range(len(A_kn_exp_vals)):
+    for j in range(len(A_kn_exp_vals[i])):
+        if max(abs(A_kn_exp_vals[i][j]))>0.01:
+            plt.plot(t,A_kn_exp_vals[i][j],label=f'observable {j} jump {i}')
+plt.legend()
 #%%
 
 
