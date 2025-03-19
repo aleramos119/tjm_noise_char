@@ -128,3 +128,5 @@ tests/Figure_1.png
 tests/Figure_2.png
 
 *.png
+
+*.txt
