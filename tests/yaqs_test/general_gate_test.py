@@ -29,8 +29,6 @@ for lk in jump_list:
 
 #%%
 
-matrices
+matrices[5]
 
-# %%
-d.matrix
 # %%

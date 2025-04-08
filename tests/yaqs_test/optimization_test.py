@@ -21,7 +21,7 @@ initial_params.gamma_rel = 0.15
 initial_params.gamma_deph = 0.2
 initial_params.N = 200
 
-loss_history, gr_history, gd_history, dJ_dgr_history, dJ_dgd_history = BFGS(initial_params, qt_ref_traj, qutip_traj, learning_rate=0.2, max_iterations=100,tolerance=1e-8, file_name='test.txt')
+loss_history, gr_history, gd_history, dJ_dgr_history, dJ_dgd_history = Secant_Penalized_BFGS(initial_params, qt_ref_traj, tjm_traj, learning_rate=0.2, max_iterations=50,tolerance=1e-40, Ns=10e5)
 
 
 # %%

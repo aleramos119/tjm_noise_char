@@ -8,6 +8,7 @@ import time
 from mqt.yaqs.noise_char.optimization import *
 from mqt.yaqs.noise_char.propagation import *
 
+import os
 
 #%%
 sim_params = SimulationParameters()
@@ -15,7 +16,7 @@ t, qt_ref_traj, d_On_d_gk=qutip_traj(sim_params)
 
 
 #%%
-alg_list=["ADAM","BFGS"]
+alg_list=["adam"]
 
 N_list=[250,500,1000,2000,4000]
 
@@ -24,15 +25,29 @@ N_list=[1,2,3]
 
 max_iter=3
 
-time_list=np.zeros([len(alg_list),len(N_list)])
-iter_list=np.zeros([len(alg_list),len(N_list)])
-error_list=np.zeros([len(alg_list),len(N_list)])
-time_per_iter_list=np.zeros([len(alg_list),len(N_list)])
+time_list=np.zeros([len(N_list),len(alg_list)])
+iter_list=np.zeros([len(N_list),len(alg_list)])
+error_list=np.zeros([len(N_list),len(alg_list)])
+time_per_iter_list=np.zeros([len(N_list),len(alg_list)])
+min_log_loss_list=np.zeros([len(N_list),len(alg_list)])
 
-time_file="time.txt"
-iter_file="iter.txt"
-error_file="error.txt"
-time_per_iter_file="time_per_iter.txt"
+#%%
+folder="test/"
+
+os.makedirs(folder, exist_ok=True)
+
+time_file=folder + "time.txt"
+iter_file=folder + "iter.txt"
+error_file=folder + "error.txt"
+min_log_loss_file=folder + "min_log_loss.txt"
+time_per_iter_file=folder + "time_per_iter.txt"
+
+file_list=[time_file,iter_file,error_file,min_log_loss_file,time_per_iter_file]
+
+for file_name in file_list:
+    if os.path.exists(file_name):
+        os.remove(file_name)
+
 
 
 #%%
@@ -49,73 +64,51 @@ def append_to_file(file_path: str, row: list) -> None:
 
 
 #%%
+files_label="# N   " + "   ".join(alg_list)  + "\n"
+
+for file_name in file_list:
+    with open(file_name, 'w') as file:
+        file.write(files_label)
+
+
 
 for i,N in enumerate(N_list):
-    initial_params = SimulationParameters()
-    initial_params.gamma_rel = 0.05
-    initial_params.gamma_deph = 0.4
-    initial_params.N = N
+    for j,alg in enumerate(alg_list):
 
-    start_time=time.time()
+        initial_params = SimulationParameters()
+        initial_params.gamma_rel = 0.05
+        initial_params.gamma_deph = 0.4
+        initial_params.N = N
 
-    adam_loss_history, adam_gr_history, adam_gd_history, adam_dJ_dgr_history, adam_dJ_dgd_history = ADAM_gradient_descent(initial_params, qt_ref_traj, tjm_traj, learning_rate=0.2, max_iterations=max_iter,tolerance=1e-8, beta1=0.5)
+        start_time=time.time()
 
-    adam_iter=len(adam_loss_history)
+        if alg=="adam":
+            loss_history, gr_history, gd_history, dJ_dgr_history, dJ_dgd_history = ADAM_gradient_descent(initial_params, qt_ref_traj, qutip_traj, learning_rate=0.2, max_iterations=max_iter,tolerance=1e-8, beta1=0.5, file_name=folder + f"adam_log_{N}.txt")
+        elif alg=="bfgs":
+            loss_history, gr_history, gd_history, dJ_dgr_history, dJ_dgd_history = BFGS(initial_params, qt_ref_traj, qutip_traj, learning_rate=0.2, max_iterations=max_iter,tolerance=1e-8, file_name=folder + f"bfgs_log_{N}.txt")
 
-    end_time=time.time()
+        end_time=time.time()
 
-    time_list[0,i]=(end_time-start_time)/60
+        iter=len(loss_history)
 
-    time_per_iter_list[0,i]=time_list[0,i]/adam_iter
+        time_list[i,j]=(end_time-start_time)/60
 
-    iter_list[0,i]=adam_iter
+        time_per_iter_list[i,j]=time_list[i,j]/iter
 
-    error_list[0,i]=(adam_gr_history[-1] - sim_params.gamma_rel)**2 + (adam_gd_history[-1] - sim_params.gamma_deph)**2
+        iter_list[i,j]=iter
 
+        error_list[i,j]=(gr_history[-1] - sim_params.gamma_rel)**2 + (gd_history[-1] - sim_params.gamma_deph)**2
 
-
-    start_time=time.time()
-
-    bfgs_loss_history, bfgs_gr_history, bfgs_gd_history, bfgs_dJ_dgr_history, bfgs_dJ_dgd_history = BFGS(initial_params, qt_ref_traj, tjm_traj, learning_rate=0.2, max_iterations=max_iter,tolerance=1e-8)
-
-    bfgs_iter=len(bfgs_loss_history)
-
-    end_time=time.time()
-
-    time_list[1,i]=(end_time-start_time)/60
-
-    time_per_iter_list[1,i]=time_list[1,i]/bfgs_iter
-
-    iter_list[1,i]=bfgs_iter
-
-    error_list[1,i]=(bfgs_gr_history[-1] - sim_params.gamma_rel)**2 + (bfgs_gd_history[-1] - sim_params.gamma_deph)**2
+        min_log_loss_list[i,j]=np.log10(min(loss_history))
 
 
-
-    append_to_file(time_file,[N, time_list[0,i], time_list[1,i]])
-    append_to_file(iter_file,[N, iter_list[0,i], iter_list[1,i]])
-    append_to_file(error_file,[N, error_list[0,i], error_list[1,i]])
-    append_to_file(time_per_iter_file,[N, time_per_iter_list[0,i], time_per_iter_list[1,i]])
-
-
-    np.savetxt(f"adam_loss_{N}.txt", adam_loss_history, fmt="%.2f", delimiter="    ", header="")
-    np.savetxt(f"bfgs_loss_{N}.txt", bfgs_loss_history, fmt="%.2f", delimiter="    ", header="")
-
-
-    np.savetxt(f"adam_gr_{N}.txt", adam_gr_history, fmt="%.2f", delimiter="    ", header="")
-    np.savetxt(f"bfgs_gr_{N}.txt", bfgs_gr_history, fmt="%.2f", delimiter="    ", header="")
-
-
-    np.savetxt(f"adam_gd_{N}.txt", adam_gd_history, fmt="%.2f", delimiter="    ", header="")
-    np.savetxt(f"bfgs_gd_{N}.txt", bfgs_gd_history, fmt="%.2f", delimiter="    ", header="")
+    append_to_file(time_file,[N] + list(time_list[i,:]))
+    append_to_file(iter_file,[N] + list(iter_list[i,:]))
+    append_to_file(error_file,[N] + list(error_list[i,:]))
+    append_to_file(time_per_iter_file,[N] + list(time_per_iter_list[i,:]))
+    append_to_file(min_log_loss_file,[N] + list(min_log_loss_list[i,:]))
 
 
 
 
-
-
-
-
-
-
-
+# %%
