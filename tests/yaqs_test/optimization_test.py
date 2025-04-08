@@ -10,17 +10,18 @@ from mqt.yaqs.noise_char.propagation import *
 
 #%%
 sim_params = SimulationParameters()
+
 t, qt_ref_traj, d_On_d_gk=qutip_traj(sim_params)
 
 
 
 #%%
 initial_params = SimulationParameters()
-initial_params.gamma_rel = 0.05
-initial_params.gamma_deph = 0.4
+initial_params.gamma_rel = 0.15
+initial_params.gamma_deph = 0.2
 initial_params.N = 200
 
-loss_history, gr_history, gd_history, dJ_dgr_history, dJ_dgd_history = BFGS(initial_params, qt_ref_traj, tjm_traj, learning_rate=0.2, max_iterations=30,tolerance=1e-8)
+loss_history, gr_history, gd_history, dJ_dgr_history, dJ_dgd_history = BFGS(initial_params, qt_ref_traj, qutip_traj, learning_rate=0.2, max_iterations=100,tolerance=1e-8, file_name='test.txt')
 
 
 # %%
