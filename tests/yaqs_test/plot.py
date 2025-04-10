@@ -7,9 +7,13 @@ import numpy as np
 header="#  Iter    Loss    Log10(Loss)    Gamma_rel    Gamma_deph "
 
 
-#,"secant_penalized_bfgs_500_8000_max_iter_60"
+
 
 folder_list=["adam_bfgs_500_8000_max_iter_60","adam_bfgs_loss_test_500_8000_max_iter_60","adam_bfgs_rate_test_500_8000_max_iter_60"]
+
+
+folder_list=["adam_bfgs_loss_test_500_8000_max_iter_60"]
+
 
 file_list=["iter.txt","time.txt","min_log_loss.txt","error.txt","time_per_iter.txt"]
 
@@ -43,16 +47,15 @@ for folder in folder_list:
         data_adam = np.genfromtxt(filename_adam, skip_header=1)
         data_bfgs = np.genfromtxt(filename_bfgs, skip_header=1)
 
-        with open(filename_adam, 'r') as f:
+        with open(filename_bfgs, 'r') as f:
                 column_names = f.readline().strip().split()
 
         plt.plot(data_adam[:, 0], data_adam[:, 2], '-o', label="adam"+column_names[3])
         plt.plot(data_bfgs[:, 0], data_bfgs[:, 2], '-o', label="bfgs"+column_names[3])
         plt.xlabel(column_names[1])
         plt.ylabel(column_names[3])
-        plt.title(f"Plot for {alg} error in {folder}")
         plt.legend()
-        plt.savefig(f"{folder}/{alg}_{traj}_{column_names[3]}.png")
+        plt.savefig(f"{folder}/{traj}_{column_names[3]}.png")
         plt.close()
 
 
