@@ -2,9 +2,9 @@
 
 #%%
 
-from  mqt.yaqs.core.libraries.gate_library import *
+from  mqt.yaqs.core.libraries.gate_library import BaseGate
 
-
+import numpy as np
 #%%
 
 
@@ -31,4 +31,32 @@ for lk in jump_list:
 
 matrices[5]
 
+# %%
+
+import qutip as qt
+
+
+
+create=qt.create(2)
+
+
+create.full()
+# %%
+
+
+x=BaseGate.x()
+# %%
+x.set_sites(0)
+# %%
+x.sites
+# %%
+
+rx=BaseGate.rx(np.pi/2)
+# %%
+rx.matrix
+# %%
+
+rx=BaseGate.rx(np.pi/1)
+# %%
+rx.matrix
 # %%
