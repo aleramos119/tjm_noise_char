@@ -25,11 +25,39 @@ def loss_function(x):
 
 xplot = np.linspace(0, 1, 100)
 yplot = loss_function(xplot)[0]
+#%%
+def plot_model(gp, xplot, yplot, iter=0):
+    with torch.no_grad():
+        test_x = torch.tensor(xplot, dtype=torch.double).unsqueeze(-1)
+        posterior = gp.posterior(test_x)
+        mean = posterior.mean.numpy().flatten()
+        std_dev = posterior.variance.sqrt().numpy().flatten()
+
+    plt.figure(figsize=(8, 6))
+    plt.plot(xplot, yplot, label='True Loss Function', color='blue')
+    plt.plot(test_x.numpy(), mean, label='GP Mean', color='orange')
+    plt.fill_between(
+        test_x.numpy().flatten(),
+        mean - 1 * std_dev,
+        mean + 1 * std_dev,
+        color='orange',
+        alpha=0.2,
+        label='Confidence Interval (±σ)'
+    )
+    plt.scatter(X_train.numpy(), Y_train.numpy(), color='red', label='Training Data')
+    # plt.axhline(y=0.5, color='green', linestyle='--', label='y=0.5')
+    plt.legend()
+    plt.title('Gaussian Process Model with Uncertainty')
+    plt.xlabel('x')
+    plt.ylabel('f(x)')
+    plt.savefig(f'plot/gp_model_{iter}.png')
+
+
 
 #%% 
 
-n_init = 5
-n_iter = 100
+n_init = 1
+n_iter = 10
 d=1
 m=1
 bounds_list = [[0,1]]
@@ -52,13 +80,15 @@ Y_train = torch.zeros(n_init, m, dtype=torch.double)
 for i in range(n_init):
     loss,grad = loss_function(X_train[i].numpy())
 
-    Y_train[i,0]= torch.tensor(-loss, dtype=torch.double)
+    Y_train[i,0]= torch.tensor(loss, dtype=torch.double)
 
     x_history.append(X_train[i].numpy())
     loss_history.append(loss)
 
 
 #%%
+# Plot the model with the standard deviation
+
 for i in range(n_iter):
     gp = SingleTaskGP(
         train_X=X_train,
@@ -67,12 +97,15 @@ for i in range(n_iter):
         outcome_transform=Standardize(m=m),
     ).to(X_train)
 
+    gp.likelihood.noise_covar.noise = torch.tensor(0.0, dtype=torch.double)
+
     mll = ExactMarginalLogLikelihood(gp.likelihood, gp)
     fit_gpytorch_mll(mll)
 
 
+    plot_model(gp, xplot, yplot, iter=i)
 
-    logNEI = LogExpectedImprovement(model=gp, best_f=Y_train.max())
+    logNEI = LogExpectedImprovement(model=gp, best_f=Y_train.min(), maximize=False)
 
 
     candidate, acq_value = optimize_acqf(
@@ -82,7 +115,7 @@ for i in range(n_iter):
 
     X_train = torch.cat([X_train, candidate], dim=0)
     loss, grad=loss_function(X_train[-1].numpy())
-    Y_train = torch.cat([Y_train, torch.tensor([-loss], dtype=torch.double)], dim=0)
+    Y_train = torch.cat([Y_train, torch.tensor([loss], dtype=torch.double)], dim=0)
 
     x_history.append(X_train[-1].numpy())
     loss_history.append(loss)
@@ -96,13 +129,15 @@ plt.plot(xplot, yplot, label='Loss function')
 plt.plot(X_train.numpy(), Y_train.numpy(), 'o', label='Initial data')
 
 # %%
-plt.plot(np.array(x_history)[:,0], 'o-', label='history')
+plt.plot(np.array(x_history)[:,0], '-', label='history')
+plt.axhline(y=0.5, color='r', linestyle='--', label='y=0.5')
+plt.legend()
+plt.savefig('plot/x_history.png')
 # %%
-np.array(x_history)[:,0]
+with torch.no_grad():
+    posterior = gp.posterior(X_train)
+    print("Standard deviation at training points:", posterior.variance.sqrt().numpy())
 # %%
-np.array(x_history)[:,0]
-# %%
-np.array(loss_history)[:,0]
-# %%
-loss_history
+print("Noise level:", gp.likelihood.noise_covar.noise.item())
+
 # %%
