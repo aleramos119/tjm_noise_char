@@ -54,11 +54,51 @@ def plot_model(gp, xplot, yplot, iter=0):
     plt.close()
 
 
+#%%
+from typing import Optional
+from torch import Tensor
+from gpytorch.models import ExactGP
+from botorch.models.gpytorch import GPyTorchModel
+from gpytorch.distributions import MultivariateNormal
+from gpytorch.kernels import RBFKernel, ScaleKernel
+from gpytorch.likelihoods import GaussianLikelihood
+from gpytorch.means import ConstantMean
+
+class SimpleCustomGP(ExactGP, GPyTorchModel):
+
+    _num_outputs = 1  # to inform GPyTorchModel API
+
+    def __init__(self, train_X, train_Y, l, train_Yvar: Optional[Tensor] = None, input_transform=None, outcome_transform=None):
+        
+        if outcome_transform is not None:
+            train_Y, _ = outcome_transform(train_Y)
+
+        super().__init__(train_X, train_Y.squeeze(-1), GaussianLikelihood())
+        self.mean_module = ConstantMean()
+        self.covar_module = ScaleKernel(
+            base_kernel=RBFKernel(ard_num_dims=train_X.shape[-1]),
+        )
+        self.covar_module.base_kernel.lengthscale = l
+
+        self.input_transform = input_transform # Normalize input to [0, 1]^d
+        self.outcome_transform = outcome_transform  # Standardize output to zero mean and unit variance
+
+        self.to(train_X)  # make sure we're on the right device/dtype
+
+    def forward(self, x):
+        if self.input_transform is not None:
+            x = self.input_transform(x)
+        mean_x = self.mean_module(x)
+        covar_x = self.covar_module(x)
+        return MultivariateNormal(mean_x, covar_x)
+
+
+
 
 #%% 
 
 n_init = 1
-n_iter = 40
+n_iter = 30
 d=1
 m=1
 bounds_list = [[0,1]]
@@ -67,9 +107,11 @@ num_restarts = 5
 raw_samples = 20
 
 acq_name="LEI"
-beta=0.1
+beta=10
 noise=1e-6
 
+l=0.2
+gp_name="SingleTaskGP"
 #%%
 
 loss_history = []
@@ -97,13 +139,29 @@ for i in range(n_iter):
 
     train_Yvar = torch.full_like(Y_train, noise)
 
-    gp = SingleTaskGP(
-        train_X=X_train,
-        train_Y=Y_train,
-        train_Yvar=train_Yvar,
-        input_transform=Normalize(d=d),
-        outcome_transform=Standardize(m=m),
-    ).to(X_train)
+    if gp_name == "SimpleCustomGP":
+        gp = SimpleCustomGP(
+            train_X=X_train,
+            train_Y=Y_train,
+            l=torch.tensor(l),
+            train_Yvar=train_Yvar, 
+            input_transform=Normalize(d=d),
+            outcome_transform=Standardize(m=m),
+        ).to(X_train)
+
+    if gp_name == "SingleTaskGP":
+        # Use the SingleTaskGP model from BoTorch
+        kernel = ScaleKernel(RBFKernel(ard_num_dims=d))
+        # kernel.base_kernel.lengthscale = torch.tensor(l)
+
+        gp = SingleTaskGP(
+            train_X=X_train,
+            train_Y=Y_train,
+            train_Yvar=train_Yvar,
+            # covar_module=kernel,
+            input_transform=Normalize(d=d),
+            outcome_transform=Standardize(m=m),
+        ).to(X_train)
 
     mll = ExactMarginalLogLikelihood(gp.likelihood, gp)
     fit_gpytorch_mll(mll)
