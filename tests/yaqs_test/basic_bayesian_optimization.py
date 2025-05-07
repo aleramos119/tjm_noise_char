@@ -26,12 +26,7 @@ def loss_function(x):
 xplot = np.linspace(0, 1, 100)
 yplot = loss_function(xplot)[0]
 #%%
-def plot_model(gp, xplot, yplot, iter=0):
-    with torch.no_grad():
-        test_x = torch.tensor(xplot, dtype=torch.double).unsqueeze(-1)
-        posterior = gp.posterior(test_x)
-        mean = posterior.mean.numpy().flatten()
-        std_dev = posterior.variance.sqrt().numpy().flatten()
+def plot_model(mean, std_dev, xplot, yplot, train_X, train_Y, iter=0, output_dim=0):
 
     plt.figure(figsize=(8, 6))
     plt.plot(xplot, yplot, label='True Loss Function', color='blue')
@@ -44,7 +39,7 @@ def plot_model(gp, xplot, yplot, iter=0):
         alpha=0.2,
         label='Confidence Interval (±σ)'
     )
-    plt.scatter(X_train.numpy(), Y_train.numpy(), color='red', label='Training Data')
+    plt.scatter(train_X.numpy(), train_Y[:,output_dim].numpy(), color='red', label='Training Data')
     # plt.axhline(y=0.5, color='green', linestyle='--', label='y=0.5')
     plt.legend()
     plt.title('Gaussian Process Model with Uncertainty')
@@ -166,8 +161,15 @@ for i in range(n_iter):
     mll = ExactMarginalLogLikelihood(gp.likelihood, gp)
     fit_gpytorch_mll(mll)
 
+    with torch.no_grad():
+        test_x = torch.tensor(xplot, dtype=torch.double).unsqueeze(-1)
+        posterior = gp.posterior(test_x)
+        mean = posterior.mean.numpy().flatten()
+        std_dev = posterior.variance.sqrt().numpy().flatten()
 
-    plot_model(gp, xplot, yplot, iter=i)
+
+    plot_model(mean, std_dev, xplot, yplot, X_train, Y_train, iter=i)
+
 
     if acq_name == "LEI":
         acqf = LogExpectedImprovement(model=gp, best_f=Y_train.min(), maximize=False)
