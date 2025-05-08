@@ -50,6 +50,30 @@ def plot_model(mean, std_dev, xplot, yplot, train_X, train_Y, iter=0, output_dim
 
 
 #%%
+
+class normalize:
+    def __init__(self, x):
+        m=x.shape[0]
+        n=x.shape[1]
+
+        self.min_array = x.min(axis=0)
+        self.max_array = x.max(axis=0)
+        self.range_array = self.max_array - self.min_array
+
+        self.x0 = 
+                
+
+
+        self.d = d
+
+    def __call__(self, x):
+        return (x - 0) / (1 - 0)
+
+    def untransform(self, x):
+        return x * (1 - 0) + 0
+
+
+#%%
 from typing import Optional
 from torch import Tensor
 from gpytorch.models import ExactGP
@@ -129,8 +153,8 @@ class GPModelWithDerivatives(ExactGP, GPyTorchModel):
 
 #%% 
 
-n_init = 1
-n_iter = 30
+n_init = 10
+n_iter = 1
 d=1  # number of dimensions
 m=2 # number of outputs
 bounds_list = [[0,1]]
@@ -167,6 +191,8 @@ for i in range(n_init):
     loss_history.append(loss)
 
 
+
+
 #%%
 # Plot the model with the standard deviation
 
@@ -174,15 +200,22 @@ for i in range(n_iter):
 
     train_Yvar = torch.full_like(Y_train, noise)
 
+
+
+    X_transform = norm(X_train)
+    Y_transform = stand(Y_train)[0]
+
+
+
     if gp_name == "SimpleCustomGP":
         gp = SimpleCustomGP(
-            train_X=X_train,
-            train_Y=Y_train,
+            train_X=X_transform,
+            train_Y=Y_transform,
             l=torch.tensor(l),
-            train_Yvar=train_Yvar, 
-            input_transform=Normalize(d=d),
-            outcome_transform=Standardize(m=m),
-        ).to(X_train)
+            # train_Yvar=train_Yvar, 
+            # input_transform=Normalize(d=d),
+            # outcome_transform=Standardize(m=m),
+        ).to(X_transform)
 
     if gp_name == "SingleTaskGP":
         # Use the SingleTaskGP model from BoTorch
@@ -190,23 +223,23 @@ for i in range(n_iter):
         # kernel.base_kernel.lengthscale = torch.tensor(l)
 
         gp = SingleTaskGP(
-            train_X=X_train,
-            train_Y=Y_train,
+            train_X=X_transform,
+            train_Y=Y_transform,
             train_Yvar=train_Yvar,
-            # covar_module=kernel,
-            input_transform=Normalize(d=d),
-            outcome_transform=Standardize(m=m),
-        ).to(X_train)
+            # # covar_module=kernel,
+            # input_transform=Normalize(d=d),
+            # outcome_transform=Standardize(m=m),
+        ).to(X_transform)
 
 
     if gp_name == "GPWithDerivatives":
         gp = GPModelWithDerivatives(
-            train_x=X_train,
-            train_y=Y_train,
-            likelihood=gpytorch.likelihoods.MultitaskGaussianLikelihood(num_tasks=1 + d),
-            input_transform=Normalize(d=d),
-            outcome_transform=Standardize(m=m)
-        ).to(X_train)
+            train_x=X_transform,
+            train_y=Y_transform,
+            likelihood=gpytorch.likelihoods.MultitaskGaussianLikelihood(num_tasks=m),
+            # input_transform=Normalize(d=d),
+            # outcome_transform=Standardize(m=m)
+        ).to(X_transform)
 
 
     mll = ExactMarginalLogLikelihood(gp.likelihood, gp)
@@ -240,13 +273,21 @@ for i in range(n_iter):
     )
 
 
-    X_train = torch.cat([X_train, candidate], dim=0)
-    loss, grad=loss_function(X_train[-1].numpy())
-    Y_train = torch.cat([Y_train, torch.tensor(np.array([loss,grad]), dtype=torch.double).T], dim=0)
 
-    x_history.append(X_train[-1].numpy())
+    X_new = norm.untransform(candidate).numpy()[0]
+    loss, grad=loss_function(X_new)
+
+    x_history.append(X_new)
     loss_history.append(loss)
 
+                       
+                         
+    Y_new_transform=stand(torch.tensor(np.array([loss,grad]), dtype=torch.double).T)[0]
+
+    X_transform = torch.cat([X_transform, candidate], dim=0)
+    Y_transform = torch.cat([Y_transform, Y_new_transform], dim=0)
+
+    
 
 plt.plot(np.array(x_history)[:,0], '-', label='history')
 plt.axhline(y=0.5, color='r', linestyle='--', label='y=0.5')
@@ -284,8 +325,8 @@ output_dim=0
 with torch.no_grad():
         test_x = torch.tensor(xplot, dtype=torch.double).unsqueeze(-1)
         posterior = gp.posterior(test_x)
-        mean = posterior.mean.numpy()[:,output_dim].flatten()
-        std_dev = posterior.variance.sqrt().numpy()[:,output_dim].flatten()
+        mean = stand.untransform(posterior.mean).numpy()[:,output_dim].flatten()
+        std_dev = stand.untransform(posterior.variance.sqrt()).numpy()[:,output_dim].flatten()
 # %%
 max(std_dev)
 # %%
@@ -311,5 +352,37 @@ plt.savefig(f'plot_gp_with_der/gp_model_{iter}.png')
 
 # %%
 plot_model(gp, xplot, yplot, iter=1000)
+
+# %%
+norm=Normalize(d=d)
+stand=Standardize(m=m)
+
+X_transform = norm(X_train)
+Y_transform = stand(Y_train)
+
+
+# %%
+X_transform
+# %%
+stand.untransform(Y_transform[0])
+# %%
+torch.tensor(np.array([loss,grad]), dtype=torch.double).T.shape
+# %%
+np.array([loss,grad]).shape
+# %%
+loss
+# %%
+X_new[0]
+# %%
+x_history
+# %%
+test_x.shape
+# %%
+# %%
+random_matrix = np.random.rand(10, 6)
+
+# %%
+random_matrix.max(axis=0).shape
+
 
 # %%
