@@ -50,27 +50,54 @@ def plot_model(mean, std_dev, xplot, yplot, train_X, train_Y, iter=0, output_dim
 
 
 #%%
+class transform:
+    def __init__(self, displacement, range):
 
-class normalize:
-    def __init__(self, x):
-        m=x.shape[0]
-        n=x.shape[1]
+        self.displacement = displacement
+        self.range = range
 
-        self.min_array = x.min(axis=0)
-        self.max_array = x.max(axis=0)
-        self.range_array = self.max_array - self.min_array
+    def displace(self, x):
+            return x - self.displacement
 
-        self.x0 = 
-                
-
-
-        self.d = d
-
-    def __call__(self, x):
-        return (x - 0) / (1 - 0)
+    def scale(self, x):
+        return x / self.range
+    
+    def transform(self, x):
+        x = self.displace(x)
+        x = self.scale(x)
+        return x
+    
+    def undisplace(self, x):
+        return x + self.displacement
+    
+    def unscale(self, x):
+        return x * self.range
 
     def untransform(self, x):
-        return x * (1 - 0) + 0
+        x = self.unscale(x)
+        x = self.undisplace(x)
+        return x
+    
+
+
+class normalize(transform):
+
+    def __init__(self, x):
+
+        if isinstance(x, torch.Tensor):
+            self.displacement = x.min(axis=0).values
+            self.range = x.max(axis=0).values - x.min(axis=0).values
+
+        elif isinstance(x, np.ndarray):
+            self.displacement = x.min(axis=0)
+            self.range = x.max(axis=0) - x.min(axis=0)
+        
+
+class standardize(transform):
+    def __init__(self, x):
+
+        self.displacement = x.mean(axis=0)
+        self.range = x.std(axis=0)
 
 
 #%%
@@ -153,8 +180,8 @@ class GPModelWithDerivatives(ExactGP, GPyTorchModel):
 
 #%% 
 
-n_init = 10
-n_iter = 1
+n_init = 2
+n_iter = 10
 d=1  # number of dimensions
 m=2 # number of outputs
 bounds_list = [[0,1]]
@@ -200,10 +227,11 @@ for i in range(n_iter):
 
     train_Yvar = torch.full_like(Y_train, noise)
 
+    norm = normalize(X_train)
+    stand = standardize(Y_train)
 
-
-    X_transform = norm(X_train)
-    Y_transform = stand(Y_train)[0]
+    X_transform = norm.transform(X_train)
+    Y_transform = stand.transform(Y_train)
 
 
 
@@ -250,9 +278,9 @@ for i in range(n_iter):
     output_dim=0
     with torch.no_grad():
         test_x = torch.tensor(xplot, dtype=torch.double).unsqueeze(-1)
-        posterior = gp.posterior(test_x)
-        mean = posterior.mean.numpy()[:,output_dim].flatten()
-        std_dev = posterior.variance.sqrt().numpy()[:,output_dim].flatten()
+        posterior = gp.posterior(norm.transform(test_x))
+        mean = stand.untransform(posterior.mean).numpy()[:,output_dim].flatten()
+        std_dev = stand.unscale(posterior.variance.sqrt()).numpy()[:,output_dim].flatten()
 
     
 
@@ -274,18 +302,17 @@ for i in range(n_iter):
 
 
 
-    X_new = norm.untransform(candidate).numpy()[0]
-    loss, grad=loss_function(X_new)
+    X_new = norm.untransform(candidate)
+    loss, grad=loss_function(X_new.numpy()[0])
 
-    x_history.append(X_new)
+    x_history.append(X_new.numpy()[0])
     loss_history.append(loss)
 
                        
-                         
-    Y_new_transform=stand(torch.tensor(np.array([loss,grad]), dtype=torch.double).T)[0]
+    Y_new=torch.tensor(np.array([loss,grad]), dtype=torch.double).T               
 
-    X_transform = torch.cat([X_transform, candidate], dim=0)
-    Y_transform = torch.cat([Y_transform, Y_new_transform], dim=0)
+    X_train = torch.cat([X_train, X_new], dim=0)
+    Y_train = torch.cat([Y_train, Y_new], dim=0)
 
     
 
@@ -362,27 +389,19 @@ Y_transform = stand(Y_train)
 
 
 # %%
+posterior.mean.shape
+# %%
+norm.untransform(candidate)
+
+# %%
+torch.tensor(np.array([loss,grad]), dtype=torch.double).T
+# %%
+X_new
+# %%
+plt.plot(X_train.numpy(), Y_train[:,0].numpy(), 'o', label='Training Data')
+# %%
 X_transform
 # %%
-stand.untransform(Y_transform[0])
-# %%
-torch.tensor(np.array([loss,grad]), dtype=torch.double).T.shape
-# %%
-np.array([loss,grad]).shape
-# %%
-loss
-# %%
-X_new[0]
-# %%
-x_history
-# %%
-test_x.shape
-# %%
-# %%
-random_matrix = np.random.rand(10, 6)
-
-# %%
-random_matrix.max(axis=0).shape
-
+test_x
 
 # %%
