@@ -101,7 +101,7 @@ bounds_list = [[0,1]]
 num_restarts = 5
 raw_samples = 20
 
-acq_name="LEI"
+acq_name="UCB"
 beta=10
 noise=1e-6
 

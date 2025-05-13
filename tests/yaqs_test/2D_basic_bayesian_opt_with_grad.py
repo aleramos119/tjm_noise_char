@@ -16,23 +16,42 @@ import gpytorch
 from botorch.optim import optimize_acqf
 
 #%%
-x_opt=0.1
-c=0.5
+x_opt=np.array([0.1, 0.15])
+c=np.array([0.5,4])
 std=0.001
 m_std=300
-der_std=0.01
+der_std=np.array([0.01,0.05])
 m_der_std=200
 
 def loss_function(x, x_opt=x_opt, c=c, std=std, m_std=m_std, der_std=der_std, m_der_std=m_der_std):
 
-    std_f = std * (1 + m_std * (x - x_opt) ** 2)
-    std_grad = der_std * (1 + m_der_std * (x - x_opt) ** 2)
+    std_f = std * (1 + m_std * np.sum((x - x_opt) ** 2))
+    std_grad =  der_std + m_der_std * der_std * (x - x_opt) ** 2
 
-    f= c*(x - x_opt) ** 2 + std_f*np.random.randn(*x.shape)
+    f= np.sum(c*(x - x_opt) ** 2) + std_f*np.random.randn()
     grad = 2 * c * (x - x_opt) + std_grad*np.random.randn(*x.shape)
     return f, grad, std_f, std_grad
 
+#%%
+# 2D plot of loss_function
+x = np.linspace(0, 0.2, 100)
+y = np.linspace(0, 0.2, 100)
+X, Y = np.meshgrid(x, y)
 
+Z = np.zeros_like(X)
+for i in range(X.shape[0]):
+    for j in range(X.shape[1]):
+        Z[i, j] = loss_function(np.array([X[i, j], Y[i, j]]))[0]
+
+plt.figure(figsize=(8, 6))
+contour = plt.contourf(X, Y, Z, levels=50, cmap='viridis')
+plt.colorbar(contour, label='Loss Function Value')
+plt.title('2D Plot of Loss Function')
+plt.xlabel('x1')
+plt.ylabel('x2')
+plt.show()
+#%%
+loss_function(np.array([X[i, j], Y[i, j]]))
 #%%
 output=1
 xplot = np.linspace(0, 0.2, 100)
@@ -276,16 +295,16 @@ class GPModelWithDerivatives(ExactGP, GPyTorchModel):
 #%% 
 
 n_init = 2
-n_iter = 50
-d=1  # number of dimensions
-m=2 # number of outputs
-bounds_list = [[0,0.3]]
+n_iter = 100
+d=2  # number of dimensions
+m=d+1 # number of outputs
+bounds_list = [[0,0.3],[0,0.3]]
 
 num_restarts = 20
 raw_samples = 40
 
 acq_name="LEI"
-beta=100
+beta=20
 noise=1e-0
 
 l=0.2
@@ -295,8 +314,8 @@ gp_name="GPWithDerivatives"
 loss_history = []
 x_history = []
 
-xplot = np.linspace(bounds_list[0][0], bounds_list[0][1], 100)
-yplot = loss_function(xplot)[0]
+# xplot = np.linspace(bounds_list[0][0], bounds_list[0][1], 100)
+# yplot = loss_function(xplot)[0]
 
 
 bounds = torch.tensor(bounds_list,dtype=torch.double).T
@@ -312,11 +331,11 @@ for i in range(n_init):
 
     Y_train[i,0]= torch.tensor(loss, dtype=torch.double)
     if m > 1:
-        Y_train[i,1]= torch.tensor(grad, dtype=torch.double)
+        Y_train[i,1:]= torch.tensor(grad, dtype=torch.double)
 
     Y_std[i,0]= torch.tensor(std_loss, dtype=torch.double)
     if m > 1:
-        Y_std[i,1]= torch.tensor(std_grad, dtype=torch.double)
+        Y_std[i,1:]= torch.tensor(std_grad, dtype=torch.double)
 
 
     x_history.append(X_train[i].numpy())
@@ -353,19 +372,19 @@ for i in range(n_iter):
     fit_gpytorch_mll(mll)
 
 
-    ### Computing mean and std deviation
-    output_dim=0
-    with torch.no_grad():
-        test_x_trans = trans.transform_x(torch.tensor(xplot, dtype=torch.double).unsqueeze(-1))
-        posterior = gp.posterior(test_x_trans)
-        mean = trans.untransform_y(posterior.mean).numpy()[:,output_dim]
-        std_dev = trans.unscale_std(posterior.variance.sqrt()).numpy()[:,output_dim]
+    # ### Computing mean and std deviation
+    # output_dim=0
+    # with torch.no_grad():
+    #     test_x_trans = trans.transform_x(torch.tensor(xplot, dtype=torch.double).unsqueeze(-1))
+    #     posterior = gp.posterior(test_x_trans)
+    #     mean = trans.untransform_y(posterior.mean).numpy()[:,output_dim]
+    #     std_dev = trans.unscale_std(posterior.variance.sqrt()).numpy()[:,output_dim]
 
     
 
-    plot_model(mean, std_dev, xplot, yplot, X_train, Y_train, iter=i)
+    # plot_model(mean, std_dev, xplot, yplot, X_train, Y_train, iter=i)
 
-    scal_transf = ScalarizedPosteriorTransform(weights=torch.tensor([1.0, 0.0], dtype=torch.double))
+    scal_transf = ScalarizedPosteriorTransform(weights=torch.tensor([1.0] + [0.0]*d, dtype=torch.double))
 
     if acq_name == "LEI":
         acqf = LogExpectedImprovement(model=gp, best_f=Y_transform.min(), posterior_transform=scal_transf, maximize=False)
@@ -379,18 +398,18 @@ for i in range(n_iter):
         acqf, bounds=bounds_trans, q=1, num_restarts=num_restarts, raw_samples=raw_samples,
     )
 
-    # Plot the acquisition function
-    acq_values = acqf(test_x_trans.unsqueeze(-2)).detach().numpy()
-    plt.figure(figsize=(8, 6))
-    plt.plot(test_x_trans.numpy(), acq_values, label='Acquisition Function', color='purple')
-    plt.axvline(x=candidate.numpy(), color='red', linestyle='--', label='Next Candidate')
-    plt.title('Acquisition Function')
-    plt.text(0.1, 0.9, f'bounds_trans: {bounds_trans.numpy()}', transform=plt.gca().transAxes, fontsize=10, color='black', bbox=dict(facecolor='white', alpha=0.5))
-    plt.xlabel('x')
-    plt.ylabel('Acquisition Value')
-    plt.legend()
-    plt.savefig(f'plot_gp_with_der/acquisition_function_{i}.png')
-    plt.close()
+    # # Plot the acquisition function
+    # acq_values = acqf(test_x_trans.unsqueeze(-2)).detach().numpy()
+    # plt.figure(figsize=(8, 6))
+    # plt.plot(test_x_trans.numpy(), acq_values, label='Acquisition Function', color='purple')
+    # plt.axvline(x=candidate.numpy(), color='red', linestyle='--', label='Next Candidate')
+    # plt.title('Acquisition Function')
+    # plt.text(0.1, 0.9, f'bounds_trans: {bounds_trans.numpy()}', transform=plt.gca().transAxes, fontsize=10, color='black', bbox=dict(facecolor='white', alpha=0.5))
+    # plt.xlabel('x')
+    # plt.ylabel('Acquisition Value')
+    # plt.legend()
+    # plt.savefig(f'plot_gp_with_der/acquisition_function_{i}.png')
+    # plt.close()
 
 
     X_new = trans.untransform_x(candidate)
@@ -400,9 +419,9 @@ for i in range(n_iter):
     loss_history.append(loss)
 
                        
-    Y_new=torch.tensor(np.array([loss,grad]), dtype=torch.double).T       
+    Y_new=torch.tensor(np.array([np.append(loss,grad)]), dtype=torch.double)      
 
-    Y_std_new=torch.tensor(np.array([std_loss,std_grad]), dtype=torch.double).T          
+    Y_std_new=torch.tensor(np.array([np.append(std_loss,std_grad)]), dtype=torch.double)      
 
     X_train = torch.cat([X_train, X_new], dim=0)
     Y_train = torch.cat([Y_train, Y_new], dim=0)
@@ -410,11 +429,15 @@ for i in range(n_iter):
 
 
     
-plt.plot(np.array(x_history)[:,0], '-', label='history')
-plt.axhline(y=x_opt, color='r', linestyle='--')
+
+for i in range(d):
+    plt.plot(np.array(x_history)[:,i], '-', label=f'history_{i}')
+    plt.axhline(y=x_opt[i], color='r', linestyle='--')
 plt.legend()
 plt.savefig('plot_gp_with_der/x_history.png')
 
 
 
+# %%
+torch.tensor(np.array([np.append(loss,grad)]), dtype=torch.double).shape
 # %%
