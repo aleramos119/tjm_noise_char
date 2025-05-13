@@ -34,7 +34,7 @@ def loss_function(x, x_opt=x_opt, c=c, std=std, m_std=m_std, der_std=der_std, m_
 
 
 #%%
-output=0
+output=1
 xplot = np.linspace(0, 0.2, 100)
 
 # Compute loss_function 100 times and calculate mean and std
@@ -275,14 +275,14 @@ class GPModelWithDerivatives(ExactGP, GPyTorchModel):
 
 #%% 
 
-n_init = 4
-n_iter = 10
+n_init = 2
+n_iter = 100
 d=1  # number of dimensions
 m=2 # number of outputs
 bounds_list = [[0,0.3]]
 
-num_restarts = 10
-raw_samples = 20
+num_restarts = 20
+raw_samples = 40
 
 acq_name="LEI"
 beta=20
@@ -373,18 +373,19 @@ for i in range(n_iter):
     if acq_name == "UCB":
         acqf = UpperConfidenceBound(model=gp, beta=beta, posterior_transform=scal_transf, maximize=False)
 
-
+    bounds_trans=trans.transform_x(bounds)
 
     candidate, acq_value = optimize_acqf(
-        acqf, bounds=bounds, q=1, num_restarts=num_restarts, raw_samples=raw_samples,
+        acqf, bounds=bounds_trans, q=1, num_restarts=num_restarts, raw_samples=raw_samples,
     )
 
     # Plot the acquisition function
     acq_values = acqf(test_x_trans.unsqueeze(-2)).detach().numpy()
     plt.figure(figsize=(8, 6))
-    plt.plot(xplot, acq_values, label='Acquisition Function', color='purple')
-    plt.axvline(x=trans.untransform_x(candidate).numpy(), color='red', linestyle='--', label='Next Candidate')
+    plt.plot(test_x_trans.numpy(), acq_values, label='Acquisition Function', color='purple')
+    plt.axvline(x=candidate.numpy(), color='red', linestyle='--', label='Next Candidate')
     plt.title('Acquisition Function')
+    plt.text(0.1, 0.9, f'bounds_trans: {bounds_trans.numpy()}', transform=plt.gca().transAxes, fontsize=10, color='black', bbox=dict(facecolor='white', alpha=0.5))
     plt.xlabel('x')
     plt.ylabel('Acquisition Value')
     plt.legend()
@@ -416,164 +417,4 @@ plt.savefig('plot_gp_with_der/x_history.png')
 
 
 
-# %%
-x_history
-
-
-# %%
-
-# %%
-from gpytorch.likelihoods import Likelihood
-class GPModelWithDerivatives(ExactGP, GPyTorchModel):
-    def __init__(self, train_X, train_Y, train_Yvar=None):
-        d = train_X.shape[-1]
-        # likelihood = GaussianLikelihood()
-        likelihood = MultitaskGaussianLikelihood(num_tasks=1 + d)
-        super().__init__(train_X, train_Y, likelihood)
-        self.mean_module = gpytorch.means.ConstantMeanGrad()
-        self.base_kernel = gpytorch.kernels.RBFKernelGrad(ard_num_dims=d)
-        self.covar_module = gpytorch.kernels.ScaleKernel(self.base_kernel)
-
-        self.train_Yvar = train_Yvar
-
-        # self.base_kernel.lengthscale = lengthscale
-
-    @property
-    def num_outputs(self):
-        return self._num_outputs  # Return the stored number of outputs
-
-
-    def forward(self, x):
-        # if self.input_transform is not None:
-        #     x = self.input_transform(x)
-        mean_x = self.mean_module(x)
-        covar_x = self.covar_module(x)
-
-        # l_shape=len(covar_x.shape)
-
-        n_samp=mean_x.shape[-2]
-
-        # if l_shape == 3:
-        #     batch_size=covar_x.shape[-2]
-
-        flat_noise=torch.tensor(np.tile(self.train_Yvar.mean(axis=0), (1, n_samp))[0])
-
-        covar_x = covar_x.add_diag(flat_noise)
-        
-        return gpytorch.distributions.MultitaskMultivariateNormal(mean_x, covar_x)
-
-
-#%%
-
-
-n_init = 10
-bounds_list = [[0,0.2]]
-
-
-xplot = np.linspace(bounds_list[0][0], bounds_list[0][1], 100)
-xplot_transform = np.linspace(0, 1, 100)
-
-yplot = np.array(loss_function(xplot)).T
-
-
-bounds = torch.tensor(bounds_list,dtype=torch.double).T
-
-X_train = bounds[0] + (bounds[1] - bounds[0]) * torch.rand(n_init, d, dtype=torch.double)
-
-
-Y_train = torch.zeros(n_init, m, dtype=torch.double)
-
-Y_std = torch.zeros(n_init, m, dtype=torch.double)
-
-for i in range(n_init):
-    loss, grad, std_loss, std_grad = loss_function(X_train[i].numpy())
-
-    Y_train[i,0]= torch.tensor(loss, dtype=torch.double)
-    if m > 1:
-        Y_train[i,1]= torch.tensor(grad, dtype=torch.double)
-
-    Y_std[i,0]= torch.tensor(std_loss, dtype=torch.double)
-    if m > 1:
-        Y_std[i,1]= torch.tensor(std_grad, dtype=torch.double)
-
-
-
-
-trans=derivative_transform(X_train, Y_train)
-
-X_transform, Y_transform = trans.transform(X_train, Y_train)
-Y_std_transform = trans.scale_std(Y_std)
-
-Y_var_transform = Y_std_transform ** 2
-print(type(Y_var_transform))
-
-
-# X_train = X_transform
-# Y_train = Y_transform
-
-
-gp = GPModelWithDerivatives(
-    train_X=X_transform,
-    train_Y=Y_transform,
-    train_Yvar=Y_var_transform,
-    # likelihood=gpytorch.likelihoods.MultitaskGaussianLikelihood(num_tasks=m),
-    # input_transform=Normalize(d=d),
-    # outcome_transform=Standardize(m=m)
-)
-
-# gp = SingleTaskGP(
-#             train_X=X_transform,
-#             train_Y=Y_transform,
-#             # train_Yvar=train_Yvar,
-#             # covar_module=kernel,
-#             # input_transform=Normalize(d=d),
-#             # outcome_transform=Standardize(m=m),
-#         )
-
-mll = ExactMarginalLogLikelihood(gp.likelihood, gp)
-fit_gpytorch_mll(mll)
-
-
-### Computing mean and std deviation
-
-with torch.no_grad():
-    test_x = torch.tensor(xplot, dtype=torch.double).unsqueeze(-1)
-
-    posterior = gp.posterior(trans.transform_x(test_x))
-    mean = trans.untransform_y(posterior.mean).numpy()
-    std_dev = trans.unscale_std(posterior.variance.sqrt()).numpy()
-
-
-
-
-#%%
-output=1
-plt.plot(xplot, yplot[:,output], label='True Loss Function', color='blue')
-plt.plot(X_train.numpy(), Y_train[:,output].numpy(), 'o', label='Training Data', markersize=10)
-# plt.plot(X_transform.numpy(), Y_transform[:,output].numpy(), 'o', label='Training Data Transformed')
-plt.plot(trans.untransform_x(X_transform).numpy(), trans.untransform_y(Y_transform)[:,output].numpy(), 'o', label='Training Data UN-Transformed')
-
-plt.plot(test_x.numpy(), mean[:,output],'--', label='GP Mean', color='orange')
-plt.fill_between(
-        xplot,
-        mean[:,output] - 1 * std_dev[:,output],
-        mean[:,output] + 1 * std_dev[:,output],
-        color='orange',
-        alpha=0.2,
-        label='Confidence Interval (±σ)'
-    )
-
-plt.legend()
-plt.show()
-# %%
-std_dev.mean(axis=0)
-
-# %%
-np.tile(Y_std.mean(axis=0), (1, 10))[0].shape
-
-# %%
-noise_mat = torch.tensor(np.array([[1,0],[0,4]]))
-noise_mat.unsqueeze(0).expand(3, -1, -1).shape
-# %%
-test_x_trans.unsqueeze(-2).shape
 # %%
