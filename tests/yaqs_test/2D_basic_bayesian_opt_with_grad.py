@@ -15,96 +15,8 @@ from botorch.acquisition import LogExpectedImprovement,UpperConfidenceBound
 import gpytorch
 from botorch.optim import optimize_acqf
 
-#%%
-x_opt=np.array([0.1, 0.15])
-c=np.array([0.5,4])
-std=0.001
-m_std=300
-der_std=np.array([0.01,0.05])
-m_der_std=200
-
-def loss_function(x, x_opt=x_opt, c=c, std=std, m_std=m_std, der_std=der_std, m_der_std=m_der_std):
-
-    std_f = std * (1 + m_std * np.sum((x - x_opt) ** 2))
-    std_grad =  der_std + m_der_std * der_std * (x - x_opt) ** 2
-
-    f= np.sum(c*(x - x_opt) ** 2) + std_f*np.random.randn()
-    grad = 2 * c * (x - x_opt) + std_grad*np.random.randn(*x.shape)
-    return f, grad, std_f, std_grad
 
 #%%
-# 2D plot of loss_function
-x = np.linspace(0, 0.2, 100)
-y = np.linspace(0, 0.2, 100)
-X, Y = np.meshgrid(x, y)
-
-Z = np.zeros_like(X)
-for i in range(X.shape[0]):
-    for j in range(X.shape[1]):
-        Z[i, j] = loss_function(np.array([X[i, j], Y[i, j]]))[0]
-
-plt.figure(figsize=(8, 6))
-contour = plt.contourf(X, Y, Z, levels=50, cmap='viridis')
-plt.colorbar(contour, label='Loss Function Value')
-plt.title('2D Plot of Loss Function')
-plt.xlabel('x1')
-plt.ylabel('x2')
-plt.show()
-#%%
-loss_function(np.array([X[i, j], Y[i, j]]))
-#%%
-output=1
-xplot = np.linspace(0, 0.2, 100)
-
-# Compute loss_function 100 times and calculate mean and std
-num_samples = 400
-y_samples = np.zeros((num_samples, len(xplot)))
-
-for i in range(num_samples):
-    y_samples[i, :] = loss_function(xplot)[output]
-
-y_mean = y_samples.mean(axis=0)
-y_std = y_samples.std(axis=0)
-
-# Plot mean and standard deviation
-plt.plot(xplot, y_mean, label='Mean of Loss Function', color='green')
-plt.fill_between(
-    xplot,
-    y_mean - y_std,
-    y_mean + y_std,
-    color='green',
-    alpha=0.2,
-    label='Standard Deviation (±σ)'
-)
-plt.legend()
-plt.show()
-#%%
-print(min(y_std),max(y_std))
-
-
-#%%
-def plot_model(mean, std_dev, xplot, yplot, train_X, train_Y, iter=0, output_dim=0):
-
-    plt.figure(figsize=(8, 6))
-    plt.plot(xplot, yplot, label='True Loss Function', color='blue')
-    plt.plot(xplot, mean, label='GP Mean', color='orange')
-    plt.fill_between(
-        xplot,
-        mean - 1 * std_dev,
-        mean + 1 * std_dev,
-        color='orange',
-        alpha=0.2,
-        label='Confidence Interval (±σ)'
-    )
-    plt.scatter(train_X.numpy(), train_Y[:,output_dim].numpy(), color='red', label='Training Data')
-    # plt.axhline(y=0.5, color='green', linestyle='--', label='y=0.5')
-    plt.legend()
-    plt.title('Gaussian Process Model with Uncertainty')
-    plt.xlabel('x')
-    plt.ylabel('f(x)')
-    plt.savefig(f'plot_gp_with_der/gp_model_{iter}.png')
-    plt.close()
-
 
 class transform:
     def __init__(self, displacement, range):
@@ -245,6 +157,7 @@ from gpytorch.models import ExactGP
 from botorch.models.gpytorch import GPyTorchModel
 from botorch.acquisition.objective import ScalarizedPosteriorTransform
 from gpytorch.likelihoods import MultitaskGaussianLikelihood
+import time
 
 
 
@@ -291,153 +204,142 @@ class GPModelWithDerivatives(ExactGP, GPyTorchModel):
         return gpytorch.distributions.MultitaskMultivariateNormal(mean_x, covar_x)
 
 
-
-#%% 
-
-n_init = 2
-n_iter = 100
-d=2  # number of dimensions
-m=d+1 # number of outputs
-bounds_list = [[0,0.3],[0,0.3]]
-
-num_restarts = 20
-raw_samples = 40
+#%%
 
 acq_name="LEI"
-beta=20
-noise=1e-0
 
-l=0.2
-gp_name="GPWithDerivatives"
-#%%
-
-loss_history = []
-x_history = []
-
-# xplot = np.linspace(bounds_list[0][0], bounds_list[0][1], 100)
-# yplot = loss_function(xplot)[0]
+file_name=f"gp_time_test/{acq_name}_time_error_vs_d.txt"
 
 
-bounds = torch.tensor(bounds_list,dtype=torch.double).T
-
-X_train = bounds[0] + (bounds[1] - bounds[0]) * torch.rand(n_init, d, dtype=torch.double)
-
-Y_train = torch.zeros(n_init, m, dtype=torch.double)
-
-Y_std = torch.zeros(n_init, m, dtype=torch.double)
-
-for i in range(n_init):
-    loss, grad, std_loss, std_grad = loss_function(X_train[i].numpy())
-
-    Y_train[i,0]= torch.tensor(loss, dtype=torch.double)
-    if m > 1:
-        Y_train[i,1:]= torch.tensor(grad, dtype=torch.double)
-
-    Y_std[i,0]= torch.tensor(std_loss, dtype=torch.double)
-    if m > 1:
-        Y_std[i,1:]= torch.tensor(std_grad, dtype=torch.double)
-
-
-    x_history.append(X_train[i].numpy())
-    loss_history.append(loss)
-
-
+with open(file_name, "w") as file:
+    file.write("#d   error                error/d                time(min)            time_per iter\n")
 
 
 #%%
-# Plot the model with the standard deviation
-
-for i in range(n_iter):
-
-    trans=derivative_transform(X_train, Y_train)
-
-    X_transform, Y_transform = trans.transform(X_train, Y_train)
-    Y_std_transform = trans.scale_std(Y_std)
-
-    Y_var_transform = Y_std_transform ** 2
-
-
-    gp = GPModelWithDerivatives(
-        train_X=X_transform,
-        train_Y=Y_transform,
-        train_Yvar=Y_var_transform,
-        # lengthscale=l,
-        # likelihood=gpytorch.likelihoods.MultitaskGaussianLikelihood(num_tasks=m),
-        # input_transform=Normalize(d=d),
-        # outcome_transform=Standardize(m=m)
-    ).to(X_transform)
-
-
-    mll = ExactMarginalLogLikelihood(gp.likelihood, gp)
-    fit_gpytorch_mll(mll)
-
-
-    # ### Computing mean and std deviation
-    # output_dim=0
-    # with torch.no_grad():
-    #     test_x_trans = trans.transform_x(torch.tensor(xplot, dtype=torch.double).unsqueeze(-1))
-    #     posterior = gp.posterior(test_x_trans)
-    #     mean = trans.untransform_y(posterior.mean).numpy()[:,output_dim]
-    #     std_dev = trans.unscale_std(posterior.variance.sqrt()).numpy()[:,output_dim]
-
     
+for d in range(10,100):
 
-    # plot_model(mean, std_dev, xplot, yplot, X_train, Y_train, iter=i)
+    x_opt=0.01+(0.4-0.01)*np.random.rand(d) ##The center of the 
+    c=0.5+(4-0.5)*np.random.rand(d)
+    std=0.001
+    m_std=300
+    der_std=0.01+(0.1-0.01)*np.random.rand(d)
+    m_der_std=200
 
-    scal_transf = ScalarizedPosteriorTransform(weights=torch.tensor([1.0] + [0.0]*d, dtype=torch.double))
+    def loss_function(x, x_opt=x_opt, c=c, std=std, m_std=m_std, der_std=der_std, m_der_std=m_der_std):
 
-    if acq_name == "LEI":
-        acqf = LogExpectedImprovement(model=gp, best_f=Y_transform.min(), posterior_transform=scal_transf, maximize=False)
-    
-    if acq_name == "UCB":
-        acqf = UpperConfidenceBound(model=gp, beta=beta, posterior_transform=scal_transf, maximize=False)
+        std_f = std * (1 + m_std * np.sum((x - x_opt) ** 2))
+        std_grad =  der_std + m_der_std * der_std * (x - x_opt) ** 2
 
-    bounds_trans=trans.transform_x(bounds)
-
-    candidate, acq_value = optimize_acqf(
-        acqf, bounds=bounds_trans, q=1, num_restarts=num_restarts, raw_samples=raw_samples,
-    )
-
-    # # Plot the acquisition function
-    # acq_values = acqf(test_x_trans.unsqueeze(-2)).detach().numpy()
-    # plt.figure(figsize=(8, 6))
-    # plt.plot(test_x_trans.numpy(), acq_values, label='Acquisition Function', color='purple')
-    # plt.axvline(x=candidate.numpy(), color='red', linestyle='--', label='Next Candidate')
-    # plt.title('Acquisition Function')
-    # plt.text(0.1, 0.9, f'bounds_trans: {bounds_trans.numpy()}', transform=plt.gca().transAxes, fontsize=10, color='black', bbox=dict(facecolor='white', alpha=0.5))
-    # plt.xlabel('x')
-    # plt.ylabel('Acquisition Value')
-    # plt.legend()
-    # plt.savefig(f'plot_gp_with_der/acquisition_function_{i}.png')
-    # plt.close()
+        f= np.sum(c*(x - x_opt) ** 2) + std_f*np.random.randn()
+        grad = 2 * c * (x - x_opt) + std_grad*np.random.randn(*x.shape)
+        return f, grad, std_f, std_grad
 
 
-    X_new = trans.untransform_x(candidate)
-    loss, grad, std_loss, std_grad =loss_function(X_new.numpy()[0])
+    n_init = 2*d
+    n_iter = 60 
+    m=d+1 # number of outputs
+    bounds_list = [[0, 0.3] for _ in range(d)]
 
-    x_history.append(X_new.numpy()[0])
-    loss_history.append(loss)
-
-                       
-    Y_new=torch.tensor(np.array([np.append(loss,grad)]), dtype=torch.double)      
-
-    Y_std_new=torch.tensor(np.array([np.append(std_loss,std_grad)]), dtype=torch.double)      
-
-    X_train = torch.cat([X_train, X_new], dim=0)
-    Y_train = torch.cat([Y_train, Y_new], dim=0)
-    Y_std = torch.cat([Y_std, Y_std_new], dim=0)
+    num_restarts = 20
+    raw_samples = 40
 
 
-    
-
-for i in range(d):
-    plt.plot(np.array(x_history)[:,i], '-', label=f'history_{i}')
-    plt.axhline(y=x_opt[i], color='r', linestyle='--')
-plt.legend()
-plt.savefig('plot_gp_with_der/x_history.png')
+    beta=20
+    noise=1e-0
 
 
 
-# %%
-torch.tensor(np.array([np.append(loss,grad)]), dtype=torch.double).shape
+    loss_history = []
+    x_history = []
+
+    diff_list = []
+    time_list =[]
+
+    bounds = torch.tensor(bounds_list,dtype=torch.double).T
+
+    X_train = bounds[0] + (bounds[1] - bounds[0]) * torch.rand(n_init, d, dtype=torch.double)
+
+    Y_train = torch.zeros(n_init, m, dtype=torch.double)
+
+    Y_std = torch.zeros(n_init, m, dtype=torch.double)
+
+    for i in range(n_init):
+        loss, grad, std_loss, std_grad = loss_function(X_train[i].numpy())
+
+        Y_train[i,0]= torch.tensor(loss, dtype=torch.double)
+        if m > 1:
+            Y_train[i,1:]= torch.tensor(grad, dtype=torch.double)
+
+        Y_std[i,0]= torch.tensor(std_loss, dtype=torch.double)
+        if m > 1:
+            Y_std[i,1:]= torch.tensor(std_grad, dtype=torch.double)
+
+
+        x_history.append(X_train[i].numpy())
+        loss_history.append(loss)
+
+
+    start_time = time.time()
+
+    for i in range(n_iter):
+
+        trans=derivative_transform(X_train, Y_train)
+
+        X_transform, Y_transform = trans.transform(X_train, Y_train)
+        Y_std_transform = trans.scale_std(Y_std)
+
+        Y_var_transform = Y_std_transform ** 2
+
+
+        gp = GPModelWithDerivatives(
+            train_X=X_transform,
+            train_Y=Y_transform,
+            train_Yvar=Y_var_transform
+        ).to(X_transform)
+
+
+        mll = ExactMarginalLogLikelihood(gp.likelihood, gp)
+        fit_gpytorch_mll(mll)
+
+
+        scal_transf = ScalarizedPosteriorTransform(weights=torch.tensor([1.0] + [0.0]*d, dtype=torch.double))
+
+        if acq_name == "LEI":
+            acqf = LogExpectedImprovement(model=gp, best_f=Y_transform.min(), posterior_transform=scal_transf, maximize=False)
+        
+        if acq_name == "UCB":
+            acqf = UpperConfidenceBound(model=gp, beta=beta, posterior_transform=scal_transf, maximize=False)
+
+        bounds_trans=trans.transform_x(bounds)
+
+        candidate, acq_value = optimize_acqf(
+            acqf, bounds=bounds_trans, q=1, num_restarts=num_restarts, raw_samples=raw_samples,
+        )
+
+        X_new = trans.untransform_x(candidate)
+        loss, grad, std_loss, std_grad =loss_function(X_new.numpy()[0])
+
+        x_history.append(X_new.numpy()[0])
+        loss_history.append(loss)
+            
+        Y_new=torch.tensor(np.array([np.append(loss,grad)]), dtype=torch.double)      
+
+        Y_std_new=torch.tensor(np.array([np.append(std_loss,std_grad)]), dtype=torch.double)      
+
+        X_train = torch.cat([X_train, X_new], dim=0)
+        Y_train = torch.cat([Y_train, Y_new], dim=0)
+        Y_std = torch.cat([Y_std, Y_std_new], dim=0)
+
+
+    end_time = time.time()
+
+    minutes = (end_time - start_time)/60
+    minutes_per_iter = minutes/n_iter
+    diff=np.linalg.norm(x_history[-1] - x_opt)
+    diff_d = diff/d
+
+    with open(file_name, "a") as file:
+        file.write(f"{d}   {diff}   {diff_d}  {minutes}   {minutes_per_iter}\n")
+
 # %%
