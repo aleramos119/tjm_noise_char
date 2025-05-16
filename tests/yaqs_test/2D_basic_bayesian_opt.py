@@ -13,9 +13,6 @@ from botorch.acquisition import LogExpectedImprovement,UpperConfidenceBound
 import gpytorch
 from botorch.optim import optimize_acqf
 
-import warnings
-warnings.filterwarnings("ignore", category=DeprecationWarning)
-
 
 class transform:
     def __init__(self, displacement, range):
@@ -155,24 +152,25 @@ class derivative_transform(transform):
 from gpytorch.models import ExactGP
 from botorch.models.gpytorch import GPyTorchModel
 from botorch.acquisition.objective import ScalarizedPosteriorTransform
-from gpytorch.likelihoods import MultitaskGaussianLikelihood
+from gpytorch.likelihoods import MultitaskGaussianLikelihood, GaussianLikelihood
 import time
-from gpytorch.kernels import ScaleKernel, RBFKernelGrad, AdditiveKernel
+from gpytorch.kernels import ScaleKernel, RBFKernelGrad, AdditiveKernel, RBFKernel
 
 
-class GPModelWithDerivatives(ExactGP, GPyTorchModel):
+class GPModel(ExactGP, GPyTorchModel):
     def __init__(self, train_X, train_Y, train_Yvar=None):
         d = train_X.shape[-1]
         # likelihood = GaussianLikelihood()
-        likelihood = MultitaskGaussianLikelihood(num_tasks=1 + d)
+        likelihood = GaussianLikelihood(num_tasks=1)
         super().__init__(train_X, train_Y, likelihood)
-        self.mean_module = gpytorch.means.ConstantMeanGrad()
 
-        self.base_kernel = RBFKernelGrad(ard_num_dims=d)
+        self.mean_module = gpytorch.means.ConstantMean()
 
-        # self.base_kernel = AdditiveKernel(
-        #     *[RBFKernelGrad(active_dims=[i]) for i in range(d)]
-        # )
+        # self.base_kernel = RBFKernel(ard_num_dims=d)
+
+        self.base_kernel = AdditiveKernel(
+            *[RBFKernel(active_dims=[i]) for i in range(d)]
+        )
 
         # kernels = [RBFKernelGrad(active_dims=[i]) for i in range(d)]
         # self.base_kernel = kernels[0]
@@ -197,13 +195,15 @@ class GPModelWithDerivatives(ExactGP, GPyTorchModel):
 
         l_shape = len(mean_x.shape)
 
-        n_samp=mean_x.shape[-2]
+        # print("Shape",mean_x.shape )
+
+        n_samp=mean_x.shape[-1]
 
         flat_noise = torch.tensor(np.tile(self.train_Yvar.mean(axis=0), (1, n_samp))[0])
 
         noise_mat = torch.diag(flat_noise)
 
-        if l_shape == 3: 
+        if l_shape == 2: 
             n_batch = mean_x.shape[0]
             noise_mat = noise_mat.unsqueeze(0).expand(n_batch, -1, -1)
 
@@ -214,14 +214,14 @@ class GPModelWithDerivatives(ExactGP, GPyTorchModel):
 
         covar_x = covar_x + noise_mat
         
-        return gpytorch.distributions.MultitaskMultivariateNormal(mean_x, covar_x)
+        return gpytorch.distributions.MultivariateNormal(mean_x, covar_x)
 
 
 #%%
 
 acq_name="UCB"
 
-file_name=f"gp_time_test/{acq_name}_time_error_vs_d.txt"
+file_name=f"gp_nograd_time_test/{acq_name}_time_error_vs_d.txt"
 
 
 with open(file_name, "w") as file:
@@ -230,7 +230,7 @@ with open(file_name, "w") as file:
 
 #%%
     
-for d_for in range(1,20):
+for d_for in range(1,100):
 
     d=d_for
 
@@ -252,7 +252,7 @@ for d_for in range(1,20):
 
 
     n_init = 30
-    iter_max =300 
+    iter_max = 300 
     m=d+1 # number of outputs
     bounds_list = [[-0.1, 0.5] for _ in range(d)]
 
@@ -314,10 +314,10 @@ for d_for in range(1,20):
             start_time = time.time()
 
 
-        gp = GPModelWithDerivatives(
+        gp = GPModel(
             train_X=X_transform,
-            train_Y=Y_transform,
-            train_Yvar=Y_var_transform
+            train_Y=Y_transform[:,0],
+            train_Yvar=Y_var_transform[:,0]
         ).to(X_transform)
 
 
@@ -325,7 +325,7 @@ for d_for in range(1,20):
         fit_gpytorch_mll(mll)
 
 
-        scal_transf = ScalarizedPosteriorTransform(weights=torch.tensor([1.0] + [0.0]*d, dtype=torch.double))
+        scal_transf = ScalarizedPosteriorTransform(weights=torch.tensor([1.0], dtype=torch.double))
 
         if acq_name == "LEI":
             acqf = LogExpectedImprovement(model=gp, best_f=Y_transform.min(), posterior_transform=scal_transf, maximize=False)
@@ -380,24 +380,7 @@ for d_for in range(1,20):
 
     with open(file_name, "a") as file:
         file.write(f"{min_diff}   {avg_diff}   {max_diff}   {i}    {sec_first_iter}\n")
-#%%
-for i in range(d):
-    plt.plot(np.array(x_history)[:,i])
-    plt.axhline(y=x_opt[i], color='r', linestyle='--', label='Optimal Value')
-
-#%%
-for i in range(d):
-    array_diff=np.array(x_history)[30:,i] - np.array(x_history)[29:-1,i]
-    plt.plot(array_diff[abs(array_diff) < 0.001])
-
 
 # %%
-i
-# %%
-max_diff
-# %%
-sec_first_iter
-
-# %%
-x_opt
+Y_transform[:,0].shape
 # %%

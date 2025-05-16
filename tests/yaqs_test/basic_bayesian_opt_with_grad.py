@@ -229,6 +229,7 @@ from gpytorch.likelihoods import MultitaskGaussianLikelihood
 
 
 
+
 class GPModelWithDerivatives(ExactGP, GPyTorchModel):
     def __init__(self, train_X, train_Y, train_Yvar=None):
         d = train_X.shape[-1]
@@ -417,4 +418,21 @@ plt.savefig('plot_gp_with_der/x_history.png')
 
 
 
+# %%
+# Read data from a file
+import numpy as np
+import matplotlib.pyplot as plt
+
+data = np.genfromtxt("gp_nograd_time_test/LEI_time_error_vs_d.txt")
+# Assuming the file has columns 'Column1' and 'Column2'
+
+# Plot the data
+plt.figure(figsize=(8, 6))
+plt.plot(data[:,0], data[:,1]/np.sqrt(data[:,0]),'o-', label='Data Plot', color='blue')
+plt.xlabel('Column1')
+plt.ylabel('Column2')
+plt.title('Plot of Column1 vs Column2')
+plt.legend()
+plt.show()
+# %%
 # %%
