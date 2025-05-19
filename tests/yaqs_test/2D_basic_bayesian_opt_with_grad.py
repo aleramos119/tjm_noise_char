@@ -251,8 +251,8 @@ for d_for in range(1,20):
         return f, grad, std_f, std_grad
 
 
-    n_init = 30
-    iter_max =300 
+    n_init = 10
+    iter_max =100 
     m=d+1 # number of outputs
     bounds_list = [[-0.1, 0.5] for _ in range(d)]
 
@@ -379,7 +379,9 @@ for d_for in range(1,20):
     avg_diff=np.mean(abs(x_history[-1] - x_opt))
 
     with open(file_name, "a") as file:
-        file.write(f"{min_diff}   {avg_diff}   {max_diff}   {i}    {sec_first_iter}\n")
+        file.write(f"{d}    {min_diff}   {avg_diff}   {max_diff}   {i}    {sec_first_iter}\n")
+
+
 #%%
 for i in range(d):
     plt.plot(np.array(x_history)[:,i])
@@ -392,12 +394,16 @@ for i in range(d):
 
 
 # %%
-i
-# %%
-max_diff
-# %%
-sec_first_iter
+gp = GPModelWithDerivatives(
+            train_X=X_transform,
+            train_Y=Y_transform,
+            train_Yvar=Y_var_transform
+        ).to(X_transform)
+
+
+mll = ExactMarginalLogLikelihood(gp.likelihood, gp)
+fit_gpytorch_mll(mll)
 
 # %%
-x_opt
+X_transform.shape
 # %%

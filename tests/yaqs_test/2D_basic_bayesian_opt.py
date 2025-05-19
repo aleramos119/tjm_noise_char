@@ -379,7 +379,7 @@ for d_for in range(1,100):
     avg_diff=np.mean(abs(x_history[-1] - x_opt))
 
     with open(file_name, "a") as file:
-        file.write(f"{min_diff}   {avg_diff}   {max_diff}   {i}    {sec_first_iter}\n")
+        file.write(f"{d}    {min_diff}   {avg_diff}   {max_diff}   {i}    {sec_first_iter}\n")
 
 # %%
 Y_transform[:,0].shape
