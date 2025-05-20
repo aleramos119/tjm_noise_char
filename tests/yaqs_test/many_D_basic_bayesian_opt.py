@@ -248,8 +248,3 @@ for d_for in range(1,d_max+1):
 
 
 # %%
-X_transform.shape
-# %%
-0.309365 - 0.305979
-
-# %%
