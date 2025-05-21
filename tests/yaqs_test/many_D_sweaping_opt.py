@@ -19,6 +19,7 @@ from botorch.acquisition.objective import ScalarizedPosteriorTransform
 
 from auxiliar.transform import derivative_transform
 from auxiliar.custom_gp import GPModel, GPModelWithDerivatives
+from auxiliar.plot import plot_model
 import sys
 import os
 
@@ -97,8 +98,8 @@ for d_for in range(2,d_max+1):
 
 
     n_init = 10*d
-    iter_max = 50 
-    inner_iter_max = 10
+    iter_max = 1
+    inner_iter_max = 50
     m=d+1 # number of outputs
     bounds_list = [[-0.1, 0.5] for _ in range(d)]
 
@@ -159,7 +160,7 @@ for d_for in range(2,d_max+1):
         Y_std[0,1:]= torch.tensor(std_grad, dtype=torch.double)
 
 
-    x_history.append(X_train[0].numpy())
+    x_history.append(X_train.numpy()[-1].copy())
     loss_history.append(loss)
 
 
@@ -170,15 +171,14 @@ for d_for in range(2,d_max+1):
     for j in range(iter_max): ## Goes through the full optimization steps
         for k in range(d): ## Goes through all dimensions
 
-            X_k_old = X_train[-1, [k]].clone()
+
+            X_k_train = X_train[:, [k]].clone()
+
+            Y_k_train = Y_train[:, [0, k + 1]].clone()
+
+            Y_k_std = Y_std[:, [0, k + 1]].clone()
 
             for i in range(inner_iter_max):
-
-                X_k_train = X_train[:, [k]].clone()
-
-                Y_k_train = Y_train[:, [0, k + 1]].clone()
-
-                Y_k_std = Y_std[:, [0, k + 1]].clone()
 
                 trans=derivative_transform(X_k_train, Y_k_train)
 
@@ -223,17 +223,26 @@ for d_for in range(2,d_max+1):
                     acqf, bounds=bounds_trans, q=1, num_restarts=num_restarts, raw_samples=raw_samples,
                 )
 
+                
+
                 X_k_new = trans.untransform_x(candidate)
                 X_train[-1, k] = X_k_new[0, 0]
+
+                # print(k,trans.untransform_x(candidate),X_train )
 
                 loss, grad, std_loss, std_grad =loss_function(X_train[-1].numpy())
                 f+=1
 
-                x_history.append(X_train.numpy()[0])
+
+
+                x_history.append(X_train.numpy()[-1].copy())
                 loss_history.append(loss)
 
-                with open(x_history_file_name, "a") as file:
-                    file.write(f"{f}    {loss}  " + "  ".join([f"{X_train[-1,j].item():.6f}" for j in range(d)]) + "\n")
+
+
+                if print_to_file:
+                    with open(x_history_file_name, "a") as file:
+                        file.write(f"{f}    {loss}  " + "  ".join([f"{X_train[-1,j].item():.6f}" for j in range(d)]) + "\n")
 
 
                 Y_k_new=torch.tensor(np.array([np.append(loss,grad[k])]), dtype=torch.double)      
@@ -245,15 +254,15 @@ for d_for in range(2,d_max+1):
                 Y_k_std = torch.cat([Y_k_std, Y_k_std_new], dim=0)
 
 
-                if max(abs(X_k_new[0]-X_k_old[0])) < threshhold:
-                    inner_n_convergence+=1
-                else:
-                    inner_n_convergence=0
+                # if max(abs(X_k_new[0]-X_k_old[0])) < threshhold:
+                #     inner_n_convergence+=1
+                # else:
+                #     inner_n_convergence=0
 
-                if inner_n_convergence==inner_max_n_convergence:
-                    break
+                # if inner_n_convergence==inner_max_n_convergence:
+                #     break
 
-                X_k_old = X_k_new.clone()
+                # X_k_old = X_k_new.clone()
 
 
     if max(abs(X_k_new[0]-X_k_old[0])) < threshhold:
@@ -288,11 +297,11 @@ print(f"Finish for d={d}!!!")
 
 
 # Plot x_history and x_opt
-x_history = np.array(x_history)
+x_history_np = np.array(x_history)
 
 plt.figure(figsize=(10, 6))
 for i in range(d):
-    plt.plot(x_history[:, i], label=f"x{i+1} history")
+    plt.plot(x_history_np[:, i], label=f"x{i+1} history")
     plt.axhline(y=x_opt[i], color=f"C{i}", linestyle="--", label=f"x{i+1}_opt")
 
 plt.xlabel("Iteration")
@@ -306,4 +315,24 @@ plt.show()
 
 
 
+# %%
+xplot=np.linspace(bounds[0, 1], bounds[1, 1], 100)
+yplot=np.array([loss_function(np.array([X_train[0,0],x]))[0] for x in xplot])
+
+output_dim=0
+
+with torch.no_grad():
+        test_x_trans = trans.transform_x(torch.tensor(xplot, dtype=torch.double).unsqueeze(-1))
+        posterior = gp.posterior(test_x_trans)
+        mean = trans.untransform_y(posterior.mean).numpy()[:,output_dim]
+        std_dev = trans.unscale_std(posterior.variance.sqrt()).numpy()[:,output_dim]
+
+
+
+plot_model(mean, std_dev, xplot, yplot, X_k_train, Y_k_train, iter=0, output_dim=output_dim)
+# %%
+
+Y_k_train
+# %%
+X_train
 # %%
