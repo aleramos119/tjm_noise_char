@@ -25,7 +25,7 @@ import os
 
 # args = sys.argv[1:]
 
-args=["GPModelWithDerivatives", "UCB", 2]
+args=["GPModelWithDerivatives", "UCB", 3]
 
 model_name = args[0]
 
@@ -46,7 +46,7 @@ if not os.path.exists(folder):
 file_name=folder+"time_error_vs_d.txt"
 
 
-print_to_file = False
+print_to_file = True
 if print_to_file:
     with open(file_name, "w") as file:
         file.write("#d  min_error              avg_error                max_error                n_iter          \n")
@@ -57,7 +57,7 @@ if print_to_file:
 
 #%%
     
-for d_for in range(2,d_max+1):
+for d_for in range(1,d_max+1):
 
     d=d_for
 
@@ -98,8 +98,8 @@ for d_for in range(2,d_max+1):
 
 
     n_init = 10*d
-    iter_max = 1
-    inner_iter_max = 50
+    iter_max = 10
+    inner_iter_max = 40
     m=d+1 # number of outputs
     bounds_list = [[-0.1, 0.5] for _ in range(d)]
 
@@ -123,13 +123,14 @@ for d_for in range(2,d_max+1):
 
 
     outer_n_convergence=0
-    outer_max_n_convergence=20
+    outer_max_n_convergence=2
 
     inner_n_convergence=0
     inner_max_n_convergence=5
 
 
     threshhold = 1e-2
+
 
 
 
@@ -171,12 +172,33 @@ for d_for in range(2,d_max+1):
     for j in range(iter_max): ## Goes through the full optimization steps
         for k in range(d): ## Goes through all dimensions
 
+            k_init = 5
+            X_k_train = torch.tensor(np.linspace(bounds[0, k], bounds[1, k], k_init), dtype=torch.double).unsqueeze(-1)
 
-            X_k_train = X_train[:, [k]].clone()
+            Y_k_train = torch.zeros(k_init, 2, dtype=torch.double)
 
-            Y_k_train = Y_train[:, [0, k + 1]].clone()
+            Y_k_std = torch.zeros(k_init, 2, dtype=torch.double)
 
-            Y_k_std = Y_std[:, [0, k + 1]].clone()
+            for i in range(k_init):
+
+                X_train[-1, k] = X_k_train[i, 0]
+
+                loss, grad, std_loss, std_grad = loss_function(X_train[-1].numpy())
+                f+=1
+
+                Y_k_train[i]= torch.tensor(np.array(np.append(loss,grad[k])), dtype=torch.double)
+
+                Y_k_std[i]= torch.tensor(np.array(np.append(std_loss,std_grad[k])), dtype=torch.double)     
+
+                x_history.append(X_train[-1].numpy().copy())
+                loss_history.append(loss)
+
+                if print_to_file:
+                    with open(x_history_file_name, "a") as file:
+                        file.write(f"{f}    {loss}  " + "  ".join([f"{X_train[-1,j].item():.6f}" for j in range(d)]) + "\n")
+            
+
+            X_k_old = X_k_train[-1].clone()
 
             for i in range(inner_iter_max):
 
@@ -254,44 +276,44 @@ for d_for in range(2,d_max+1):
                 Y_k_std = torch.cat([Y_k_std, Y_k_std_new], dim=0)
 
 
-                # if max(abs(X_k_new[0]-X_k_old[0])) < threshhold:
-                #     inner_n_convergence+=1
-                # else:
-                #     inner_n_convergence=0
+                if max(abs(X_k_new[0]-X_k_old[0])) < threshhold:
+                    inner_n_convergence+=1
+                else:
+                    inner_n_convergence=0
 
-                # if inner_n_convergence==inner_max_n_convergence:
-                #     break
+                if inner_n_convergence==inner_max_n_convergence:
+                    break
 
-                # X_k_old = X_k_new.clone()
-
-
-    if max(abs(X_k_new[0]-X_k_old[0])) < threshhold:
-        inner_n_convergence+=1
-    else:
-        inner_n_convergence=0
-
-    if inner_n_convergence==inner_max_n_convergence:
-        break
-
-    X_old = X_train[-1].clone()
+                X_k_old = X_k_new.clone()
 
 
+        if max(abs(X_train[-1]-X_old)) < threshhold:
+            outer_n_convergence+=1
+        else:
+            outer_n_convergence=0
+
+        if outer_n_convergence==outer_max_n_convergence:
+            break
+
+        X_old = X_train[-1].clone()
 
 
 
-max_diff=max(abs(x_history[-1] - x_opt))
-
-min_diff=min(abs(x_history[-1] - x_opt))
-
-avg_diff=np.mean(abs(x_history[-1] - x_opt))
-
-if print_to_file:
-    with open(file_name, "a") as file:
-        file.write(f"{d}    {min_diff}   {avg_diff}   {max_diff}   {j} \n")
 
 
+    max_diff=max(abs(x_history[-1] - x_opt))
 
-print(f"Finish for d={d}!!!")
+    min_diff=min(abs(x_history[-1] - x_opt))
+
+    avg_diff=np.mean(abs(x_history[-1] - x_opt))
+
+    if print_to_file:
+        with open(file_name, "a") as file:
+            file.write(f"{d}    {min_diff}   {avg_diff}   {max_diff}   {f} \n")
+
+
+
+    print(f"Finish for d={d}!!!")
 
 #%%
 
@@ -301,7 +323,7 @@ x_history_np = np.array(x_history)
 
 plt.figure(figsize=(10, 6))
 for i in range(d):
-    plt.plot(x_history_np[:, i], label=f"x{i+1} history")
+    plt.plot(x_history_np[:, i],'o-', label=f"x{i+1} history")
     plt.axhline(y=x_opt[i], color=f"C{i}", linestyle="--", label=f"x{i+1}_opt")
 
 plt.xlabel("Iteration")
@@ -332,7 +354,5 @@ with torch.no_grad():
 plot_model(mean, std_dev, xplot, yplot, X_k_train, Y_k_train, iter=0, output_dim=output_dim)
 # %%
 
-Y_k_train
-# %%
 X_train
 # %%
