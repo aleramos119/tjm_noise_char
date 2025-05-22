@@ -68,7 +68,7 @@ for d_for in range(1,d_max+1):
     std=0.001
     m_std=300
     der_std=0.01+(0.1-0.01)*np.random.rand(d)
-    m_der_std=200
+    m_der_std=100
 
     def loss_function(x, x_opt=x_opt, c=c, std=std, m_std=m_std, der_std=der_std, m_der_std=m_der_std):
 
@@ -172,8 +172,8 @@ for d_for in range(1,d_max+1):
     for j in range(iter_max): ## Goes through the full optimization steps
         for k in range(d): ## Goes through all dimensions
 
-            k_init = 5
-            X_k_train = torch.tensor(np.linspace(bounds[0, k], bounds[1, k], k_init), dtype=torch.double).unsqueeze(-1)
+            k_init = 10
+            X_k_train = bounds[0,k] + (bounds[1,k] - bounds[0,k]) * torch.rand(k_init, 1, dtype=torch.double)
 
             Y_k_train = torch.zeros(k_init, 2, dtype=torch.double)
 
@@ -335,11 +335,13 @@ plt.show()
 
 
 
+#%%
+k
 
 
 # %%
-xplot=np.linspace(bounds[0, 1], bounds[1, 1], 100)
-yplot=np.array([loss_function(np.array([X_train[0,0],x]))[0] for x in xplot])
+xplot=np.linspace(bounds[0, k], bounds[1, k], 100)
+yplot = np.array([loss_function(np.array([x if i == k else X_train[0, i] for i in range(X_train.shape[1])]))[0] for x in xplot])
 
 output_dim=0
 
@@ -355,4 +357,26 @@ plot_model(mean, std_dev, xplot, yplot, X_k_train, Y_k_train, iter=0, output_dim
 # %%
 
 X_train
+# %%
+
+data=np.genfromtxt("results/sweap_GPModelWithDerivatives_UCB_test/x_history_6.txt", skip_header=1)[:,2:]
+x_opt=np.genfromtxt("results/sweap_GPModelWithDerivatives_UCB_test/x_opt_values_6.txt", skip_header=1)
+
+plt.figure(figsize=(10, 6))
+for i in range(6):
+    plt.plot(data[:, i],'o-', label=f"x{i+1} history")
+    plt.axhline(y=x_opt[i], color=f"C{i}", linestyle="--", label=f"x{i+1}_opt")
+
+plt.xlabel("Iteration")
+plt.ylabel("x values")
+plt.title("Convergence of x_history to x_opt")
+plt.legend()
+plt.grid()
+plt.show()
+
+# %%
+X_train[0,k]
+# %%
+
+plt.plot(X_transform[:,0],Y_transform[:,0],'o')
 # %%
