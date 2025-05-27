@@ -25,7 +25,7 @@ import os
 
 # args = sys.argv[1:]
 
-args=["ADAM", 4]
+args=["ADAM", 3]
 
 opt_name = args[0]
 
@@ -260,10 +260,7 @@ def Secant_Penalized_BFGS(f, x_copy, print_to_file = False, x_history_file_name=
   
 
 
-        if print_to_file:
-            with open(x_history_file_name, "a") as file:
-                file.write(f"{i+1}    {loss}  " + "  ".join([f"{x_avg[j]:.6f}" for j in range(d)]) + "\n")
-        
+
         # print(f"Iteration {i+1}: x_new={x_new}, alpha={alpha}")
 
         # if abs(loss) < tolerance:
@@ -304,35 +301,47 @@ def Secant_Penalized_BFGS(f, x_copy, print_to_file = False, x_history_file_name=
         grad_old = grad_new.copy()  # Update old gradient for next iteration
 
 
-        if len(x_history) < avg_len:
-            x_avg = np.mean(x_history, axis=0)
-        else:
-            x_avg = np.mean(x_history[-avg_len:], axis=0)
+        x_avg_history=[]
+
+        for k in range(1, len(x_history) + 1):
+            if k < avg_len:
+                x_avg = np.mean(x_history[:k], axis=0)
+            else:
+                x_avg = np.mean(x_history[avg_len:], axis=0)
+
+            x_avg_history.append(x_avg.copy())
+
+        if len(x_avg_history) > avg_len:
+            x_avg_diff = [ max(abs(x_avg_history[-k] - x_avg_history[-k-1])) for k in range(avg_len)]
+
+            if all(diff < threshhold for diff in x_avg_diff):
+                print(f"Convergence check: {len(x_history)} iterations with max change {max(x_avg_diff)} < {threshhold}")
+                break
 
 
-        if max(abs(x_avg-x_avg_old)) < threshhold:
-            n_convergence+=1
-            print(f"Convergence check: {n_convergence} iterations with max change {max(abs(x_avg-x_avg_old))} < {threshhold}")
-        else:
-            n_convergence=0
+        # if print_to_file:
+        #     with open(x_history_file_name, "a") as file:
+        #         file.write(f"{i+1}    {loss}  " + "  ".join([f"{x_avg_history[-1][j]:.6f}" for j in range(d)]) + "\n")
+        
 
-        if n_convergence==max_n_convergence:
-            print(f"Converged after {i} iterations.")
-            break
-
-        x_avg_old = x_avg.copy()  # Update old x for next iteration
+        # if len(x_history) < avg_len:
+        #     x_avg = np.mean(x_history, axis=0)
+        # else:
+        #     x_avg = np.mean(x_history[-avg_len:], axis=0)
 
 
+        # if max(abs(x_avg-x_avg_old)) < threshhold:
+        #     n_convergence+=1
+        #     print(f"Convergence check: {n_convergence} iterations with max change {max(abs(x_avg-x_avg_old))} < {threshhold}")
+        # else:
+        #     n_convergence=0
 
-    x_avg_history=[]
+        # if n_convergence==max_n_convergence:
+        #     print(f"Converged after {i} iterations.")
+        #     break
 
-    for k in range(1, len(x_history) + 1):
-        if k < avg_len:
-            x_avg = np.mean(x_history[:k], axis=0)
-        else:
-            x_avg = np.mean(x_history[k - avg_len:k], axis=0)
+        # x_avg_old = x_avg.copy()  # Update old x for next iteration
 
-        x_avg_history.append(x_avg.copy())
 
 
     return loss_history, x_history, x_avg_history, update_history
@@ -359,7 +368,7 @@ if print_to_file:
 
 #%%
     
-for d_for in range(1,d_max+1):
+for d_for in range(3,d_max+1):
 
     d=d_for
 
@@ -372,10 +381,10 @@ for d_for in range(1,d_max+1):
     der_std=0.01+(0.1-0.01)*np.random.rand(d)
     m_der_std=200
 
-    # std=0
-    # m_std=0
-    # der_std=0*np.random.rand(d)
-    # m_der_std=0
+    std=0
+    m_std=0
+    der_std=0*np.random.rand(d)
+    m_der_std=0
 
     def loss_function(x, x_opt=x_opt, c=c, std=std, m_std=m_std, der_std=der_std, m_der_std=m_der_std):
 
@@ -413,23 +422,24 @@ for d_for in range(1,d_max+1):
 
     x0= 0.01+(0.4-0.01)*np.random.rand(d)
     
-    if opt_name == "ADAM":
-        loss_history, x_history, x_avg_history, update_history = ADAM_gradient_descent(loss_function, x0,  beta1 = 0.5, beta2 = 0.999, avg_len = 50, print_to_file = print_to_file, x_history_file_name=x_history_file_name, threshhold=5e-4, alpha=0.05, max_iterations=1000)
-    # bfgs_loss_history, bfgs_x_history, bfgs_x_avg_history, bfgs_update_history = Secant_Penalized_BFGS(loss_function, x0, print_to_file = print_to_file, x_history_file_name=" ", avg_len = 100, alpha=0.4, max_iterations=100, threshhold = 1e-3, max_n_convergence = 50, tolerance=1e-8, Ns=10e8, N0=10e-10)
+    # if opt_name == "ADAM":
+    #     loss_history, x_history, x_avg_history, update_history = ADAM_gradient_descent(loss_function, x0,  beta1 = 0.5, beta2 = 0.999, avg_len = 50, print_to_file = print_to_file, x_history_file_name=x_history_file_name, threshhold=5e-4, alpha=0.05, max_iterations=1000)
+    
+    bfgs_loss_history, bfgs_x_history, bfgs_x_avg_history, bfgs_update_history = Secant_Penalized_BFGS(loss_function, x0, print_to_file = print_to_file, x_history_file_name=" ", avg_len = 100, alpha=0.4, max_iterations=100, threshhold = 1e-3, max_n_convergence = 40, tolerance=1e-8, Ns=10e8, N0=10e-10)
 
 
-    max_diff=max(abs(x_avg_history[-1] - x_opt))
+    # max_diff=max(abs(x_avg_history[-1] - x_opt))
 
-    min_diff=min(abs(x_avg_history[-1] - x_opt))
+    # min_diff=min(abs(x_avg_history[-1] - x_opt))
 
-    avg_diff=np.mean(abs(x_avg_history[-1] - x_opt))
+    # avg_diff=np.mean(abs(x_avg_history[-1] - x_opt))
 
 
-    f=len(loss_history)
+    # f=len(loss_history)
 
-    if print_to_file:
-        with open(file_name, "a") as file:
-            file.write(f"{d}    {min_diff}   {avg_diff}   {max_diff}   {f} \n")
+    # if print_to_file:
+    #     with open(file_name, "a") as file:
+    #         file.write(f"{d}    {min_diff}   {avg_diff}   {max_diff}   {f} \n")
 
 
 
@@ -446,25 +456,25 @@ for d_for in range(1,d_max+1):
 
 
 
-# x_history_np = np.array(x_avg_history)
-# # x_history_np_2 = np.array(bfgs_x_history)
+#x_history_np = np.array(x_avg_history)
+x_history_np_2 = np.array(bfgs_x_history)
 
 
 
-# plt.figure(figsize=(10, 6))
-# for i in range(d):
-#     plt.plot(x_history_np[:, i],'-', color=f"C{i}", label=f"adam x{i+1} history")
-#     # plt.plot(x_history_np_2[:, i],'x-', color=f"C{i}", label=f"bfgs x{i+1} history")
-#     plt.axhline(y=x_opt[i], color=f"C{i}", linestyle="--", label=f"x{i+1}_opt")
+plt.figure(figsize=(10, 6))
+for i in range(d):
+    # plt.plot(x_history_np[:, i],'-', color=f"C{i}", label=f"adam x{i+1} history")
+    plt.plot(x_history_np_2[:, i],'x-', color=f"C{i}", label=f"bfgs x{i+1} history")
+    plt.axhline(y=x_opt[i], color=f"C{i}", linestyle="--", label=f"x{i+1}_opt")
 
 
 
-# # plt.xlabel("Iteration")
-# # plt.ylabel("x values")
-# # plt.title("Convergence of x_history to x_opt")
-# # plt.legend()
-# # plt.grid()
-# # plt.show()
+# plt.xlabel("Iteration")
+# plt.ylabel("x values")
+# plt.title("Convergence of x_history to x_opt")
+# plt.legend()
+# plt.grid()
+# plt.show()
 
 
 
@@ -482,4 +492,6 @@ for d_for in range(1,d_max+1):
 
 # # %%
 # len(x_avg_history)
+# %%
+abs(np.array([-1,2,-5]))
 # %%
