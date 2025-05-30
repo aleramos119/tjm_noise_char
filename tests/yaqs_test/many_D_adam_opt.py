@@ -179,56 +179,29 @@ def line_search(f, x, loss, p, grad, alpha=1.0, beta=0.8, c=1e-4):
     """
     Backtracking line search to find a suitable step size.
     """
-    loss_history = []
-    x_history = []
-    grad_history = []
-
-    # loss, grad, _, _ = f(x)
-    # loss_history.append(loss)
-    # x_history.append(x.copy())
-    # grad_history.append(grad.copy())
-
-    # print(f"Line search: x={x}, alpha={alpha}")
-
-    iter=0
-    while True and iter < 50:
+    i=0
+    while True and i < 50:
         x_new = x + alpha * p
         loss_new, grad_new, _, _ = f(x_new)
-
-        loss_history.append(loss_new)
-        x_history.append(x_new.copy())
-        grad_history.append(grad_new.copy())
-
-        # print(f"Line search: x_new={x_new}, alpha={alpha}")
-
 
         if loss_new <= loss + c * alpha * grad.dot(p):
             break
         alpha *= beta
-        iter+=1
 
-    return alpha, loss_history, x_history, grad_history
-
+        i += 1
 
 
-def Secant_Penalized_BFGS(f, x_copy, print_to_file = False, x_history_file_name=" ", avg_len = 100, alpha=0.01, max_iterations=200, threshhold = 1e-4, max_n_convergence = 50, tolerance=1e-8, Ns=10e8, N0=10e-10):
+    return alpha, loss_new, grad_new, x_new
+
+
+
+def Secant_Penalized_BFGS(f, x_copy, beta=0, alpha=0.01, max_iterations=200, threshhold = 1e-4, max_n_convergence = 50, tolerance=1e-8, Ns=10e8, N0=10e-10):
 
 
     x = x_copy.copy()  # Make a copy of the input x to avoid modifying the original
 
 
-    loss_history = []
-    x_history = []
-    x_avg_history = []
-    update_history = []
-
     d = len(x)
-
-
-    if print_to_file:
-
-        with open(x_history_file_name, "w") as file:
-            file.write("#iter  loss  " + "  ".join([f"x{i+1}" for i in range(d)]) + "\n")
 
 
     # Initial inverse Hessian approximation
@@ -236,34 +209,12 @@ def Secant_Penalized_BFGS(f, x_copy, print_to_file = False, x_history_file_name=
 
     I = np.eye(d)
 
-
     x_old = x.copy()  # Store the old x for convergence check
 
     # Calculate first loss and gradients
     loss, grad_old, std_loss, std_grad = f(x_old)
 
-
-
-    loss_history.append(loss)
-    x_history.append(x_old.copy())
-
-    
-
-    if len(x_history) < avg_len:
-        x_avg = np.mean(x_history, axis=0)
-    else:
-        x_avg = np.mean(x_history[-avg_len:], axis=0)
-
-    x_avg_history.append(x_avg.copy())
-
-    x_avg_old = x_avg.copy()  # Store the old x for convergence check
     n_convergence = 0  # Counter for convergence checks
-
-    if print_to_file:
-        with open(x_history_file_name, "a") as file:
-            file.write(f"{0}    {loss}  " + "  ".join([f"{x_avg[j]:.6f}" for j in range(d)]) + "\n")
-
-
 
     for i in range(max_iterations-1):
 
@@ -272,50 +223,7 @@ def Secant_Penalized_BFGS(f, x_copy, print_to_file = False, x_history_file_name=
 
 
         
-        alpha, line_loss_history, line_x_history, line_grad_history = line_search(f, x_old, loss, p, grad_old)
-
-        loss= line_loss_history[-1]
-        x_new = line_x_history[-1].copy()
-        grad_new = line_grad_history[-1].copy()
-
-
-        loss_history.extend(line_loss_history)
-        x_history.extend(line_x_history)
-
-        # update= alpha * p
-
-
-        # # Update parameters
-        # x_new = x_old + update
-
-
-        # # Update simulation parameters
-        # loss, grad_new, _, _ = f(x_new)
-
-
-        # loss_history.append(loss)
-        # x_history.append(x_new.copy())
-
-        # update_history.append(update.copy())
-        
-
-        # for k in range(1,len(x_history)+1):
-        #     if k < avg_len:
-        #         x_avg = np.mean(x_history[:k], axis=0)
-        #     else:
-        #         x_avg = np.mean(x_history[k-avg_len:k], axis=0)
-
-        #     x_avg_history.append(x_avg.copy())
-
-  
-
-
-
-        # print(f"Iteration {i+1}: x_new={x_new}, alpha={alpha}")
-
-        # if abs(loss) < tolerance:
-        #     print(f"Loss Converged after {i} iterations.x_new={x_new}, loss={loss_history}, tolerance={tolerance}")
-        #     break
+        alpha, loss, grad_new, x_new = line_search(f, x_old, loss, p, grad_old)
 
 
         # Compute differences
@@ -325,26 +233,28 @@ def Secant_Penalized_BFGS(f, x_copy, print_to_file = False, x_history_file_name=
         
         prod=y.dot(s)
 
-        if prod != 0:
+        # if prod != 0:
             
-            # Update inverse Hessian approximation using BFGS formula
+        #     # Update inverse Hessian approximation using BFGS formula
 
-            rho = 1.0 / prod
-            H_inv = (I - rho * np.outer(s, y)).dot(H_inv).dot(I - rho * np.outer(y, s)) + rho * np.outer(s, s)
+        #     rho = 1.0 / prod
+        #     H_inv = (I - rho * np.outer(s, y)).dot(H_inv).dot(I - rho * np.outer(y, s)) + rho * np.outer(s, s)
 
-        # # beta=(Ns/np.linalg.norm(std_grad))*np.linalg.norm(s) + N0
-        # beta=1e+10
+        beta=(Ns/np.linalg.norm(std_grad))*np.linalg.norm(s) + N0
 
-        # if prod > -1/beta:
 
-        #     gamma=1.0/(prod+1/beta)
+        if prod > -1/beta:
 
-        #     omega=1.0/(prod+2/beta)
+            gamma=1.0/(prod+1/beta)
 
-        #     H_inv = (I - omega * np.outer(s, y)).dot(H_inv).dot(I - omega * np.outer(y, s))    +     omega * (gamma/omega  + (gamma-omega)*y.dot(H_inv.dot(y))) * np.outer(s, s)
+            omega=1.0/(prod+2/beta)
 
-        #     # H_inv = np.eye(d)
+            H_inv = (I - omega * np.outer(s, y)).dot(H_inv).dot(I - omega * np.outer(y, s))    +     omega * (gamma/omega  + (gamma-omega)*y.dot(H_inv.dot(y))) * np.outer(s, s)
 
+            # H_inv = np.eye(d)
+
+
+        print(f"Iteration {i+1}: max_H_inv={max(np.abs(H_inv).flatten())}, min_H_inv={min(np.abs(H_inv).flatten())}")
 
 
         x_old = x_new.copy()  # Update old x for next iteration
@@ -353,48 +263,15 @@ def Secant_Penalized_BFGS(f, x_copy, print_to_file = False, x_history_file_name=
 
         x_avg_history=[]
 
-        for k in range(1, len(x_history) + 1):
-            if k < avg_len:
-                x_avg = np.mean(x_history[:k], axis=0)
-            else:
-                x_avg = np.mean(x_history[avg_len:], axis=0)
-
-            x_avg_history.append(x_avg.copy())
-
-        if len(x_avg_history) > avg_len:
-            x_avg_diff = [ max(abs(x_avg_history[-k] - x_avg_history[-k-1])) for k in range(avg_len)]
-
-            if all(diff < threshhold for diff in x_avg_diff):
-                print(f"Convergence check: {len(x_history)} iterations with max change {max(x_avg_diff)} < {threshhold}")
-                break
-
-
-        # if print_to_file:
-        #     with open(x_history_file_name, "a") as file:
-        #         file.write(f"{i+1}    {loss}  " + "  ".join([f"{x_avg_history[-1][j]:.6f}" for j in range(d)]) + "\n")
-        
-
-        # if len(x_history) < avg_len:
-        #     x_avg = np.mean(x_history, axis=0)
-        # else:
-        #     x_avg = np.mean(x_history[-avg_len:], axis=0)
-
-
-        # if max(abs(x_avg-x_avg_old)) < threshhold:
-        #     n_convergence+=1
-        #     print(f"Convergence check: {n_convergence} iterations with max change {max(abs(x_avg-x_avg_old))} < {threshhold}")
-        # else:
-        #     n_convergence=0
-
-        # if n_convergence==max_n_convergence:
-        #     print(f"Converged after {i} iterations.")
-        #     break
-
-        # x_avg_old = x_avg.copy()  # Update old x for next iteration
 
 
 
-    return loss_history, x_history, x_avg_history, update_history
+        if len(f.diff_avg_history)>max_n_convergence and all (diff < threshhold for diff in f.diff_avg_history[-max_n_convergence:]):
+            break
+
+
+
+    return f.f_history, f.x_history, f.x_avg_history
 
 
 
@@ -428,7 +305,7 @@ if print_to_file:
 
 #%%
     
-for d_for in range(3,d_max+1):
+for d_for in range(1,d_max+1):
 
     d=d_for
 
@@ -459,7 +336,8 @@ for d_for in range(3,d_max+1):
     if opt_name == "ADAM":
         loss_history, x_history, x_avg_history = ADAM_gradient_descent(loss_function, x0,  beta1 = 0.5, beta2 = 0.999, avg_len = 50, threshhold=5e-4, alpha=0.05, max_iterations=1000)
     
-    # bfgs_loss_history, bfgs_x_history, bfgs_x_avg_history, bfgs_update_history = Secant_Penalized_BFGS(loss_function, x0, print_to_file = print_to_file, x_history_file_name=" ", avg_len = 100, alpha=0.4, max_iterations=100, threshhold = 1e-3, max_n_convergence = 40, tolerance=1e-8, Ns=10e8, N0=10e-10)
+    if opt_name == "BFGS":
+        loss_history, x_history, x_avg_history = Secant_Penalized_BFGS(loss_function, x0, beta=1e-3, alpha=0.4, max_iterations=100, threshhold = 1e-3, max_n_convergence = 40, tolerance=1e-8, Ns=10e8, N0=10e-10)
 
 
     max_diff=max(abs(x_avg_history[-1] - loss_function.x_opt))
@@ -490,49 +368,53 @@ for d_for in range(3,d_max+1):
 
 
 
-#x_history_np = np.array(x_avg_history)
-x_history_np_2 = np.array(x_avg_history)
+# #x_history_np = np.array(x_avg_history)
+# x_history_np_2 = np.array(bfgs_x_history)
 
 
 
-plt.figure(figsize=(10, 6))
-for i in range(d):
-    # plt.plot(x_history_np[:, i],'-', color=f"C{i}", label=f"adam x{i+1} history")
-    plt.plot(x_history_np_2[:, i],'x-', color=f"C{i}", label=f"bfgs x{i+1} history")
-    plt.axhline(y=loss_function.x_opt[i], color=f"C{i}", linestyle="--", label=f"x{i+1}_opt")
+# plt.figure(figsize=(10, 6))
+# for i in range(d):
+#     # plt.plot(x_history_np[:, i],'-', color=f"C{i}", label=f"adam x{i+1} history")
+#     plt.plot(x_history_np_2[:, i],'x-', color=f"C{i}", label=f"bfgs x{i+1} history")
+#     plt.axhline(y=loss_function.x_opt[i], color=f"C{i}", linestyle="--", label=f"x{i+1}_opt")
 
 
 
-# plt.xlabel("Iteration")
-# plt.ylabel("x values")
-# plt.title("Convergence of x_history to x_opt")
-# plt.legend()
-# plt.grid()
-# plt.show()
+# # plt.xlabel("Iteration")
+# # plt.ylabel("x values")
+# # plt.title("Convergence of x_history to x_opt")
+# # plt.legend()
+# # plt.grid()
+# # plt.show()
 
+
+
+# # # #%%
+# # # bfgs_loss_history
+# # # %%
+# # plt.plot([np.log10(x) for x in loss_history], label='BFGS Loss History')
+# # # %%
+# # # bfgs_x_history
+# # # # %%
+# # # bfgs_x_avg_history
+# # # # %%
+# # # [1,2,3,4][:1]
+# # # # %%
+
+# # # %%
+# # len(x_avg_history)
+# # %%
+# # abs(np.array([-1,2,-5]))
+# # # %%
+# # if all (diff < 1e-4 for diff in loss_function.diff_avg_history[-50:]):
+# #     break
 
 
 # # #%%
-# # bfgs_loss_history
+# # (diff < 1e-4 for diff in loss_function.diff_avg_history[-50:])
 # # %%
-# plt.plot([np.log10(x) for x in loss_history], label='BFGS Loss History')
+# max(np.abs(np.array([[1,2],[3,4]])).flatten())
 # # %%
-# # bfgs_x_history
-# # # %%
-# # bfgs_x_avg_history
-# # # %%
-# # [1,2,3,4][:1]
-# # # %%
-
+# np.abs(np.array([[1,2],[3,4]]))
 # # %%
-# len(x_avg_history)
-# %%
-# abs(np.array([-1,2,-5]))
-# # %%
-# if all (diff < 1e-4 for diff in loss_function.diff_avg_history[-50:]):
-#     break
-
-
-# #%%
-# (diff < 1e-4 for diff in loss_function.diff_avg_history[-50:])
-# %%
