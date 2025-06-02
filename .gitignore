@@ -130,3 +130,6 @@ tests/Figure_2.png
 *.png
 
 *.txt
+
+
+*run.slurm
