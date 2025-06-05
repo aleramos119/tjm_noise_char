@@ -2,7 +2,7 @@
 #SBATCH --job-name=%JOB_NAME% # Job name
 #SBATCH --time=2-00:00:00 # Specify a Time limit in the format days-hrs:min:sec. Use sinfo to see node time limits
 #SBATCH --chdir=/home/htc/aramos/simulation_of_open_quantum_systems/tjm_noise_char/tests/yaqs_test  # Navigate to the working directory where your script lies
-#SBATCH --output=/home/htc/aramos/simulation_of_open_quantum_systems/tjm_noise_char/tests/yaqs_test/%JOB_DIR%/%j.log     # Standard output and error log
+#SBATCH --output=/home/htc/aramos/simulation_of_open_quantum_systems/tjm_noise_char/tests/yaqs_test/results/cpu_traj_scan/%JOB_DIR%/%j.log     # Standard output and error log
 #SBATCH --partition=small  # Specify the desired partition, e.g. gpu or big. Note that small is the default partition.
 #SBATCH --cpus-per-task=%NCPUS%
 
@@ -37,7 +37,7 @@ export https_proxy=http://squid.zib.de:3128
 export http_proxy=http://squid.zib.de:3128
 
 echo 'Running python script'
-python many_D_adam_opt.py %JOB_DIR% %NTRAJ%
+python propagation.py %JOB_DIR% %NTRAJ%
 
 
 
