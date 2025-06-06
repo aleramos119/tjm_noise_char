@@ -1,7 +1,7 @@
 #%%
 import numpy as np
 from mqt.yaqs.noise_char.propagation import *
-
+import matplotlib.pyplot as plt
 
 import sys
 import time
@@ -13,11 +13,11 @@ args = sys.argv[1:]
 
 
 
-args=["results/cpu_traj_scan/cpu_traj_scan/32_cpus_4096_traj", 124]
+args=["results/cpu_traj_scan/cpu_traj_scan/32_cpus_4096_traj", 124, 100]
 
-folder = args[0]
+folder = int(args[0])
 
-ntraj = args[1]
+ntraj = int(args[1])
 
 
 folder="results/cpu_traj_scan/"+folder
@@ -51,9 +51,9 @@ with open(f"{folder}/time_sec.txt", "w") as f:
 
 
 #%%
-cpu_list=[8, 12, 16, 20, 32, 36, 64, 68]
+cpu_list=[8, 16, 32]
 
-sites=4
+sites=100
 
 ntraj=4096
 
@@ -72,8 +72,8 @@ for cpu in cpu_list:
     time_file= f"{folder}/time_sec.txt"
     mem_file= f"{folder}/mem_usage.csv"
 
-    time_list.append(np.loadtxt(time_file))
-    mem_list.append(pd.read_csv(mem_file).values[-1])
+    time_list.append(np.loadtxt(time_file)/60/60)
+    # mem_list.append(pd.read_csv(mem_file).values[-1])
 
 
 plt.plot(cpu_list, time_list,'-o')
@@ -89,7 +89,7 @@ plt.ylabel("Memory Usage (MB)")
 # %%
 import matplotlib.pyplot as plt
 
-ncpus=20
+ncpus=32
 
 csv_file=f"/home/aramos/Dokumente/Work/Simulation of Open Quantum Systems/tjm_noise_char/tests/yaqs_test/results/cpu_traj_scan/4_sites/{ncpus}_cpus/4096_traj/cpu_usage.csv"
 

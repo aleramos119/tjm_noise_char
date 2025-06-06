@@ -171,7 +171,6 @@ def ADAM_gradient_descent(f, x_copy, avg_len = 100, alpha=0.01, max_iterations=2
             break
 
 
-
     return f.f_history, f.x_history, f.x_avg_history
 
 
