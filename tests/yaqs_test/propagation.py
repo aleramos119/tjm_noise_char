@@ -30,7 +30,7 @@ def log_memory(pid, log_file, interval=1):
 
 
 
-def main_code(folder, ntraj, L):
+def main_code(folder, ntraj, L, order , threshold):
     
 
 
@@ -39,6 +39,8 @@ def main_code(folder, ntraj, L):
     sim_params.N = ntraj
     sim_params.L = L
     sim_params.T = 5
+    sim_params.order = order
+    sim_params.threshold = threshold
 
 
     start_time = time.time()
@@ -74,6 +76,11 @@ if __name__=="__main__":
 
     L = int(args[2])
 
+    order= int(args[3])
+
+
+    threshold = float(args[4])
+
 
     pid = os.getpid()
 
@@ -87,7 +94,7 @@ if __name__=="__main__":
     # Run your main code
 
 
-    main_code(folder, ntraj, L)
+    main_code(folder, ntraj, L, order , threshold)
 
 
 
