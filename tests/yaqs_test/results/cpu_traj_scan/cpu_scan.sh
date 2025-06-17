@@ -2,10 +2,7 @@
 
 # Define your two parameter sets
 cpus=(8 16 32 64)
-<<<<<<< Updated upstream
-=======
 #cpus=(8)
->>>>>>> Stashed changes
 trajectories=(4096)
 
 L=80
@@ -22,11 +19,7 @@ for ncpus in "${cpus[@]}"; do
 
         job_name="${ncpus}_cpus/${ntraj}_traj"
 
-<<<<<<< Updated upstream
-        job_dir="4_sites/${job_name}"
-=======
         job_dir="${L}_sites/${job_name}"
->>>>>>> Stashed changes
 
         mkdir -p "${job_dir}"
 

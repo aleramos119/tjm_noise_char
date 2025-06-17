@@ -3,11 +3,7 @@
 #SBATCH --time=24:00:00 # Specify a Time limit in the format days-hrs:min:sec. Use sinfo to see node time limits
 #SBATCH --chdir=/home/htc/aramos/simulation_of_open_quantum_systems/tjm_noise_char/tests/yaqs_test  # Navigate to the working directory where your script lies
 #SBATCH --output=/home/htc/aramos/simulation_of_open_quantum_systems/tjm_noise_char/tests/yaqs_test/results/cpu_traj_scan/%JOB_DIR%/%j.log     # Standard output and error log
-<<<<<<< Updated upstream
-#SBATCH --partition=small  # Specify the desired partition, e.g. gpu or big. Note that small is the default partition.
-=======
 #SBATCH --partition=high-mem  # Specify the desired partition, e.g. gpu or big. Note that small is the default partition.
->>>>>>> Stashed changes
 #SBATCH --cpus-per-task=%NCPUS%
 
 ##SBATCH --exclude=htc-cmp[101-148,501-532] # exclude nodes. Your job will run on nodes not in the list.
@@ -41,9 +37,6 @@ export https_proxy=http://squid.zib.de:3128
 export http_proxy=http://squid.zib.de:3128
 
 echo 'Running python script'
-<<<<<<< Updated upstream
-python propagation.py %JOB_DIR% %NTRAJ%
-=======
 CPU_LIST=$(taskset -cp $$ | awk -F: '{print $2}' | tr -d ' ')
 
 
@@ -65,7 +58,6 @@ $2 ~ /^[0-9]+$/ {
 
 
 python propagation.py %JOB_DIR% %NTRAJ% %L%
->>>>>>> Stashed changes
 
 
 

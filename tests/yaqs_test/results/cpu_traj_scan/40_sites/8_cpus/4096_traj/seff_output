@@ -1,0 +1,11 @@
+Job ID: 12971326
+Cluster: z1
+User/Group: aramos/ais2t
+State: OUT_OF_MEMORY (exit code 0)
+Nodes: 1
+Cores per node: 8
+CPU Utilized: 00:00:51
+CPU Efficiency: 0.25% of 05:36:24 core-walltime
+Job Wall-clock time: 00:42:03
+Memory Utilized: 84.49 GB
+Memory Efficiency: 360.50% of 23.44 GB (2.93 GB/core)

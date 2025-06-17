@@ -1,14 +1,15 @@
 #!/bin/bash
 
 # Define your two parameter sets
-cpus=(16)
+cpus=(32)
 
-trajectories=(512 1024)
+trajectories=(128 256 512 1024)
 
-L_list=(10 20 40 80)
+#L_list=(10 20 40 80)
+
+L_list=(80 100)
 
 d=2
-
 
 # Paths
 template="template.slurm"
@@ -19,7 +20,7 @@ for ncpus in "${cpus[@]}"; do
     for ntraj in "${trajectories[@]}"; do
 	for L in "${L_list[@]}"; do
 
-        	job_name="d_${d}/L_${L}/ntraj_${ntraj}"
+        	job_name="d_${d}_ntraj0_8192/L_${L}/ntraj_${ntraj}"
 
         	job_dir="results/optimization/${job_name}"
 

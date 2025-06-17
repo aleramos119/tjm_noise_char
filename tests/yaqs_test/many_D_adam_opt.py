@@ -3,29 +3,12 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
-import torch
-from botorch.fit import fit_gpytorch_mll
-from gpytorch.mlls import ExactMarginalLogLikelihood
 
-
-from botorch.acquisition import LogExpectedImprovement,UpperConfidenceBound
-
-from botorch.optim import optimize_acqf
-
-
-import time
-
-from botorch.acquisition.objective import ScalarizedPosteriorTransform
-
-from auxiliar.transform import derivative_transform
-from auxiliar.custom_gp import GPModel, GPModelWithDerivatives
-from auxiliar.plot import plot_model
-import sys
 import os
 
 # args = sys.argv[1:]
 
-args=["ADAM", 3]
+args=["BFGS", 50]
 
 opt_name = args[0]
 
@@ -285,7 +268,7 @@ def Secant_Penalized_BFGS(f, x_copy, beta=0, alpha=0.01, max_iterations=200, thr
 
 #%%
 
-folder = f"test/{opt_name}_test/"
+folder = f"test/algorithm_test/{opt_name}_test/"
 
 if not os.path.exists(folder):
     os.makedirs(folder)
@@ -304,7 +287,7 @@ if print_to_file:
 
 #%%
     
-for d_for in range(1,d_max+1):
+for d_for in range(46,46+1):
 
     d=d_for
 
@@ -336,7 +319,7 @@ for d_for in range(1,d_max+1):
         loss_history, x_history, x_avg_history = ADAM_gradient_descent(loss_function, x0,  beta1 = 0.5, beta2 = 0.999, avg_len = 50, threshhold=5e-4, alpha=0.05, max_iterations=1000)
     
     if opt_name == "BFGS":
-        loss_history, x_history, x_avg_history = Secant_Penalized_BFGS(loss_function, x0, beta=1e-3, alpha=0.4, max_iterations=100, threshhold = 1e-3, max_n_convergence = 40, tolerance=1e-8, Ns=10e8, N0=10e-10)
+        loss_history, x_history, x_avg_history = Secant_Penalized_BFGS(loss_function, x0, beta=1e-3, alpha=0.4, max_iterations=1000, threshhold = 1e-3, max_n_convergence = 40, tolerance=1e-8, Ns=10e8, N0=10e-10)
 
 
     max_diff=max(abs(x_avg_history[-1] - loss_function.x_opt))
