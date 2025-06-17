@@ -1,6 +1,7 @@
 #!/bin/bash
 
 # Define your two parameter sets
+<<<<<<< HEAD
 cpus=(32)
 
 trajectories=(512 1024)
@@ -8,6 +9,13 @@ trajectories=(512 1024)
 #L_list=(10 20 40 80)
 
 L_list=(80 100)
+=======
+cpus=(16)
+
+trajectories=(512 1024)
+
+L_list=(10 20 40 80)
+>>>>>>> tjm_noise_char/main
 
 d=2
 

@@ -59,6 +59,18 @@ def main_code(folder, ntraj, L):
         f.write(f"{duration}\n")
 
 #%%
+<<<<<<< HEAD
+=======
+qt_ref_traj_reshaped = qt_ref_traj.reshape(-1, *qt_ref_traj.shape[2:]).T
+
+np.savetxt(f"{folder}/qt_ref_traj.txt", qt_ref_traj_reshaped )
+
+
+<<<<<<< Updated upstream
+duration = end_time - start_time
+with open(f"{folder}/time_sec.txt", "w") as f:
+    f.write(f"{duration}\n")
+>>>>>>> tjm_noise_char/main
 
 
 
@@ -164,6 +176,48 @@ if __name__=="__main__":
 # plt.plot(np.array(mem_usage/1024/1024))
 
 
+<<<<<<< HEAD
 # # %%
 # mem_usage
 # # %%
+=======
+# %%
+mem_usage
+# %%
+=======
+#%%
+
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+
+cpu_list = [8, 9, 16, 17, 32, 33, 64, 65]
+
+time_list=[]
+
+for cpu in cpu_list:
+    folder= f"results/cpu_traj_scan/4_sites/{cpu}_cpus/4096_traj/"
+
+    time_file=folder + "time_sec.txt"
+
+    time_list.append(np.loadtxt(time_file))
+
+
+plt.plot(cpu_list, time_list, marker='o')
+plt.xlabel("Number of CPUs")
+plt.ylabel("Time (seconds)")
+plt.title("Time vs Number of CPUs for 4096 Trajectories")
+# %%
+
+csv_file = "your_file.csv"  # Replace with your actual CSV file path
+
+df = pd.read_csv(csv_file)
+
+df.plot()
+plt.xlabel("Index")
+plt.ylabel("Value")
+plt.title("All Columns from CSV File")
+plt.legend(loc='best')
+plt.show()
+>>>>>>> Stashed changes
+>>>>>>> tjm_noise_char/main
