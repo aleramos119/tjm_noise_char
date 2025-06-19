@@ -1,0 +1,11 @@
+Job ID: 12944869
+Cluster: z1
+User/Group: aramos/ais2t
+State: COMPLETED (exit code 0)
+Nodes: 1
+Cores per node: 12
+CPU Utilized: 00:32:27
+CPU Efficiency: 53.02% of 01:01:12 core-walltime
+Job Wall-clock time: 00:05:06
+Memory Utilized: 12.42 GB
+Memory Efficiency: 35.33% of 35.16 GB (2.93 GB/core)

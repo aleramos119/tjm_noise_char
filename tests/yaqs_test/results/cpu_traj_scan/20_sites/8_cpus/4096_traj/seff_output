@@ -1,0 +1,11 @@
+Job ID: 12971312
+Cluster: z1
+User/Group: aramos/ais2t
+State: FAILED (exit code 127)
+Nodes: 1
+Cores per node: 8
+CPU Utilized: 1-18:18:29
+CPU Efficiency: 98.05% of 1-19:08:56 core-walltime
+Job Wall-clock time: 05:23:37
+Memory Utilized: 80.03 GB
+Memory Efficiency: 341.46% of 23.44 GB (2.93 GB/core)
