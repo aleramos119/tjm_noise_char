@@ -19,14 +19,25 @@ def log_memory(pid, log_file, interval=1):
         f.write("timestamp,ram_GB\n")
     try:
         while True:
-            mem_bytes = process.memory_info().rss  # byte
-            mem_mb = mem_bytes / 1024 / 1024 / 1024      # GB
+            # Get memory usage of the main process
+            total_mem_bytes = process.memory_info().rss
+
+            # Add memory usage of all child processes (recursively)
+            for child in process.children(recursive=True):
+                try:
+                    total_mem_bytes += child.memory_info().rss
+                except (psutil.NoSuchProcess, psutil.AccessDenied):
+                    pass  # child might have exited
+
+            mem_gb = total_mem_bytes / 1024 / 1024 / 1024  # Convert to GB
             timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
             with open(log_file, "a") as f:
-                f.write(f"{timestamp},{mem_mb:.2f}\n")
+                f.write(f"{timestamp},{mem_gb:.2f}\n")
+
             time.sleep(interval)
-    except:
-        pass  # exit silently when thread is stopped
+    except Exception as e:
+        pass  # Silently ignore exceptions when stopping
 
 
 
@@ -50,7 +61,7 @@ def main_code(folder, ntraj, L, order , threshold):
 
     end_time = time.time()
 
-    #%%
+
     qt_ref_traj_reshaped = qt_ref_traj.reshape(-1, *qt_ref_traj.shape[2:]).T
 
     np.savetxt(f"{folder}/qt_ref_traj.txt", qt_ref_traj_reshaped )
@@ -69,6 +80,8 @@ def main_code(folder, ntraj, L, order , threshold):
 
 if __name__=="__main__":
     args = sys.argv[1:]
+
+    # args = ["test/propagation/", "256", "3", "2", "1e-6"]
 
     folder = args[0]
 
@@ -102,37 +115,75 @@ if __name__=="__main__":
     time.sleep(1)
 
 
-# #%%
-# cpu_list=[8, 16, 32]
-
-# sites=100
-
-# ntraj=4096
 
 
 
 
-# time_list=[]
-
-# mem_list=[]
 
 
-# for cpu in cpu_list:
-
-#     folder=f"results/cpu_traj_scan/{sites}_sites/{cpu}_cpus/{ntraj}_traj/"
-
-#     time_file= f"{folder}/time_sec.txt"
-#     mem_file= f"{folder}/mem_usage.csv"
-
-#     time_list.append(np.loadtxt(time_file)/60/60)
-#     # mem_list.append(pd.read_csv(mem_file).values[-1])
 
 
-# plt.plot(cpu_list, time_list,'-o')
-# plt.xlabel("Number of CPUs")
-# plt.ylabel("Time (seconds)")
 
-# #%%
+
+
+
+
+
+
+
+#%%
+cpu_list=[10, 18, 34]
+
+sites=100
+
+ntraj=512
+
+precision_list=[[1,"1e-4"],[2,"1e-6"]]
+
+precision=precision_list[0]
+
+
+job="memory"
+
+
+
+for precision in precision_list:
+
+
+    data_list=[]
+
+
+    for cpu in cpu_list:
+
+        folder=f"results/cpu_traj_scan/order_{precision[0]}/threshold_{precision[1]}/{sites}_sites/{cpu}_cpus/{ntraj}_traj"
+
+        if job=="time":
+
+            time_file= f"{folder}/time_sec.txt"
+            data_list.append(np.loadtxt(time_file)/60/60)
+            plt.ylabel("Time (seconds)")
+
+
+        if job=="memory":
+
+            mem_file= f"{folder}/self_memory_log.csv"
+            data_list.append(max(pd.read_csv(mem_file).values[:,1]))
+
+            plt.ylabel("Max Memory (GB)")
+
+
+    plt.plot(cpu_list, data_list,'-o', label=f"order_{precision[0]}/threshold_{precision[1]}")
+plt.title(f"{sites}_sites  {ntraj}_Ntraj")
+plt.xlabel("Number of CPUs")
+plt.legend()
+#%%
+precision=precision_list[1]
+sites=100
+cpu=34
+ntraj=512
+plt.plot(pd.read_csv(f"results/cpu_traj_scan/order_{precision[0]}/threshold_{precision[1]}/{sites}_sites/{cpu}_cpus/{ntraj}_traj/self_memory_log.csv").values[:,1])
+
+#%%
 # plt.plot(cpu_list, mem_list,'-o')
 # plt.xlabel("Number of CPUs")
 # plt.ylabel("Memory Usage (MB)")
@@ -174,3 +225,4 @@ if __name__=="__main__":
 # # %%
 # mem_usage
 # # %%
+# %%

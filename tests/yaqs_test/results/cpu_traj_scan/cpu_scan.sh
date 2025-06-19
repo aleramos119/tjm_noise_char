@@ -1,15 +1,15 @@
 #!/bin/bash
 
 # Define your two parameter sets
-cpus=(8 16 32 64)
-<<<<<<< Updated upstream
-=======
+cpus=(10 18 34)
 #cpus=(8)
->>>>>>> Stashed changes
-trajectories=(4096)
+trajectories=(512)
 
-L=80
+L=100 
 
+order=1
+
+threshold="1e-4"
 
 # Paths
 template="template.slurm"
@@ -22,11 +22,7 @@ for ncpus in "${cpus[@]}"; do
 
         job_name="${ncpus}_cpus/${ntraj}_traj"
 
-<<<<<<< Updated upstream
-        job_dir="4_sites/${job_name}"
-=======
-        job_dir="${L}_sites/${job_name}"
->>>>>>> Stashed changes
+        job_dir="order_${order}/threshold_${threshold}/${L}_sites/${job_name}"
 
         mkdir -p "${job_dir}"
 
@@ -34,7 +30,7 @@ for ncpus in "${cpus[@]}"; do
         output_script="$job_dir/run.slurm"
 
         # Replace placeholders in the template
-        sed  -e "s|%L%|${L}|g"  -e "s|%NCPUS%|${ncpus}|g" -e "s|%NTRAJ%|${ntraj}|g" -e "s|%JOB_NAME%|${job_name}|g" -e "s|%JOB_DIR%|${job_dir}|g" "$template" > "$output_script"
+        sed -e "s|%THRESHOLD%|${threshold}|g" -e "s|%ORDER%|${order}|g" -e "s|%L%|${L}|g"  -e "s|%NCPUS%|${ncpus}|g" -e "s|%NTRAJ%|${ntraj}|g" -e "s|%JOB_NAME%|${job_name}|g" -e "s|%JOB_DIR%|${job_dir}|g" "$template" > "$output_script"
 
         # Optional: submit the job
         sbatch "$output_script"

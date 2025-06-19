@@ -20,6 +20,8 @@ ntraj=512
 plt.rcParams.update({'axes.linewidth': 1.2})
 plt.rcParams.update({'font.size': 18, 'lines.linewidth': 2, 'lines.markersize': 6})
 
+plt.figure(figsize=(15, 5))
+
 
 for ntraj in ntraj_list:
 
@@ -45,14 +47,14 @@ for ntraj in ntraj_list:
 plt.xlabel(r"N")
 plt.ylabel(r"$log( e_{max})$")
 plt.legend()
-plt.savefig(f"{folder}/error_vs_L.pdf", dpi=300, bbox_inches='tight')
+plt.savefig(f"{folder}/error_vs_L_15x5.pdf", dpi=300, bbox_inches='tight')
 
 
 
 
 # %%
 
-L=40
+L=100
 ntraj=512
 
 
