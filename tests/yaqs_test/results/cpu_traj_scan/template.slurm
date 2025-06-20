@@ -56,8 +56,35 @@ $2 ~ /^[0-9]+$/ {
   print $1 "," cpu "," usr
 }' > results/cpu_traj_scan/%JOB_DIR%/cpu_usage.csv &
 
+MPSTAT_PID=$!
+
+
+
+
+# Start sstat logging in the background
+{
+  echo "timestamp,MaxRSS"
+  while true; do
+    timestamp=$(date '+%Y-%m-%d %H:%M:%S')
+    #maxrss=$(sstat -j ${SLURM_JOB_ID}.batch --format=MaxRSS --noheader 2>/dev/null | awk '{print $1}')
+    maxrss_kb=$(sstat -j ${SLURM_JOB_ID}.batch --format=MaxRSS --noheader 2>/dev/null | awk '{print $1}')
+    maxrss_gb=$(awk -v kb="$maxrss_kb" 'BEGIN { printf "%.2f", kb / 1024 / 1024 }')
+    if [ -z "$maxrss_gb" ]; then
+      break
+    fi
+    echo "$timestamp,$maxrss_gb"
+    sleep 1
+  done
+} > results/cpu_traj_scan/%JOB_DIR%/sstat_log.csv &
+SSTAT_PID=$!
+
+
 
 python propagation.py results/cpu_traj_scan/%JOB_DIR% %NTRAJ% %L% %ORDER% %THRESHOLD%
+
+# Stop background loggers after script ends
+kill $MPSTAT_PID
+kill $SSTAT_PID
 
 
 

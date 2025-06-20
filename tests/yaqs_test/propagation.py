@@ -41,7 +41,7 @@ def log_memory(pid, log_file, interval=1):
 
 
 
-def main_code(folder, ntraj, L, order , threshold):
+def main_code(folder, ntraj, L, order , threshold, method):
     
 
 
@@ -56,7 +56,11 @@ def main_code(folder, ntraj, L, order , threshold):
 
     start_time = time.time()
 
-    t, qt_ref_traj, d_On_d_gk=tjm_traj(sim_params)
+    if method == "scikit_tt":
+        t, qt_ref_traj, d_On_d_gk=scikit_tt_traj(sim_params)
+
+    elif method == "tjm":
+        t, qt_ref_traj, d_On_d_gk = tjm_traj(sim_params)
 
 
     end_time = time.time()
@@ -94,6 +98,8 @@ if __name__=="__main__":
 
     threshold = float(args[4])
 
+    method = args[5]
+
 
     pid = os.getpid()
 
@@ -107,7 +113,7 @@ if __name__=="__main__":
     # Run your main code
 
 
-    main_code(folder, ntraj, L, order , threshold)
+    main_code(folder, ntraj, L, order , threshold, method)
 
 
 
@@ -131,58 +137,60 @@ if __name__=="__main__":
 
 
 
-#%%
-cpu_list=[10, 18, 34]
+# #%%
+# cpu_list=[10, 18, 34]
 
-sites=100
+# sites=100
 
-ntraj=512
+# ntraj=512
 
-precision_list=[[1,"1e-4"],[2,"1e-6"]]
+# precision_list=[[1,"1e-4"],[2,"1e-6"]]
 
-precision=precision_list[0]
-
-
-job="memory"
+# precision=precision_list[0]
 
 
-
-for precision in precision_list:
-
-
-    data_list=[]
+# job="memory"
 
 
-    for cpu in cpu_list:
 
-        folder=f"results/cpu_traj_scan/order_{precision[0]}/threshold_{precision[1]}/{sites}_sites/{cpu}_cpus/{ntraj}_traj"
-
-        if job=="time":
-
-            time_file= f"{folder}/time_sec.txt"
-            data_list.append(np.loadtxt(time_file)/60/60)
-            plt.ylabel("Time (seconds)")
+# for precision in precision_list:
 
 
-        if job=="memory":
-
-            mem_file= f"{folder}/self_memory_log.csv"
-            data_list.append(max(pd.read_csv(mem_file).values[:,1]))
-
-            plt.ylabel("Max Memory (GB)")
+#     data_list=[]
 
 
-    plt.plot(cpu_list, data_list,'-o', label=f"order_{precision[0]}/threshold_{precision[1]}")
-plt.title(f"{sites}_sites  {ntraj}_Ntraj")
-plt.xlabel("Number of CPUs")
-plt.legend()
-#%%
-precision=precision_list[1]
-sites=100
-cpu=34
-ntraj=512
-plt.plot(pd.read_csv(f"results/cpu_traj_scan/order_{precision[0]}/threshold_{precision[1]}/{sites}_sites/{cpu}_cpus/{ntraj}_traj/self_memory_log.csv").values[:,1])
+#     for cpu in cpu_list:
 
+#         folder=f"results/cpu_traj_scan/order_{precision[0]}/threshold_{precision[1]}/{sites}_sites/{cpu}_cpus/{ntraj}_traj"
+
+#         if job=="time":
+
+#             time_file= f"{folder}/time_sec.txt"
+#             data_list.append(np.loadtxt(time_file)/60/60)
+#             plt.ylabel("Time (hours)")
+
+
+#         if job=="memory":
+
+#             mem_file= f"{folder}/sstat_log.csv"
+#             data_list.append(max(pd.read_csv(mem_file).values[:,1]))
+
+#             plt.ylabel("Max Memory (GB)")
+
+
+#     plt.plot(cpu_list, data_list,'-o', label=f"order_{precision[0]}/threshold_{precision[1]}")
+# plt.title(f"{sites}_sites  {ntraj}_Ntraj")
+# plt.xlabel("Number of CPUs")
+# plt.legend()
+# #%%
+# precision=precision_list[1]
+# sites=100
+# cpu=34
+# ntraj=512
+# plt.plot(pd.read_csv(f"results/cpu_traj_scan/order_{precision[0]}/threshold_{precision[1]}/{sites}_sites/{cpu}_cpus/{ntraj}_traj/self_memory_log.csv").values[:,1])
+# plt.ylim(22,23)
+# plt.ylabel("Memory Usage (GB)")
+# plt.xlabel("Time (seconds)")
 #%%
 # plt.plot(cpu_list, mem_list,'-o')
 # plt.xlabel("Number of CPUs")
@@ -225,4 +233,25 @@ plt.plot(pd.read_csv(f"results/cpu_traj_scan/order_{precision[0]}/threshold_{pre
 # # %%
 # mem_usage
 # # %%
-# %%
+# # %%
+
+
+
+# #%%
+# sim_params = SimulationParameters()
+# t, ref_traj, d_On_d_gk=tjm_traj(sim_params)
+# # %%
+# sci_kit_t, sci_kit_ref_traj, sci_kit_d_On_d_gk=scikit_tt_traj(sim_params)
+
+# # %%
+
+
+
+
+# plt.plot(t, d_On_d_gk[1, 1, 3,:], label="TJM")
+# plt.plot(sci_kit_t, np.array(sci_kit_d_On_d_gk)[1, 1, 3,:], label="SciKit-TT")
+
+# plt.legend()
+
+# # plt.plot(t, ref_traj[:, 0, 0], label="TJM")
+# # %%

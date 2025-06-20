@@ -7,9 +7,9 @@ trajectories=(512)
 
 L=100 
 
-order=1
+order=2
 
-threshold="1e-4"
+threshold="1e-6"
 
 # Paths
 template="template.slurm"

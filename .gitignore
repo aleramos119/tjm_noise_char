@@ -136,3 +136,5 @@ tests/Figure_2.png
 *.csv
 
 *.pdf
+
+*.pkl
