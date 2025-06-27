@@ -10,9 +10,9 @@ from mqt.yaqs.noise_char.propagation import *
 import sys
 import os
 #
-# args = sys.argv[1:]
+args = sys.argv[1:]
 
-args=["test/reset", 100, 3, "True", "1", "1e-4"]
+# args=["test/reset", 100, 3, "True", "1", "1e-4"]
 
 folder = args[0]
 
@@ -27,6 +27,7 @@ order = int(args[4])
 
 threshold = float(args[5])
 
+dimensions = args[6]
 
 
 
@@ -35,13 +36,18 @@ threshold = float(args[5])
 
 if restart:
     gammas = np.genfromtxt(f"{folder}/gammas.txt", skip_header=1)
-    gamma_rel = gammas[:L]
-    gamma_deph = gammas[L:]
+
+    if dimensions == "2d":
+        gamma_rel=gammas[0]
+        gamma_deph=gammas[1]
+
+    if dimensions == "nd":
+        gamma_rel = gammas[:L]
+        gamma_deph = gammas[L:]
 
 else:
     gamma_rel=np.random.rand(L)
     gamma_deph=np.random.rand(L)
-
 
 
 sim_params = SimulationParameters(L, gamma_rel, gamma_deph)
@@ -50,7 +56,7 @@ sim_params.N = 4096
 
 
 
-t, qt_ref_traj, d_On_d_gk=qutip_traj(sim_params)
+t, qt_ref_traj, d_On_d_gk=tjm_traj(sim_params)
 
 
 qt_ref_traj_reshaped = qt_ref_traj.reshape(-1, qt_ref_traj.shape[-1])
@@ -89,18 +95,27 @@ sim_params.N = ntraj
 sim_params.order = order
 sim_params.threshold = threshold
 
-loss_function=loss_class_nd(sim_params, qt_ref_traj, qutip_traj, print_to_file=True)
 
+
+
+if dimensions == "2":
+
+    loss_function=loss_class_2d(sim_params, qt_ref_traj, qutip_traj, print_to_file=True)
+    x0 = np.random.rand(2)
+
+if dimensions == "2L":
+
+    loss_function=loss_class_nd(sim_params, qt_ref_traj, qutip_traj, print_to_file=True)
+    x0 = np.random.rand(2*sim_params.L)
 
 loss_function.set_file_name(f"{folder}/loss_x_history", reset=not restart)
 
-x0 = np.random.rand(2*sim_params.L)
 
 
 
 #%%
 loss_function.reset()
-loss_history, x_history, x_avg_history, t_opt, exp_val_traj= ADAM_loss_class(loss_function, x0, alpha=0.1, max_iterations=100, threshhold = 1e-3, max_n_convergence = 20, tolerance=1e-8, beta1 = 0.5, beta2 = 0.99, epsilon = 1e-8, restart=restart)#, Ns=10e5)
+loss_history, x_history, x_avg_history, t_opt, exp_val_traj= ADAM_loss_class(loss_function, x0, alpha=0.1, max_iterations=500, threshhold = 1e-3, max_n_convergence = 20, tolerance=1e-8, beta1 = 0.5, beta2 = 0.99, epsilon = 1e-8, restart=restart)#, Ns=10e5)
 
 
 # %%
@@ -126,36 +141,36 @@ np.savetxt(opt_traj_file, exp_val_traj_with_t.T, header=header, fmt='%.6f')
 
 
 
-L=100
-ntraj=1024
-x_avg_file="test/reset/loss_x_history.txt"
-gammas_file="test/reset/gammas.txt"
+# L=100
+# ntraj=1024
+# x_avg_file="test/reset/loss_x_history.txt"
+# gammas_file="test/reset/gammas.txt"
 
-data = np.genfromtxt(x_avg_file, skip_header=1)
-gammas=np.genfromtxt(gammas_file, skip_header=1)
-
-
-nt,cols = data.shape
-
-d=cols-2
-
-L=d//2
-
-for i in range(d):
-    plt.plot(data[:, 0], data[:, 2 + i], label=f"$\\gamma_{{{i+1}}}$")
-    plt.axhline(gammas[i], color=plt.gca().lines[-1].get_color(), linestyle='--', linewidth=2)
+# data = np.genfromtxt(x_avg_file, skip_header=1)
+# gammas=np.genfromtxt(gammas_file, skip_header=1)
 
 
-plt.xlabel("Iterations")
-plt.ylabel(r"$\gamma$")
-plt.legend()
+# nt,cols = data.shape
+
+# d=cols-2
+
+# L=d//2
+
+# for i in range(d):
+#     plt.plot(data[:, 0], data[:, 2 + i], label=f"$\\gamma_{{{i+1}}}$")
+#     plt.axhline(gammas[i], color=plt.gca().lines[-1].get_color(), linestyle='--', linewidth=2)
+
+
+# plt.xlabel("Iterations")
+# plt.ylabel(r"$\gamma$")
+# plt.legend()
 
 
 
 
-# %%
+# # %%
 
-plt.plot(loss_function.diff_avg_history)
-# %%
-loss_function.diff_avg_history
-# %%
+# plt.plot(loss_function.diff_avg_history)
+# # %%
+# loss_function.diff_avg_history
+# # %%

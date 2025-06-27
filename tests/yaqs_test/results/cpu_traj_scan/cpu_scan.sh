@@ -1,18 +1,21 @@
 #!/bin/bash
 
 # Define your two parameter sets
-cpus=(10 18 34)
+cpus=(66)
 #cpus=(8)
 trajectories=(512)
 
 L=100 
 
-order=2
+order=1
 
-threshold="1e-6"
+threshold="1e-4"
 
 # Paths
 template="template.slurm"
+
+
+method="scikit_tt"
 
 
 # Loop over all combinations
