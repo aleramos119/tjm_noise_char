@@ -1,10 +1,12 @@
 #!/bin/bash
 #SBATCH --job-name=%JOB_NAME% # Job name
-#SBATCH --time=2-02:00:00 # Specify a Time limit in the format days-hrs:min:sec. Use sinfo to see node time limits
+#SBATCH --time=4-00:00:00 # Specify a Time limit in the format days-hrs:min:sec. Use sinfo to see node time limits
 #SBATCH --chdir=/home/htc/aramos/simulation_of_open_quantum_systems/tjm_noise_char/tests/yaqs_test  # Navigate to the working directory where your script lies
 #SBATCH --output=/home/htc/aramos/simulation_of_open_quantum_systems/tjm_noise_char/tests/yaqs_test/%JOB_DIR%/%j.log     # Standard output and error log
-#SBATCH --partition=high-mem  # Specify the desired partition, e.g. gpu or big. Note that small is the default partition.
+#SBATCH --partition=big  # Specify the desired partition, e.g. gpu or big. Note that small is the default partition.
 #SBATCH --cpus-per-task=%NCPUS%
+##SBATCH --mem=100G 
+
 
 ##SBATCH --exclude=htc-cmp[101-148,501-532] # exclude nodes. Your job will run on nodes not in the list.
 
@@ -54,10 +56,43 @@ $2 ~ /^[0-9]+$/ {
   cpu = $2
   usr = $3
   print $1 "," cpu "," usr
-}' > results/cpu_traj_scan/%JOB_DIR%/cpu_usage.csv &
+}' > %JOB_DIR%/cpu_usage.csv &
+
+MPSTAT_PID=$!
 
 
-python optimization_test.py %JOB_DIR% %NTRAJ% %L%
+
+
+# Start sstat logging in the background
+{
+  echo "timestamp,MaxRSS"
+  while true; do
+    timestamp=$(date '+%Y-%m-%d %H:%M:%S')
+    #maxrss=$(sstat -j ${SLURM_JOB_ID}.batch --format=MaxRSS --noheader 2>/dev/null | awk '{print $1}')
+    maxrss_kb=$(sstat -j ${SLURM_JOB_ID}.batch --format=MaxRSS --noheader 2>/dev/null | awk '{print $1}')
+    maxrss_gb=$(awk -v kb="$maxrss_kb" 'BEGIN { printf "%.2f", kb / 1024 / 1024 }')
+    if [ -z "$maxrss_gb" ]; then
+      break
+    fi
+    echo "$timestamp,$maxrss_gb"
+    sleep 1
+  done
+} > %JOB_DIR%/sstat_log.csv &
+SSTAT_PID=$!
+
+
+
+
+
+
+
+python optimization_test.py %JOB_DIR% %NTRAJ% %L% %RESTART% %ORDER% %THRESHOLD% %D%
+
+# Stop background loggers after script ends
+kill $MPSTAT_PID
+kill $SSTAT_PID
+
+
 
 
 
@@ -77,8 +112,4 @@ seconds=$((duration % 60))
 echo "Job completed at $(date)"
 echo "Total duration: $days days, $hours hours, $minutes minutes, $seconds seconds"
 
-
-
-
-seff $SLURM_JOB_ID >  results/cpu_traj_scan/%JOB_DIR%/mem_usage.csv 
 

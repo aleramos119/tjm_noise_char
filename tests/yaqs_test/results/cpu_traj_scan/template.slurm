@@ -80,7 +80,7 @@ SSTAT_PID=$!
 
 
 
-python propagation.py results/cpu_traj_scan/%JOB_DIR% %NTRAJ% %L% %ORDER% %THRESHOLD%
+python propagation.py results/cpu_traj_scan/%JOB_DIR% %NTRAJ% %L% %ORDER% %THRESHOLD% %METHOD% %SOLVER%
 
 # Stop background loggers after script ends
 kill $MPSTAT_PID

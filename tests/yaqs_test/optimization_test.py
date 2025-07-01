@@ -87,6 +87,8 @@ logger_thread.start()
 
 
 
+
+## Defining the gammas
 if restart:
     gammas = np.genfromtxt(f"{folder}/gammas.txt", skip_header=1)
 
@@ -99,9 +101,19 @@ if restart:
         gamma_deph = gammas[L:]
 
 else:
-    gamma_rel=np.random.rand(L)
-    gamma_deph=np.random.rand(L)
+    if dimensions == "2":
+        gamma_rel=np.random.rand()
+        gamma_deph=np.random.rand()
 
+    if dimensions == "2L":
+        gamma_rel=np.random.rand(L)
+        gamma_deph=np.random.rand(L)
+    
+
+
+
+
+## Computing reference trajectory 
 
 sim_params = SimulationParameters(L, gamma_rel, gamma_deph)
 sim_params.T = 5
@@ -119,6 +131,7 @@ qt_ref_traj_with_t=np.concatenate([np.array([t]), qt_ref_traj_reshaped], axis=0)
 
 
 
+## Saving reference trajectory and gammas
 header =   "t  " +  "  ".join([obs+str(i)   for obs in sim_params.observables for i in range(sim_params.L) ])
 gamma_header = "  ".join([f"gr_{i+1}" for i in range(L)] + [f"gd_{i+1}" for i in range(L)])
 
@@ -144,6 +157,9 @@ if not restart:
 
 
 
+
+
+## Defining the loss function and initial parameters
 sim_params.N = ntraj
 sim_params.order = order
 sim_params.threshold = threshold
@@ -167,12 +183,16 @@ loss_function.set_file_name(f"{folder}/loss_x_history", reset=not restart)
 
 
 
+## Running the optimization
 loss_function.reset()
 loss_history, x_history, x_avg_history, t_opt, exp_val_traj= ADAM_loss_class(loss_function, x0, alpha=0.1, max_iterations=500, threshhold = 1e-3, max_n_convergence = 20, tolerance=1e-8, beta1 = 0.5, beta2 = 0.99, epsilon = 1e-8, restart=restart)#, Ns=10e5)
 
 
 
 
+
+
+## Saving the optimization results
 exp_val_traj_reshaped = exp_val_traj.reshape(-1, exp_val_traj.shape[-1])
 
 exp_val_traj_with_t=np.concatenate([np.array([t_opt]), exp_val_traj_reshaped], axis=0)
@@ -189,11 +209,6 @@ stop_event.set()
 logger_thread.join()
 
 #%%
-%matplotlib qt
-mem_usage = np.array(pd.read_csv(f"test/optimization/self_memory_log.csv")['ram_GB'])
-
-plt.plot(mem_usage[mem_usage >4], label="Memory Usage (GB)")
-
 
 
 # %%
@@ -249,3 +264,5 @@ plt.plot(mem_usage[mem_usage >4], label="Memory Usage (GB)")
 
 
 #%%
+np.random.rand()
+# %%

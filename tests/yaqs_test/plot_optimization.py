@@ -60,38 +60,28 @@ plt.savefig(f"{folder}/error_vs_L_15x5.pdf", dpi=300, bbox_inches='tight')
 
 # %%
 
-L=100
-ntraj=1024
+L=5
+ntraj=512
 x_avg_file=folder + f"L_{L}/ntraj_{ntraj}/loss_x_history_avg.txt"
 
 data = np.genfromtxt(x_avg_file, skip_header=1)
 
+gammas_file=folder + f"L_{L}/ntraj_{ntraj}/gammas.txt"
+gammas = np.genfromtxt(gammas_file, skip_header=1)
 
-plt.plot(data[:,0], data[:,-2], label=r"$\gamma_{r}$")
-plt.plot(data[:,0], data[:,-1], label=r"$\gamma_{d}$")
+d=len(gammas)
+
+for i in range(d):
+    plt.plot(data[:, 0], data[:, 2 + i], label=f"$\\gamma_{{{i+1}}}$")
+    plt.axhline(gammas[i], color=plt.gca().lines[-1].get_color(), linestyle='--', linewidth=2)
+
+
 plt.xlabel("Iterations")
 plt.ylabel(r"$\gamma$")
 plt.legend()
-plt.axhline(0.1, color='gray', linestyle='--', linewidth=2, label='0.1')
-plt.savefig(f"{folder}/gamma_avg_vs_iterations_L_{L}_ntraj_{ntraj}.pdf", dpi=300, bbox_inches='tight')
+plt.show()
+# plt.savefig(f"{folder}/gamma_avg_vs_iterations_L_{L}_ntraj_{ntraj}.pdf", dpi=300, bbox_inches='tight')
 
-
-
-# %%
-L=100
-ntraj=1024
-x_avg_file=folder + f"L_{L}/ntraj_{ntraj}/loss_x_history.txt"
-
-data = np.genfromtxt(x_avg_file, skip_header=1)
-
-
-plt.plot(data[:,0], data[:,-2], label=r"$\gamma_{r}$")
-plt.plot(data[:,0], data[:,-1], label=r"$\gamma_{d}$")https://www.youtube.com/watch?v=CqwrwwOzVcQ&list=RDCqwrwwOzVcQ&start_radio=1
-plt.xlabel("Iterations")
-plt.ylabel(r"$\gamma$")
-plt.legend()
-plt.axhline(0.1, color='gray', linestyle='--', linewidth=2, label='0.1')
-plt.savefig(f"{folder}/gamma_vs_iterations_L_{L}_ntraj_{ntraj}.pdf", dpi=300, bbox_inches='tight')
 
 
 # %%
@@ -102,38 +92,20 @@ plt.savefig(f"{folder}/gamma_vs_iterations_L_{L}_ntraj_{ntraj}.pdf", dpi=300, bb
 
 
 
-#%%
-
-L=10
-ntraj=1024
-x_avg_file=folder + f"L_{L}/ntraj_{ntraj}/loss_x_history.txt"
-
-data = np.genfromtxt(x_avg_file, skip_header=1)
-
-
-plt.plot(data[:,0], data[:,-2], label=r"$\gamma_{r}$")
-plt.plot(data[:,0], data[:,-1], label=r"$\gamma_{d}$")
-plt.xlabel("Iterations")
-plt.ylabel(r"$\gamma$")
-plt.legend()
-plt.axhline(0.1, color='gray', linestyle='--', linewidth=2, label='0.1')
-plt.savefig(f"{folder}/gamma_vs_iterations_L_{L}_ntraj_{ntraj}.pdf", dpi=300, bbox_inches='tight')
-
-
-
 
 
 
 # %%
-%matplotlib qt
+%matplotlib inline
 L=5
 ntraj=512
-mem_usage = pd.read_csv(f"/home/ale/Documents/Work/simulation_of_open_quantum_systems/tjm_noise_char/tests/yaqs_test/results/optimization/d_2L/L_{L}/ntraj_{ntraj}/sstat_log.csv")
+mem_usage = pd.read_csv(f"results/optimization/d_2L/L_{L}/ntraj_{ntraj}/sstat_log.csv")
 
 plt.figure()
 plt.plot(mem_usage.iloc[:, -1])
 plt.xlabel("Step")
 plt.ylabel("Memory Usage")
 plt.title("Memory Usage Over Steps")
+plt.show()
 # plt.savefig(f"{folder}/mem_usage_L_{L}_ntraj_{ntraj}.pdf", dpi=300, bbox_inches='tight')
 # %%
