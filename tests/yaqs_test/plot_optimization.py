@@ -126,14 +126,14 @@ plt.savefig(f"{folder}/gamma_vs_iterations_L_{L}_ntraj_{ntraj}.pdf", dpi=300, bb
 
 # %%
 %matplotlib qt
-L=80
+L=5
 ntraj=512
-mem_usage = pd.read_csv(f"/home/ale/Documents/Work/simulation_of_open_quantum_systems/tjm_noise_char/tests/yaqs_test/results/optimization/d_2/L_{L}/ntraj_{ntraj}/sstat_log.csv")
+mem_usage = pd.read_csv(f"/home/ale/Documents/Work/simulation_of_open_quantum_systems/tjm_noise_char/tests/yaqs_test/results/optimization/d_2L/L_{L}/ntraj_{ntraj}/sstat_log.csv")
 
 plt.figure()
 plt.plot(mem_usage.iloc[:, -1])
 plt.xlabel("Step")
 plt.ylabel("Memory Usage")
 plt.title("Memory Usage Over Steps")
-plt.savefig(f"{folder}/mem_usage_L_{L}_ntraj_{ntraj}.pdf", dpi=300, bbox_inches='tight')
+# plt.savefig(f"{folder}/mem_usage_L_{L}_ntraj_{ntraj}.pdf", dpi=300, bbox_inches='tight')
 # %%
