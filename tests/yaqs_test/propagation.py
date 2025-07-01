@@ -13,6 +13,8 @@ import os
 import threading
 from datetime import datetime
 
+
+stop_event = threading.Event()
 def log_memory(pid, log_file, interval=1):
     process = psutil.Process(pid)
     with open(log_file, "w") as f:
@@ -118,6 +120,10 @@ if __name__=="__main__":
 
 
     main_code(folder, ntraj, L, order , threshold, method, solver)
+
+    stop_event.set()
+
+    logger_thread.join()
 
 
 

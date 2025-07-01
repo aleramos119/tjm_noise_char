@@ -186,7 +186,7 @@ np.savetxt(opt_traj_file, exp_val_traj_with_t.T, header=header, fmt='%.6f')
 
 
 stop_event.set()
-t.join()
+logger_thread.join()
 
 #%%
 %matplotlib qt
@@ -243,9 +243,9 @@ plt.plot(mem_usage[mem_usage >4], label="Memory Usage (GB)")
 
 # %%
 
-mem_usage = pd.read_csv(f"test/optimization/self_memory_log.csv")
+# mem_usage = pd.read_csv(f"test/optimization/self_memory_log.csv")
 
-plt.plot(np.array(mem_usage['ram_GB']), label="Memory Usage (GB)")
+# plt.plot(np.array(mem_usage['ram_GB']), label="Memory Usage (GB)")
 
 
 #%%
