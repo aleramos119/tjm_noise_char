@@ -13,7 +13,7 @@ import os
 import threading
 from datetime import datetime
 
-def log_memory(pid, log_file, interval=0.1):
+def log_memory(pid, log_file, interval=1):
     process = psutil.Process(pid)
     with open(log_file, "w") as f:
         f.write("timestamp,ram_GB\n")
@@ -41,17 +41,19 @@ def log_memory(pid, log_file, interval=0.1):
 
 
 
-def main_code(folder, ntraj, L, order , threshold, method):
+def main_code(folder, ntraj, L, order , threshold, method, solver):
     
 
 
 
     sim_params = SimulationParameters(L,0.1,0.1)
     sim_params.N = ntraj
-    sim_params.L = L
     sim_params.T = 5
     sim_params.order = order
     sim_params.threshold = threshold
+
+
+    sim_params.set_solver("tdvp1",solver)
 
 
     start_time = time.time()
@@ -83,9 +85,9 @@ def main_code(folder, ntraj, L, order , threshold, method):
 
 
 if __name__=="__main__":
-    # args = sys.argv[1:]
+    args = sys.argv[1:]
 
-    args = ["test/propagation/", "100", "3", "1", "1e-4","tjm"]
+    # args = ["test/propagation/", "256", "3", "2", "1e-6"]
 
     folder = args[0]
 
@@ -100,6 +102,8 @@ if __name__=="__main__":
 
     method = args[5]
 
+    solver = args[6]
+
 
     pid = os.getpid()
 
@@ -113,7 +117,7 @@ if __name__=="__main__":
     # Run your main code
 
 
-    main_code(folder, ntraj, L, order , threshold, method)
+    main_code(folder, ntraj, L, order , threshold, method, solver)
 
 
 
@@ -223,15 +227,35 @@ if __name__=="__main__":
 # plt.show()
 # # %%
 # np.array(cpu_usage_pivot[cpu]).shape
-# %%
+# # %%
 
-mem_usage = pd.read_csv(f"test/propagation/self_memory_log.csv")
+# mem_usage = pd.read_csv(f"/home/aramos/Dokumente/Work/Simulation of Open Quantum Systems/tjm_noise_char/tests/yaqs_test/results/cpu_traj_scan/4_sites/{ncpus}_cpus/4096_traj/mem_usage.csv")
 
-plt.plot(np.array(mem_usage['ram_GB']), label="Memory Usage (GB)")
+# plt.plot(np.array(mem_usage/1024/1024))
 
 
-#%%
-mem_usage
-# %%
-# %%
+# # %%
+# mem_usage
+# # %%
+# # %%
 
+
+
+# #%%
+# sim_params = SimulationParameters()
+# t, ref_traj, d_On_d_gk=tjm_traj(sim_params)
+# # %%
+# sci_kit_t, sci_kit_ref_traj, sci_kit_d_On_d_gk=scikit_tt_traj(sim_params)
+
+# # %%
+
+
+
+
+# plt.plot(t, d_On_d_gk[1, 1, 3,:], label="TJM")
+# plt.plot(sci_kit_t, np.array(sci_kit_d_On_d_gk)[1, 1, 3,:], label="SciKit-TT")
+
+# plt.legend()
+
+# # plt.plot(t, ref_traj[:, 0, 0], label="TJM")
+# # %%
