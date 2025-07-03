@@ -270,3 +270,18 @@ garbage = np.genfromtxt(f"test/optimization_cluster/garbage.txt", skip_header=1)
 plt.plot(garbage[:,1], label="Memory Usage (GB)")
 
 # %%
+ref_traj = np.genfromtxt("results/optimization/d_2L/L_5/ntraj_512/ref_traj.txt", skip_header=1)
+opt_traj = np.genfromtxt("results/optimization/d_2L/L_5/ntraj_512/opt_traj.txt", skip_header=1)
+
+# Compare trajectories for each observable
+plt.figure(figsize=(10, 6))
+for i in range(1, ref_traj.shape[1]):  # skip time column
+    plt.plot(ref_traj[:, 0], ref_traj[:, i], label=f"Ref obs {i}")
+    plt.plot(opt_traj[:, 0], opt_traj[:, i], '--', color=plt.gca().lines[-1].get_color(), label=f"Opt obs {i}")
+
+plt.xlabel("Time")
+plt.ylabel("Observable value")
+plt.legend()
+plt.title("Reference vs Optimized Trajectories")
+plt.tight_layout()
+plt.show()
