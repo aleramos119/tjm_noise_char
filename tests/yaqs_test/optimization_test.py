@@ -55,7 +55,7 @@ def log_memory(pid, log_file, interval=0.1):
 #
 # args = sys.argv[1:]
 
-args=["test/optimization", 100, 5, "False", "1", "1e-4", "2L"]
+args=["test/optimization", 100, 2, "False", "1", "1e-4", "2L"]
 
 folder = args[0]
 
@@ -117,11 +117,11 @@ else:
 
 sim_params = SimulationParameters(L, gamma_rel, gamma_deph)
 sim_params.T = 5
-sim_params.N = 4096
+sim_params.N = 1024
 
 
 
-t, qt_ref_traj, d_On_d_gk=qutip_traj(sim_params)
+t, qt_ref_traj, d_On_d_gk=tjm_traj(sim_params)
 
 
 qt_ref_traj_reshaped = qt_ref_traj.reshape(-1, qt_ref_traj.shape[-1])
@@ -257,12 +257,16 @@ logger_thread.join()
 
 
 # %%
+%matplotlib qt
 
-# mem_usage = pd.read_csv(f"test/optimization/self_memory_log.csv")
+mem_usage = pd.read_csv(f"test/optimization_cluster/self_memory_log.csv")
 
-# plt.plot(np.array(mem_usage['ram_GB']), label="Memory Usage (GB)")
+plt.plot(np.array(mem_usage['ram_GB']), label="Memory Usage (GB)")
 
 
 #%%
-np.random.rand()
+garbage = np.genfromtxt(f"test/optimization_cluster/garbage.txt", skip_header=1)
+
+plt.plot(garbage[:,1], label="Memory Usage (GB)")
+
 # %%
