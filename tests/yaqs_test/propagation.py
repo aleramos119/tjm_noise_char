@@ -61,7 +61,9 @@ def main_code(folder, ntraj, L, order , threshold, method, solver):
     start_time = time.time()
 
     if method == "scikit_tt":
+        print("Using SciKit-TT method")
         t, qt_ref_traj, d_On_d_gk=scikit_tt_traj(sim_params)
+        print("SciKit-TT method completed")
 
     elif method == "tjm":
         t, qt_ref_traj, d_On_d_gk = tjm_traj(sim_params)
@@ -74,10 +76,14 @@ def main_code(folder, ntraj, L, order , threshold, method, solver):
 
     np.savetxt(f"{folder}/qt_ref_traj.txt", qt_ref_traj_reshaped )
 
+    print("ref_traj saved!!!")
 
     duration = end_time - start_time
     with open(f"{folder}/time_sec.txt", "w") as f:
         f.write(f"{duration}\n")
+
+    print("time saved!!!")
+    
 
 #%%
 
@@ -87,9 +93,9 @@ def main_code(folder, ntraj, L, order , threshold, method, solver):
 
 
 if __name__=="__main__":
-    args = sys.argv[1:]
+    # args = sys.argv[1:]
 
-    # args = ["test/propagation/", "256", "3", "2", "1e-6"]
+    args = ["test/propagation/", "100", "3", "2", "1e-6", "scikit_tt", "krylov_5"]
 
     folder = args[0]
 

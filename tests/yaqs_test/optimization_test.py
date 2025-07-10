@@ -259,13 +259,13 @@ logger_thread.join()
 # %%
 %matplotlib qt
 
-mem_usage = pd.read_csv(f"test/optimization_cluster/self_memory_log.csv")
+mem_usage = pd.read_csv(f"test/optimization_klotz2/self_memory_log.csv")
 
 plt.plot(np.array(mem_usage['ram_GB']), label="Memory Usage (GB)")
 
 
 #%%
-garbage = np.genfromtxt(f"test/optimization_cluster/garbage.txt", skip_header=1)
+garbage = np.genfromtxt(f"test/optimization_klotz/garbage.txt", skip_header=1)
 
 plt.plot(garbage[:,1], label="Memory Usage (GB)")
 

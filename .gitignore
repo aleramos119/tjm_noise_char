@@ -138,3 +138,5 @@ tests/Figure_2.png
 *.pdf
 
 *.pkl
+
+*output*
