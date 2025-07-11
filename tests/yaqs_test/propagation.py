@@ -42,7 +42,7 @@ def log_memory(pid, log_file, interval, stop_event=stop_event):
         pass  # Silently ignore exceptions when stopping
 
 
-def main_code(folder, ntraj, L, order , threshold, method, solver):
+def main_code(folder, ntraj, L, order , threshold, method, solver, req_cpus):
     
 
 
@@ -52,6 +52,7 @@ def main_code(folder, ntraj, L, order , threshold, method, solver):
     sim_params.T = 5
     sim_params.order = order
     sim_params.threshold = threshold
+    sim_params.req_cpus = req_cpus
 
 
     sim_params.set_solver("tdvp1",solver)
@@ -94,7 +95,7 @@ def main_code(folder, ntraj, L, order , threshold, method, solver):
 if __name__=="__main__":
     # args = sys.argv[1:]
 
-    args = ["test/propagation/", "100", "3", "1", "1e-4", "tjm", "exact"]
+    args = ["test/propagation/", "100", "3", "1", "1e-4", "scikit_tt", "exact", "4"]
 
     folder = args[0]
 
@@ -112,7 +113,11 @@ if __name__=="__main__":
     solver = args[6]
 
 
+    req_cpus = int(args[7])
+
+
     pid = os.getpid()
+
 
 
     log_file = folder+"/self_memory_log.csv"
@@ -124,7 +129,7 @@ if __name__=="__main__":
     # Run your main code
 
 
-    main_code(folder, ntraj, L, order , threshold, method, solver)
+    main_code(folder, ntraj, L, order , threshold, method, solver, req_cpus)
 
     stop_event.set()
 
