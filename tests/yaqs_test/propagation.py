@@ -15,12 +15,12 @@ from datetime import datetime
 
 
 stop_event = threading.Event()
-def log_memory(pid, log_file, interval=1):
+def log_memory(pid, log_file, interval, stop_event=stop_event):
     process = psutil.Process(pid)
     with open(log_file, "w") as f:
         f.write("timestamp,ram_GB\n")
     try:
-        while True:
+        while stop_event.is_set() == False:
             # Get memory usage of the main process
             total_mem_bytes = process.memory_info().rss
 
@@ -40,7 +40,6 @@ def log_memory(pid, log_file, interval=1):
             time.sleep(interval)
     except Exception as e:
         pass  # Silently ignore exceptions when stopping
-
 
 
 def main_code(folder, ntraj, L, order , threshold, method, solver):
@@ -95,7 +94,7 @@ def main_code(folder, ntraj, L, order , threshold, method, solver):
 if __name__=="__main__":
     # args = sys.argv[1:]
 
-    args = ["test/propagation/", "100", "3", "2", "1e-6", "scikit_tt", "krylov_5"]
+    args = ["test/propagation/", "100", "3", "1", "1e-4", "tjm", "exact"]
 
     folder = args[0]
 
@@ -119,7 +118,7 @@ if __name__=="__main__":
     log_file = folder+"/self_memory_log.csv"
 
     # Start memory logging in a background thread
-    logger_thread = threading.Thread(target=log_memory, args=(pid, log_file), daemon=True)
+    logger_thread = threading.Thread(target=log_memory, args=(pid, log_file, 1,stop_event), daemon=True)
     logger_thread.start()
 
     # Run your main code
