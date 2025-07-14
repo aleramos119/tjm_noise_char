@@ -146,3 +146,8 @@ tests/Figure_2.png
 tests/yaqs_test/results/cpu_traj_scan/cpu_scan.sh
 
 *.dat
+
+tests/yaqs_test/results/cpu_traj_scan/*/seff_output
+
+
+ 
