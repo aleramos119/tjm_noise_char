@@ -140,3 +140,9 @@ tests/Figure_2.png
 *.pkl
 
 *output*
+
+ 
+
+tests/yaqs_test/results/cpu_traj_scan/cpu_scan.sh
+
+*.dat

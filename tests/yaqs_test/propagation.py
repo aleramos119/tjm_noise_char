@@ -15,31 +15,63 @@ from datetime import datetime
 
 
 stop_event = threading.Event()
-def log_memory(pid, log_file, interval, stop_event=stop_event):
-    process = psutil.Process(pid)
+def log_memory(pid, log_file, interval, stop_event):
+    """
+    Logs memory usage (in GB) of parent and child processes individually,
+    plus the total RAM used by all of them.
+
+    Output CSV columns: timestamp,pid,name,ram_GB,type
+    Where type is "parent", "child", or "total".
+    """
+    import psutil
+    from datetime import datetime
+    import time
+
+    parent = psutil.Process(pid)
+
     with open(log_file, "w") as f:
-        f.write("timestamp,ram_GB\n")
+        f.write("timestamp,pid,name,ram_GB,type\n")
+
     try:
-        while stop_event.is_set() == False:
-            # Get memory usage of the main process
-            total_mem_bytes = process.memory_info().rss
-
-            # Add memory usage of all child processes (recursively)
-            for child in process.children(recursive=True):
-                try:
-                    total_mem_bytes += child.memory_info().rss
-                except (psutil.NoSuchProcess, psutil.AccessDenied):
-                    pass  # child might have exited
-
-            mem_gb = total_mem_bytes / 1024 / 1024 / 1024  # Convert to GB
+        while not stop_event.is_set():
             timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
+            entries = []
+            total_rss = 0
+
+            # Log parent
+            try:
+                parent_rss = parent.memory_info().rss
+                total_rss += parent_rss
+                entries.append((parent.pid, parent.name(), parent_rss, "parent"))
+            except (psutil.NoSuchProcess, psutil.AccessDenied):
+                pass
+
+            # Log children
+            try:
+                for child in parent.children(recursive=True):
+                    try:
+                        child_rss = child.memory_info().rss
+                        total_rss += child_rss
+                        entries.append((child.pid, child.name(), child_rss, "child"))
+                    except (psutil.NoSuchProcess, psutil.AccessDenied):
+                        continue
+            except psutil.Error:
+                pass
+
+            # Add total as a virtual process line
+            entries.append(("NA", "ALL_PROCESSES", total_rss, "total"))
+
+            # Write to file
             with open(log_file, "a") as f:
-                f.write(f"{timestamp},{mem_gb:.2f}\n")
+                for pid, name, rss_bytes, label in entries:
+                    ram_gb = rss_bytes / 1024 / 1024 / 1024
+                    f.write(f"{timestamp},{pid},{name},{ram_gb:.3f},{label}\n")
 
             time.sleep(interval)
-    except Exception as e:
-        pass  # Silently ignore exceptions when stopping
+
+    except Exception:
+        pass  # silent fail is safer for daemonized threads
 
 
 def main_code(folder, ntraj, L, order , threshold, method, solver, req_cpus):
@@ -95,7 +127,7 @@ def main_code(folder, ntraj, L, order , threshold, method, solver, req_cpus):
 if __name__=="__main__":
     # args = sys.argv[1:]
 
-    args = ["test/propagation/", "100", "3", "1", "1e-4", "scikit_tt", "exact", "4"]
+    args = ["test/propagation/", "50", "3", "1", "1e-4", "tjm", "exact", "4"]
 
     folder = args[0]
 
@@ -123,7 +155,7 @@ if __name__=="__main__":
     log_file = folder+"/self_memory_log.csv"
 
     # Start memory logging in a background thread
-    logger_thread = threading.Thread(target=log_memory, args=(pid, log_file, 1,stop_event), daemon=True)
+    logger_thread = threading.Thread(target=log_memory, args=(pid, log_file, 10,stop_event), daemon=True)
     logger_thread.start()
 
     # Run your main code

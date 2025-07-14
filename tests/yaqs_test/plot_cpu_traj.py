@@ -9,12 +9,28 @@ import pandas as pd
 #%%
 L=100
 
-cpu_list_initial=list(range(5, 50))  # Initial list of CPUs
+cpu_list_initial=list(range(3, 50))  # Initial list of CPUs
 
 folder="results/cpu_traj_scan"
 
-method_list=["method_tjm/order_2/threshold_1e-6", "method_tjm/order_1/threshold_1e-4", "method_tjm_new_calc/solver_exact/order_1/threshold_1e-4"]
-method_list=["method_tjm/order_1/threshold_1e-4", "method_tjm_new_calc/solver_exact/order_1/threshold_1e-4"]
+method_list=[
+             "method_tjm/order_2/threshold_1e-6", 
+             "method_tjm/order_1/threshold_1e-4", 
+
+             "method_tjm_new_calc/solver_exact/order_1/threshold_1e-4", 
+
+            #  "method_scikit_tt_new_calc/solver_exact/order_1/threshold_1e-4",
+            #  "method_scikit_tt_new_calc/solver_krylov_5/order_1/threshold_1e-4",
+
+
+             "method_scikit_tt_klotz/solver_krylov_5/order_1/threshold_1e-4",
+
+                "method_tjm_klotz/solver_exact/order_1/threshold_1e-4",
+
+
+
+             ]
+
 
 
 ntraj=512
@@ -58,6 +74,8 @@ axs[1].set_ylabel("Time (hours)")
 plt.tight_layout()
 plt.legend()
 plt.show()
+#%%
+mem_file
 # %%
 
 method="method_tjm_new_calc/solver_exact/order_1/threshold_1e-4"
