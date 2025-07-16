@@ -18,31 +18,63 @@ import pandas as pd
 
 #%%
 stop_event = threading.Event()
-def log_memory(pid, log_file, interval=0.1):
-    process = psutil.Process(pid)
+def log_memory(pid, log_file, interval, stop_event):
+    """
+    Logs memory usage (in GB) of parent and child processes individually,
+    plus the total RAM used by all of them.
+
+    Output CSV columns: timestamp,pid,name,ram_GB,type
+    Where type is "parent", "child", or "total".
+    """
+    import psutil
+    from datetime import datetime
+    import time
+
+    parent = psutil.Process(pid)
+
     with open(log_file, "w") as f:
-        f.write("timestamp,ram_GB\n")
+        f.write("timestamp,pid,name,ram_GB,type\n")
+
     try:
         while not stop_event.is_set():
-            # Get memory usage of the main process
-            total_mem_bytes = process.memory_info().rss
-
-            # Add memory usage of all child processes (recursively)
-            for child in process.children(recursive=True):
-                try:
-                    total_mem_bytes += child.memory_info().rss
-                except (psutil.NoSuchProcess, psutil.AccessDenied):
-                    pass  # child might have exited
-
-            mem_gb = total_mem_bytes / 1024 / 1024 / 1024  # Convert to GB
             timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
+            entries = []
+            total_rss = 0
+
+            # Log parent
+            try:
+                parent_rss = parent.memory_info().rss
+                total_rss += parent_rss
+                entries.append((parent.pid, parent.name(), parent_rss, "parent"))
+            except (psutil.NoSuchProcess, psutil.AccessDenied):
+                pass
+
+            # Log children
+            try:
+                for child in parent.children(recursive=True):
+                    try:
+                        child_rss = child.memory_info().rss
+                        total_rss += child_rss
+                        entries.append((child.pid, child.name(), child_rss, "child"))
+                    except (psutil.NoSuchProcess, psutil.AccessDenied):
+                        continue
+            except psutil.Error:
+                pass
+
+            # Add total as a virtual process line
+            entries.append(("NA", "ALL_PROCESSES", total_rss, "total"))
+
+            # Write to file
             with open(log_file, "a") as f:
-                f.write(f"{timestamp},{mem_gb:.2f}\n")
+                for pid, name, rss_bytes, label in entries:
+                    ram_gb = rss_bytes / 1024 / 1024 / 1024
+                    f.write(f"{timestamp},{pid},{name},{ram_gb:.3f},{label}\n")
 
             time.sleep(interval)
-    except Exception as e:
-        pass  # Silently ignore exceptions when stopping
+
+    except Exception:
+        pass  # silent fail is safer for daemonized threads
 
 
 #%%
@@ -55,7 +87,7 @@ def log_memory(pid, log_file, interval=0.1):
 #
 # args = sys.argv[1:]
 
-args=["test/optimization", 100, 2, "False", "1", "1e-4", "2L"]
+args=["test/optimization", 100, 2, "False", "1", "1e-4", "2L", "scikit_tt", "krylov_5", "4"]
 
 folder = args[0]
 
@@ -74,13 +106,24 @@ dimensions = args[6]
 
 
 
+
+method = args[7]
+
+solver = args[8]
+
+
+req_cpus = int(args[9])
+
+
+
+
 pid = os.getpid()
 
 
 log_file = folder+"/self_memory_log.csv"
 
 # Start memory logging in a background thread
-logger_thread = threading.Thread(target=log_memory, args=(pid, log_file), daemon=True)
+logger_thread = threading.Thread(target=log_memory, args=(pid, log_file, 30,stop_event), daemon=True)
 logger_thread.start()
 
 
@@ -102,26 +145,36 @@ if restart:
 
 else:
     if dimensions == "2":
-        gamma_rel=np.random.rand()
-        gamma_deph=np.random.rand()
+        gamma_rel=0.1
+        gamma_deph=0.1
 
     if dimensions == "2L":
         gamma_rel=np.random.rand(L)
         gamma_deph=np.random.rand(L)
     
 
+if method == "tjm":
+    traj_function = tjm_traj
+
+if method == "scikit_tt":
+    traj_function = scikit_tt_traj
+
 
 
 
 ## Computing reference trajectory 
-
+print("Running ref traj")
 sim_params = SimulationParameters(L, gamma_rel, gamma_deph)
 sim_params.T = 5
-sim_params.N = 1024
+sim_params.N = 50
+sim_params.order = order
+sim_params.threshold = threshold
+sim_params.req_cpus = req_cpus
+sim_params.set_solver("tdvp"+str(order),solver)
 
 
+t, qt_ref_traj, d_On_d_gk=traj_function(sim_params)
 
-t, qt_ref_traj, d_On_d_gk=tjm_traj(sim_params)
 
 
 qt_ref_traj_reshaped = qt_ref_traj.reshape(-1, qt_ref_traj.shape[-1])
@@ -161,20 +214,15 @@ if not restart:
 
 ## Defining the loss function and initial parameters
 sim_params.N = ntraj
-sim_params.order = order
-sim_params.threshold = threshold
-
-
-
 
 if dimensions == "2":
 
-    loss_function=loss_class_2d(sim_params, qt_ref_traj, tjm_traj, print_to_file=True)
+    loss_function=loss_class_2d(sim_params, qt_ref_traj, traj_function, print_to_file=True)
     x0 = np.random.rand(2)
 
 if dimensions == "2L":
 
-    loss_function=loss_class_nd(sim_params, qt_ref_traj, tjm_traj, print_to_file=True)
+    loss_function=loss_class_nd(sim_params, qt_ref_traj, traj_function, print_to_file=True)
     x0 = np.random.rand(2*sim_params.L)
 
 loss_function.set_file_name(f"{folder}/loss_x_history", reset=not restart)
@@ -184,6 +232,7 @@ loss_function.set_file_name(f"{folder}/loss_x_history", reset=not restart)
 
 
 ## Running the optimization
+print("running optimzation")
 loss_function.reset()
 loss_history, x_history, x_avg_history, t_opt, exp_val_traj= ADAM_loss_class(loss_function, x0, alpha=0.1, max_iterations=500, threshhold = 1e-3, max_n_convergence = 20, tolerance=1e-8, beta1 = 0.5, beta2 = 0.99, epsilon = 1e-8, restart=restart)#, Ns=10e5)
 
@@ -206,7 +255,13 @@ np.savetxt(opt_traj_file, exp_val_traj_with_t.T, header=header, fmt='%.6f')
 
 
 stop_event.set()
+
 logger_thread.join()
+
+
+
+# Wait briefly to ensure logger finishes last write
+time.sleep(1)
 
 #%%
 
@@ -257,31 +312,31 @@ logger_thread.join()
 
 
 # %%
-%matplotlib qt
+# %matplotlib qt
 
-mem_usage = pd.read_csv(f"test/optimization_klotz2/self_memory_log.csv")
+# mem_usage = pd.read_csv(f"test/optimization_klotz2/self_memory_log.csv")
 
-plt.plot(np.array(mem_usage['ram_GB']), label="Memory Usage (GB)")
+# plt.plot(np.array(mem_usage['ram_GB']), label="Memory Usage (GB)")
 
 
-#%%
-garbage = np.genfromtxt(f"test/optimization_klotz/garbage.txt", skip_header=1)
+# #%%
+# garbage = np.genfromtxt(f"test/optimization_klotz/garbage.txt", skip_header=1)
 
-plt.plot(garbage[:,1], label="Memory Usage (GB)")
+# plt.plot(garbage[:,1], label="Memory Usage (GB)")
 
-# %%
-ref_traj = np.genfromtxt("results/optimization/d_2L/L_5/ntraj_512/ref_traj.txt", skip_header=1)
-opt_traj = np.genfromtxt("results/optimization/d_2L/L_5/ntraj_512/opt_traj.txt", skip_header=1)
+# # %%
+# ref_traj = np.genfromtxt("results/optimization/d_2L/L_5/ntraj_512/ref_traj.txt", skip_header=1)
+# opt_traj = np.genfromtxt("results/optimization/d_2L/L_5/ntraj_512/opt_traj.txt", skip_header=1)
 
-# Compare trajectories for each observable
-plt.figure(figsize=(10, 6))
-for i in range(1, ref_traj.shape[1]):  # skip time column
-    plt.plot(ref_traj[:, 0], ref_traj[:, i], label=f"Ref obs {i}")
-    plt.plot(opt_traj[:, 0], opt_traj[:, i], '--', color=plt.gca().lines[-1].get_color(), label=f"Opt obs {i}")
+# # Compare trajectories for each observable
+# plt.figure(figsize=(10, 6))
+# for i in range(1, ref_traj.shape[1]):  # skip time column
+#     plt.plot(ref_traj[:, 0], ref_traj[:, i], label=f"Ref obs {i}")
+#     plt.plot(opt_traj[:, 0], opt_traj[:, i], '--', color=plt.gca().lines[-1].get_color(), label=f"Opt obs {i}")
 
-plt.xlabel("Time")
-plt.ylabel("Observable value")
-plt.legend()
-plt.title("Reference vs Optimized Trajectories")
-plt.tight_layout()
-plt.show()
+# plt.xlabel("Time")
+# plt.ylabel("Observable value")
+# plt.legend()
+# plt.title("Reference vs Optimized Trajectories")
+# plt.tight_layout()
+# plt.show()
