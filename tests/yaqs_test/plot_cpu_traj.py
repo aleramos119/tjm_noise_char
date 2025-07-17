@@ -49,7 +49,11 @@ for method in method_list:
         time_file = f"{folder}/{method}/{L}_sites/{cpu}_cpus/{ntraj}_traj/time_sec.txt"
 
         if os.path.exists(mem_file):
-            cpu_mem.append([cpu, max(pd.read_csv(mem_file).values[:, 1])])
+            data = pd.read_csv(mem_file).values 
+            if data.shape[1] > 3: 
+                cpu_mem.append([cpu, max(data[:, 3])]) 
+            else: 
+                cpu_mem.append([cpu, max(data[:, 1])]) 
 
         if os.path.exists(time_file):
             cpu_time.append([cpu, np.loadtxt(time_file) / 60 / 60])
