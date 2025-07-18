@@ -14,18 +14,21 @@ cpu_list_initial=list(range(3, 50))  # Initial list of CPUs
 folder="results/cpu_traj_scan"
 
 method_list=[
-             "method_tjm/order_2/threshold_1e-6", 
-             "method_tjm/order_1/threshold_1e-4", 
+            #  "method_tjm/order_2/threshold_1e-6", 
+            #  "method_tjm/order_1/threshold_1e-4", 
 
              "method_tjm_new_calc/solver_exact/order_1/threshold_1e-4", 
 
-            #  "method_scikit_tt_new_calc/solver_exact/order_1/threshold_1e-4",
+             "method_tjm_new_calc_1/solver_exact/order_1/threshold_1e-4", 
+            #  "method_scikit_tt_new_calc_1/solver_krylov_5/order_1/threshold_1e-4",
+
+             "method_scikit_tt_new_calc/solver_exact/order_1/threshold_1e-4",
             #  "method_scikit_tt_new_calc/solver_krylov_5/order_1/threshold_1e-4",
 
 
-             "method_scikit_tt_klotz/solver_krylov_5/order_1/threshold_1e-4",
+            #  "method_scikit_tt_klotz/solver_krylov_5/order_1/threshold_1e-4",
 
-                "method_tjm_klotz/solver_exact/order_1/threshold_1e-4",
+            #     "method_tjm_klotz/solver_exact/order_1/threshold_1e-4",
 
 
 
@@ -82,11 +85,11 @@ plt.show()
 mem_file
 # %%
 
-method="method_tjm_new_calc/solver_exact/order_1/threshold_1e-4"
+method="method_scikit_tt_new_calc_1/solver_krylov_5/order_1/threshold_1e-4"
 L=100
 ntraj=512
-cpu=34
-mem_file = f"{folder}/{method}/{L}_sites/{cpu}_cpus/{ntraj}_traj/sstat_log.csv"
+cpu=3
+mem_file = f"{folder}/{method}/{L}_sites/{cpu}_cpus/{ntraj}_traj/self_memory_log.csv"
 
 data=pd.read_csv(mem_file).values[:, 1]
 

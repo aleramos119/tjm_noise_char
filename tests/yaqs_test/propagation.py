@@ -127,7 +127,7 @@ def main_code(folder, ntraj, L, order , threshold, method, solver, req_cpus):
 if __name__=="__main__":
     # args = sys.argv[1:]
 
-    args = ["test/propagation/", "50", "3", "1", "1e-4", "tjm", "exact", "4"]
+    args = ["test/propagation/", "50", "3", "1", "1e-4", "scikit_tt", "krylov_5", "4"]
 
     folder = args[0]
 
@@ -146,6 +146,17 @@ if __name__=="__main__":
 
 
     req_cpus = int(args[7])
+
+
+    print("Inputs:")
+    print(f"  folder: {folder}")
+    print(f"  ntraj: {ntraj}")
+    print(f"  L: {L}")
+    print(f"  order: {order}")
+    print(f"  threshold: {threshold}")
+    print(f"  method: {method}")
+    print(f"  solver: {solver}")
+    print(f"  req_cpus: {req_cpus}")
 
 
     pid = os.getpid()
