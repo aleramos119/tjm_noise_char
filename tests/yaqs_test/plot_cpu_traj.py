@@ -17,16 +17,17 @@ method_list=[
             #  "method_tjm/order_2/threshold_1e-6", 
             #  "method_tjm/order_1/threshold_1e-4", 
 
-             "method_tjm_new_calc/solver_exact/order_1/threshold_1e-4", 
+            #  "method_tjm_new_calc/solver_exact/order_1/threshold_1e-4", 
 
-             "method_tjm_new_calc_1/solver_exact/order_1/threshold_1e-4", 
-            #  "method_scikit_tt_new_calc_1/solver_krylov_5/order_1/threshold_1e-4",
+            #  "method_tjm_new_calc_1/solver_exact/order_1/threshold_1e-4", 
+             "method_scikit_tt_new_calc_big/solver_krylov_5/order_1/threshold_1e-4",
+             "method_scikit_tt_new_calc_1/solver_krylov_5/order_1/threshold_1e-4",
 
-             "method_scikit_tt_new_calc/solver_exact/order_1/threshold_1e-4",
+            #  "method_scikit_tt_new_calc/solver_exact/order_1/threshold_1e-4",
             #  "method_scikit_tt_new_calc/solver_krylov_5/order_1/threshold_1e-4",
 
 
-            #  "method_scikit_tt_klotz/solver_krylov_5/order_1/threshold_1e-4",
+             "method_scikit_tt_klotz/solver_krylov_5/order_1/threshold_1e-4",
 
             #     "method_tjm_klotz/solver_exact/order_1/threshold_1e-4",
 
@@ -47,6 +48,8 @@ fig, axs = plt.subplots(1, 2, figsize=(12, 5))
 for method in method_list:
     cpu_mem = []
     cpu_time = []
+
+    print(method)
     for cpu in cpu_list_initial:
         mem_file = f"{folder}/{method}/{L}_sites/{cpu}_cpus/{ntraj}_traj/self_memory_log.csv"
         time_file = f"{folder}/{method}/{L}_sites/{cpu}_cpus/{ntraj}_traj/time_sec.txt"

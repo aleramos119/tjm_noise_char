@@ -155,7 +155,7 @@ if __name__=="__main__":
     solver = args[6]
 
 
-    req_cpus = int(args[7])
+    allocated_cpus = int(args[7])
 
 
     print("Inputs:")
@@ -166,7 +166,7 @@ if __name__=="__main__":
     print(f"  threshold: {threshold}")
     print(f"  method: {method}")
     print(f"  solver: {solver}")
-    print(f"  req_cpus: {req_cpus}")
+    print(f"  req_cpus: {allocated_cpus}")
 
 
     pid = os.getpid()
@@ -176,11 +176,13 @@ if __name__=="__main__":
     log_file = folder+"/self_memory_log.csv"
 
     # Start memory logging in a background thread
-    logger_thread = threading.Thread(target=log_memory, args=(pid, log_file, 10,stop_event), daemon=True)
+    logger_thread = threading.Thread(target=log_memory, args=(pid, log_file, 10, stop_event), daemon=True)
     logger_thread.start()
 
     # Run your main code
 
+
+    req_cpus=allocated_cpus-1
 
     main_code(folder, ntraj, L, order , threshold, method, solver, req_cpus)
 
