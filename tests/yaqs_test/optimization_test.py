@@ -16,6 +16,14 @@ import threading
 from datetime import datetime
 import pandas as pd
 
+
+os.environ["OMP_NUM_THREADS"] = "1"
+os.environ["OPENBLAS_NUM_THREADS"] = "1"
+os.environ["MKL_NUM_THREADS"] = "1"
+os.environ["NUMEXPR_NUM_THREADS"] = "1"
+os.environ["VECLIB_MAXIMUM_THREADS"] = "1"
+
+
 #%%
 stop_event = threading.Event()
 def log_memory(pid, log_file, interval, stop_event):
@@ -85,9 +93,9 @@ def log_memory(pid, log_file, interval, stop_event):
 
 
 #
-# args = sys.argv[1:]
+args = sys.argv[1:]
 
-args=["test/optimization", 100, 2, "False", "1", "1e-4", "2L", "scikit_tt", "krylov_5", "4"]
+#args=["test/optimization", 100, 2, "False", "1", "1e-4", "2L", "scikit_tt", "krylov_5", "4"]
 
 folder = args[0]
 
@@ -112,7 +120,21 @@ method = args[7]
 solver = args[8]
 
 
-req_cpus = int(args[9])
+allocated_cpus = int(args[9])
+
+
+
+print("Input parameters:")
+print(f"folder = {folder}")
+print(f"ntraj = {ntraj}")
+print(f"L = {L}")
+print(f"restart = {restart}")
+print(f"order = {order}")
+print(f"threshold = {threshold}")
+print(f"dimensions = {dimensions}")
+print(f"method = {method}")
+print(f"solver = {solver}")
+print(f"allocated_cpus = {allocated_cpus}")
 
 
 
@@ -166,10 +188,10 @@ if method == "scikit_tt":
 print("Running ref traj")
 sim_params = SimulationParameters(L, gamma_rel, gamma_deph)
 sim_params.T = 5
-sim_params.N = 50
+sim_params.N = 4096
 sim_params.order = order
 sim_params.threshold = threshold
-sim_params.req_cpus = req_cpus
+sim_params.req_cpus = allocated_cpus - 1
 sim_params.set_solver("tdvp"+str(order),solver)
 
 

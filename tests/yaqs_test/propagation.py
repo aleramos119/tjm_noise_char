@@ -14,6 +14,16 @@ import threading
 from datetime import datetime
 
 
+
+os.environ["OMP_NUM_THREADS"] = "1"
+os.environ["OPENBLAS_NUM_THREADS"] = "1"
+os.environ["MKL_NUM_THREADS"] = "1"
+os.environ["NUMEXPR_NUM_THREADS"] = "1"
+os.environ["VECLIB_MAXIMUM_THREADS"] = "1"
+
+
+
+
 stop_event = threading.Event()
 def log_memory(pid, log_file, interval, stop_event):
     """
@@ -127,7 +137,7 @@ def main_code(folder, ntraj, L, order , threshold, method, solver, req_cpus):
 if __name__=="__main__":
     # args = sys.argv[1:]
 
-    args = ["test/propagation/", "50", "3", "1", "1e-4", "scikit_tt", "krylov_5", "4"]
+    args = ["test/propagation/", "20", "3", "1", "1e-4", "scikit_tt", "krylov_5", "4"]
 
     folder = args[0]
 
