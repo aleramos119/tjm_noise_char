@@ -7,6 +7,8 @@ import numpy as np
 from mqt.yaqs.noise_char.optimization import *
 from mqt.yaqs.noise_char.propagation import *
 
+from auxiliar.write import *
+
 import sys
 import os
 
@@ -26,68 +28,6 @@ os.environ["VECLIB_MAXIMUM_THREADS"] = "1"
 
 #%%
 stop_event = threading.Event()
-def log_memory(pid, log_file, interval, stop_event):
-    """
-    Logs memory usage (in GB) of parent and child processes individually,
-    plus the total RAM used by all of them.
-
-    Output CSV columns: timestamp,pid,name,ram_GB,type
-    Where type is "parent", "child", or "total".
-    """
-    import psutil
-    from datetime import datetime
-    import time
-
-    parent = psutil.Process(pid)
-
-    with open(log_file, "w") as f:
-        f.write("timestamp,pid,name,ram_GB,type\n")
-
-    try:
-        while not stop_event.is_set():
-            timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-
-            entries = []
-            total_rss = 0
-
-            # Log parent
-            try:
-                parent_rss = parent.memory_info().rss
-                total_rss += parent_rss
-                entries.append((parent.pid, parent.name(), parent_rss, "parent"))
-            except (psutil.NoSuchProcess, psutil.AccessDenied):
-                pass
-
-            # Log children
-            try:
-                for child in parent.children(recursive=True):
-                    try:
-                        child_rss = child.memory_info().rss
-                        total_rss += child_rss
-                        entries.append((child.pid, child.name(), child_rss, "child"))
-                    except (psutil.NoSuchProcess, psutil.AccessDenied):
-                        continue
-            except psutil.Error:
-                pass
-
-            # Add total as a virtual process line
-            entries.append(("NA", "ALL_PROCESSES", total_rss, "total"))
-
-            # Write to file
-            with open(log_file, "a") as f:
-                for pid, name, rss_bytes, label in entries:
-                    ram_gb = rss_bytes / 1024 / 1024 / 1024
-                    f.write(f"{timestamp},{pid},{name},{ram_gb:.3f},{label}\n")
-
-            time.sleep(interval)
-
-    except Exception:
-        pass  # silent fail is safer for daemonized threads
-
-
-#%%
-
-
 
 
 
@@ -199,15 +139,8 @@ t, qt_ref_traj, d_On_d_gk=traj_function(sim_params)
 
 
 
-qt_ref_traj_reshaped = qt_ref_traj.reshape(-1, qt_ref_traj.shape[-1])
-
-qt_ref_traj_with_t=np.concatenate([np.array([t]), qt_ref_traj_reshaped], axis=0)
-
-
-
 
 ## Saving reference trajectory and gammas
-header =   "t  " +  "  ".join([obs+str(i)   for obs in sim_params.observables for i in range(sim_params.L) ])
 gamma_header = "  ".join([f"gr_{i+1}" for i in range(L)] + [f"gd_{i+1}" for i in range(L)])
 
 
@@ -219,9 +152,7 @@ if not restart:
         os.makedirs(folder)
 
 
-    ref_traj_file= f"{folder}/ref_traj.txt"
-
-    np.savetxt(ref_traj_file, qt_ref_traj_with_t.T, header=header, fmt='%.6f')
+    write_ref_traj(t, qt_ref_traj, f"{folder}/ref_traj.txt")
 
 
     # Save gamma values next to each other with appropriate header
@@ -254,25 +185,14 @@ loss_function.set_file_name(f"{folder}/loss_x_history", reset=not restart)
 
 
 ## Running the optimization
-print("running optimzation")
+print("running optimzation !!!")
 loss_function.reset()
-loss_history, x_history, x_avg_history, t_opt, exp_val_traj= ADAM_loss_class(loss_function, x0, alpha=0.1, max_iterations=500, threshhold = 1e-3, max_n_convergence = 20, tolerance=1e-8, beta1 = 0.5, beta2 = 0.99, epsilon = 1e-8, restart=restart)#, Ns=10e5)
+loss_history, x_history, x_avg_history, t_opt, opt_traj= ADAM_loss_class(loss_function, x0, alpha=0.1, max_iterations=500, threshhold = 1e-3, max_n_convergence = 20, tolerance=1e-8, beta1 = 0.5, beta2 = 0.99, epsilon = 1e-8, restart=restart)#, Ns=10e5)
 
 
 
 
-
-
-## Saving the optimization results
-exp_val_traj_reshaped = exp_val_traj.reshape(-1, exp_val_traj.shape[-1])
-
-exp_val_traj_with_t=np.concatenate([np.array([t_opt]), exp_val_traj_reshaped], axis=0)
-
-
-
-opt_traj_file= f"{folder}/opt_traj.txt"
-
-np.savetxt(opt_traj_file, exp_val_traj_with_t.T, header=header, fmt='%.6f')
+write_ref_traj(t_opt, opt_traj, f"{folder}/opt_traj.txt" )
 
 
 

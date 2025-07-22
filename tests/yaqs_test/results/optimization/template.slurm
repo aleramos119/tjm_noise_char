@@ -1,6 +1,6 @@
 #!/bin/bash
 #SBATCH --job-name=%JOB_NAME% # Job name
-#SBATCH --time=4-00:00:00 # Specify a Time limit in the format days-hrs:min:sec. Use sinfo to see node time limits
+#SBATCH --time=2-00:00:00 # Specify a Time limit in the format days-hrs:min:sec. Use sinfo to see node time limits
 #SBATCH --chdir=/home/htc/aramos/simulation_of_open_quantum_systems/tjm_noise_char/tests/yaqs_test  # Navigate to the working directory where your script lies
 #SBATCH --output=/home/htc/aramos/simulation_of_open_quantum_systems/tjm_noise_char/tests/yaqs_test/%JOB_DIR%/%j.log     # Standard output and error log
 #SBATCH --partition=big  # Specify the desired partition, e.g. gpu or big. Note that small is the default partition.
@@ -28,7 +28,6 @@ echo "Allocated memory: $SLURM_MEM_PER_NODE MB"
 
 
 
-
 echo 'Activating virtual environment'
 source /opt/conda/etc/profile.d/conda.sh
 
@@ -48,37 +47,37 @@ CPU_LIST=$(taskset -cp $$ | awk -F: '{print $2}' | tr -d ' ')
 
 echo "CPU_LIST:  $CPU_LIST "
 
-LC_NUMERIC=C mpstat -P $CPU_LIST 1 300 | awk '
-BEGIN {
-  print "timestamp,cpu,usr"
-}
-$2 ~ /^[0-9]+$/ {
-  cpu = $2
-  usr = $3
-  print $1 "," cpu "," usr
-}' > %JOB_DIR%/cpu_usage.csv &
+#LC_NUMERIC=C mpstat -P $CPU_LIST 1 300 | awk '
+#BEGIN {
+#  print "timestamp,cpu,usr"
+#}
+#$2 ~ /^[0-9]+$/ {
+#  cpu = $2
+#  usr = $3
+#  print $1 "," cpu "," usr
+#}' > %JOB_DIR%/cpu_usage.csv &
 
-MPSTAT_PID=$!
+#MPSTAT_PID=$!
 
 
 
 
 # Start sstat logging in the background
-{
-  echo "timestamp,MaxRSS"
-  while true; do
-    timestamp=$(date '+%Y-%m-%d %H:%M:%S')
-    #maxrss=$(sstat -j ${SLURM_JOB_ID}.batch --format=MaxRSS --noheader 2>/dev/null | awk '{print $1}')
-    maxrss_kb=$(sstat -j ${SLURM_JOB_ID}.batch --format=MaxRSS --noheader 2>/dev/null | awk '{print $1}')
-    maxrss_gb=$(awk -v kb="$maxrss_kb" 'BEGIN { printf "%.2f", kb / 1024 / 1024 }')
-    if [ -z "$maxrss_gb" ]; then
-      break
-    fi
-    echo "$timestamp,$maxrss_gb"
-    sleep 1
-  done
-} > %JOB_DIR%/sstat_log.csv &
-SSTAT_PID=$!
+#{
+#  echo "timestamp,MaxRSS"
+#  while true; do
+#    timestamp=$(date '+%Y-%m-%d %H:%M:%S')
+#    #maxrss=$(sstat -j ${SLURM_JOB_ID}.batch --format=MaxRSS --noheader 2>/dev/null | awk '{print $1}')
+#    maxrss_kb=$(sstat -j ${SLURM_JOB_ID}.batch --format=MaxRSS --noheader 2>/dev/null | awk '{print $1}')
+#    maxrss_gb=$(awk -v kb="$maxrss_kb" 'BEGIN { printf "%.2f", kb / 1024 / 1024 }')
+#    if [ -z "$maxrss_gb" ]; then
+#      break
+#    fi
+#    echo "$timestamp,$maxrss_gb"
+#    sleep 1
+#  done
+#} > %JOB_DIR%/sstat_log.csv &
+#SSTAT_PID=$!
 
 
 
@@ -86,11 +85,12 @@ SSTAT_PID=$!
 
 
 
-python optimization_test.py %JOB_DIR% %NTRAJ% %L% %RESTART% %ORDER% %THRESHOLD% %D%
+python optimization_test.py %JOB_DIR% %NTRAJ% %L% %RESTART% %ORDER% %THRESHOLD% %D% %METHOD% %SOLVER% %NCPUS% > %JOB_DIR%/python_output.log 2>&1
+
 
 # Stop background loggers after script ends
-kill $MPSTAT_PID
-kill $SSTAT_PID
+#kill $MPSTAT_PID
+#kill $SSTAT_PID
 
 
 

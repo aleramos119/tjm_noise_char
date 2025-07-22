@@ -1,13 +1,13 @@
 #!/bin/bash
 
 # Define your two parameter sets
-cpus=(17)
+cpus=(96)
 
-trajectories=(512)
+trajectories=(512 1024)
 
 #L_list=(10 20 40 80)
 
-L_list=(5)
+L_list=(80 100)
 
 d="2L"
 
@@ -20,7 +20,8 @@ ORDER=1
 THRESHOLD="1e-4"
 
 
-
+method="scikit_tt"
+solver="krylov_5"
 
 # Loop over all combinations
 for ncpus in "${cpus[@]}"; do
@@ -37,7 +38,7 @@ for ncpus in "${cpus[@]}"; do
         	output_script="$job_name/run.slurm"
 
         	# Replace placeholders in the template
-        	sed -e "s|%D%|${d}|g" -e "s|%RESTART%|${RESTART}|g" -e "s|%ORDER%|${ORDER}|g" -e "s|%THRESHOLD%|${THRESHOLD}|g"  -e "s|%L%|${L}|g"  -e "s|%NCPUS%|${ncpus}|g" -e "s|%NTRAJ%|${ntraj}|g" -e "s|%JOB_NAME%|${job_name}|g" -e "s|%JOB_DIR%|${job_dir}|g" "$template" > "$output_script"
+        	sed -e "s|%SOLVER%|${solver}|g" -e "s|%METHOD%|${method}|g"  -e "s|%D%|${d}|g" -e "s|%RESTART%|${RESTART}|g" -e "s|%ORDER%|${ORDER}|g" -e "s|%THRESHOLD%|${THRESHOLD}|g"  -e "s|%L%|${L}|g"  -e "s|%NCPUS%|${ncpus}|g" -e "s|%NTRAJ%|${ntraj}|g" -e "s|%JOB_NAME%|${job_name}|g" -e "s|%JOB_DIR%|${job_dir}|g" "$template" > "$output_script"
 
         	# Optional: submit the job
         	sbatch "$output_script"

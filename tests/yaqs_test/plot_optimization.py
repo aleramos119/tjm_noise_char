@@ -7,22 +7,22 @@ import os
 import pandas as pd
 
 #%%
-L_list_initial=[10,50,100]
+L_list_initial=[10,20,40, 80, 100]
 
-folder="results/optimization/d_2L/"
+folder="results/optimization/d_2/"
 
 
-ntraj_list=[512]
+ntraj_list=[512, 1024]
 
 ntraj=512
 
 
 #%%
-
+### Plotting the error vs L for different ntraj values
 plt.rcParams.update({'axes.linewidth': 1.2})
 plt.rcParams.update({'font.size': 12, 'lines.linewidth': 2, 'lines.markersize': 6})
 
-plt.figure(figsize=(15, 5))
+plt.figure(figsize=(9, 6))
 
 
 for ntraj in ntraj_list:
@@ -59,10 +59,12 @@ plt.savefig(f"{folder}/error_vs_L_15x5.pdf", dpi=300, bbox_inches='tight')
 
 
 # %%
+### Plotting the average gamma values over iterations
 
-L=5
+folder="results/optimization/d_2/"
+L=80
 ntraj=512
-x_avg_file=folder + f"L_{L}/ntraj_{ntraj}/loss_x_history_avg.txt"
+x_avg_file=folder + f"L_{L}/ntraj_{ntraj}/loss_x_history.txt"
 
 data = np.genfromtxt(x_avg_file, skip_header=1)
 
@@ -84,28 +86,120 @@ plt.show()
 
 
 
-# %%
+
+#%%
+# Plot the loss from loss_x_history.txt
+folder = "results/optimization/d_2/"
+L = 100
+ntraj = 512
+loss_file = folder + f"L_{L}/ntraj_{ntraj}/loss_x_history.txt"
+
+if os.path.exists(loss_file):
+    data = np.genfromtxt(loss_file, skip_header=1)
+    plt.figure(figsize=(8, 5))
+    plt.plot(data[:, 0], data[:, 1], label="Loss")
+    plt.xlabel("Iterations")
+    plt.ylabel("Loss")
+    plt.title("Loss vs Iterations")
+    plt.legend()
+    plt.show()
+else:
+    print("Loss file not found.")
 
 
 
 
 
 
+#%%
 
-
-
-
-# %%
-%matplotlib inline
-L=5
+#### Plot reference and optimized trajectory
+folder="results/optimization/d_2/"
+L=100
 ntraj=512
-mem_usage = pd.read_csv(f"results/optimization/d_2L/L_{L}/ntraj_{ntraj}/sstat_log.csv")
 
-plt.figure()
-plt.plot(mem_usage.iloc[:, -1])
-plt.xlabel("Step")
-plt.ylabel("Memory Usage")
-plt.title("Memory Usage Over Steps")
-plt.show()
-# plt.savefig(f"{folder}/mem_usage_L_{L}_ntraj_{ntraj}.pdf", dpi=300, bbox_inches='tight')
+
+ref_traj_file = folder + f"L_{L}/ntraj_{ntraj}/ref_traj.txt"
+opt_traj_file = folder + f"L_{L}/ntraj_{ntraj}/opt_traj.txt"
+
+if os.path.exists(ref_traj_file) and os.path.exists(opt_traj_file):
+    ref_traj = np.genfromtxt(ref_traj_file, skip_header=1)
+    opt_traj = np.genfromtxt(opt_traj_file, skip_header=1)
+
+    plt.figure(figsize=(8, 5))
+    plt.plot(ref_traj[:, 0], ref_traj[:, 1], label="Reference Trajectory")
+    plt.plot(opt_traj[:, 0], opt_traj[:, 1], label="Optimized Trajectory", linestyle='--')
+    plt.xlabel("Time")
+    plt.ylabel("Trajectory Value")
+    plt.legend()
+    plt.title("Comparison of Reference and Optimized Trajectories")
+    plt.show()
+else:
+    print("Reference or optimized trajectory file not found.")
+
+
+
+
+
+#%%
+
+#### Plot reference and opptimized trajecotry
+folder="results/optimization/d_2/"
+L=100
+ntraj=512
+
+
+ref_traj_file = folder + f"L_{L}/ntraj_{ntraj}/ref_traj.txt"
+opt_traj_file = folder + f"L_{L}/ntraj_{ntraj}/opt_traj.txt"
+
+if os.path.exists(ref_traj_file):
+    ref_traj = np.genfromtxt(ref_traj_file, skip_header=1)
+    # opt_traj = np.genfromtxt(opt_traj_file, skip_header=1)
+
+    plt.figure(figsize=(8, 5))
+    plt.plot(ref_traj[:, 0], ref_traj[:, 1], label="Reference Trajectory")
+    # plt.plot(opt_traj[:, 0], opt_traj[:, 1], label="Optimized Trajectory", linestyle='--')
+    plt.xlabel("Time")
+    plt.ylabel("Trajectory Value")
+    plt.legend()
+    plt.title("Comparison of Reference and Optimized Trajectories")
+    plt.show()
+else:
+    print("Reference or optimized trajectory file not found.")
+
+
+
+
+
+#%%
+
+#### Plot reference and opptimized trajecotry
+folder="results/optimization/d_2/"
+L=100
+ntraj=512
+
+
+ref_traj_file = f"results/cpu_traj_scan/method_scikit_tt_new_calc_omp_1/solver_krylov_5/order_1/threshold_1e-4/{L}_sites/96_cpus/{ntraj}_traj/qt_ref_traj.txt"
+
+if os.path.exists(ref_traj_file):
+    ref_traj = np.genfromtxt(ref_traj_file, skip_header=1)
+    # opt_traj = np.genfromtxt(opt_traj_file, skip_header=1)
+
+    plt.figure(figsize=(8, 5))
+    plt.plot(ref_traj[:, 0], ref_traj[:, 1], label="Reference Trajectory")
+    # plt.plot(opt_traj[:, 0], opt_traj[:, 1], label="Optimized Trajectory", linestyle='--')
+    plt.xlabel("Time")
+    plt.ylabel("Trajectory Value")
+    plt.legend()
+    plt.title("Comparison of Reference and Optimized Trajectories")
+    plt.show()
+else:
+    print("Reference or optimized trajectory file not found.")
+
+
+#%%
+ref_traj.shape
+
+
+
 # %%
