@@ -35,7 +35,7 @@ stop_event = threading.Event()
 #
 args = sys.argv[1:]
 
-#args=["test/optimization", 100, 2, "False", "1", "1e-4", "2L", "scikit_tt", "krylov_5", "4"]
+# args=["test/optimization", 100, 2, "False", "1", "1e-4", "2", "scikit_tt", "krylov_5", "6"]
 
 folder = args[0]
 
@@ -220,8 +220,8 @@ time.sleep(1)
 
 # L=100
 # ntraj=1024
-# x_avg_file="test/reset/loss_x_history.txt"
-# gammas_file="test/reset/gammas.txt"
+# x_avg_file="test/optimization/loss_x_history.txt"
+# gammas_file="test/optimization/gammas.txt"
 
 # data = np.genfromtxt(x_avg_file, skip_header=1)
 # gammas=np.genfromtxt(gammas_file, skip_header=1)
@@ -245,7 +245,7 @@ time.sleep(1)
 
 
 
-# # %%
+# %%
 
 # plt.plot(loss_function.diff_avg_history)
 # # %%
