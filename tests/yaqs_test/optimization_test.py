@@ -35,7 +35,7 @@ stop_event = threading.Event()
 #
 args = sys.argv[1:]
 
-# args=["test/optimization", 100, 2, "False", "1", "1e-4", "2", "scikit_tt", "krylov_5", "6"]
+#args=["test/optimization", 20, 2, "False", "1", "1e-4", "2", "scikit_tt", "krylov_5", "6"]
 
 folder = args[0]
 
@@ -135,7 +135,7 @@ sim_params.req_cpus = allocated_cpus - 1
 sim_params.set_solver("tdvp"+str(order),solver)
 
 
-t, qt_ref_traj, d_On_d_gk=traj_function(sim_params)
+t, qt_ref_traj, d_On_d_gk, avg_min_max_traj_time=traj_function(sim_params)
 
 
 

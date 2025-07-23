@@ -49,11 +49,11 @@ def main_code(folder, ntraj, L, order , threshold, method, solver, req_cpus):
 
     if method == "scikit_tt":
         print("Using SciKit-TT method")
-        t, ref_traj, d_On_d_gk=scikit_tt_traj(sim_params)
+        t, ref_traj, d_On_d_gk, avg_min_max_traj_time=scikit_tt_traj(sim_params)
         print("SciKit-TT method completed")
 
     elif method == "tjm":
-        t, ref_traj, d_On_d_gk = tjm_traj(sim_params)
+        t, ref_traj, d_On_d_gk, avg_min_max_traj_time = tjm_traj(sim_params)
 
 
     end_time = time.time()
@@ -65,9 +65,13 @@ def main_code(folder, ntraj, L, order , threshold, method, solver, req_cpus):
 
     duration = end_time - start_time
     with open(f"{folder}/time_sec.txt", "w") as f:
-        f.write(f"{duration}\n")
+        f.write(f"#sim_time    avg_traj_time     min_traj_time     max_traj_time  \n")
+        f.write(f"#{duration}    {avg_min_max_traj_time[0]}     {avg_min_max_traj_time[1]}       {avg_min_max_traj_time[2]}  \n")
+
 
     print("time saved!!!")
+
+    return t, ref_traj, d_On_d_gk, results
     
 
 #%%
@@ -78,9 +82,9 @@ def main_code(folder, ntraj, L, order , threshold, method, solver, req_cpus):
 
 
 if __name__=="__main__":
-    # args = sys.argv[1:]
+    args = sys.argv[1:]
 
-    args = ["test/propagation/", "100", "3", "1", "1e-4", "scikit_tt", "krylov_5", "4"]
+    #args = ["test/propagation/", "100", "3", "1", "1e-4", "scikit_tt", "krylov_5", "4"]
 
     folder = args[0]
 
@@ -127,7 +131,7 @@ if __name__=="__main__":
 
     req_cpus=allocated_cpus-1
 
-    main_code(folder, ntraj, L, order , threshold, method, solver, req_cpus)
+    t, ref_traj, d_On_d_gk, results=main_code(folder, ntraj, L, order , threshold, method, solver, req_cpus)
 
     stop_event.set()
 
@@ -141,22 +145,32 @@ if __name__=="__main__":
 
 
 
-
-
-
-
 #%%
 
+# # for i in range(100):
+# #     plt.plot(t, results[i][0][1])
+
+
+
+# average=np.sum([res[0]/100 for res in results], axis=0)
+
+
+# col=2
+# plt.plot(t, ref_traj[0, col], label="ref_traj")
+# plt.plot(t, average[col], label="average")
+
+
+
+# #%%
+
+# average=np.sum([res[0][1]/100 for res in results])
+# average.shape
 
 
 
 
-
-
-
-
-
-
+# #%%
+# np.sum([results[0][0][1], results[1][0][1]], axis=0)
 
 
 # #%%

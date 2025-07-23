@@ -127,3 +127,60 @@ plt.legend(loc="upper left", ncol=2)
 
 print(cpu_usage_df.columns.tolist())
 # %%
+
+fig, axs = plt.subplots(1, 2, figsize=(14, 5))
+col = 1
+ntraj_list = [1024, 2048, 4096, 8192]
+
+for ntraj in ntraj_list:
+    traj_file = f"results/cpu_traj_scan/method_tjm_new_calc_omp_1/solver_exact/order_1/threshold_1e-4/10_sites/96_cpus/{ntraj}_traj/ref_traj.txt"
+    data = np.loadtxt(traj_file)
+    axs[0].plot(data[:, 0], data[:, col], label=f"tjm - {ntraj} trajs")
+
+axs[0].set_title("tjm_new_calc_omp_1")
+axs[0].set_xlabel("Time")
+axs[0].set_ylabel("Value")
+axs[0].legend()
+
+for ntraj in ntraj_list:
+    traj_file = f"results/cpu_traj_scan/method_scikit_tt_new_calc_omp_1/solver_krylov_5/order_1/threshold_1e-4/10_sites/96_cpus/{ntraj}_traj/ref_traj.txt"
+    data = np.loadtxt(traj_file)
+    axs[1].plot(data[:, 0], data[:, col], label=f"scikit_tt - {ntraj} trajs")
+
+axs[1].set_title("scikit_tt_new_calc_omp_1")
+axs[1].set_xlabel("Time")
+axs[1].set_ylabel("Value")
+axs[1].legend()
+
+plt.tight_layout()
+plt.show()
+col=1
+
+
+#%%
+
+ntraj_list = [1024, 2048, 4096, 8192]
+time_list = []
+for ntraj in ntraj_list:
+    time_file = f"results/cpu_traj_scan/method_scikit_tt_new_calc_omp_1/solver_krylov_5/order_1/threshold_1e-4/10_sites/96_cpus/{ntraj}_traj/time_sec.txt"
+    time=np.loadtxt(time_file)
+    time_list.append(time / 60)  # convert seconds to minutes
+
+plt.plot(ntraj_list, time_list, 'o-', label=f"scikit_tt")
+   
+
+time_list = []
+for ntraj in ntraj_list:
+    time_file = f"results/cpu_traj_scan/method_tjm_new_calc_omp_1/solver_exact/order_1/threshold_1e-4/10_sites/96_cpus/{ntraj}_traj/time_sec.txt"
+    time=np.loadtxt(time_file)
+    time_list.append(time / 60)  # convert seconds to minutes
+plt.plot(ntraj_list, time_list, 'o-', label=f"tjm")
+
+plt.xlabel("Number of Trajectories")
+plt.ylabel("Time (min)")
+plt.legend()
+# %%
+time_list
+# %%
+ntraj_list
+# %%
