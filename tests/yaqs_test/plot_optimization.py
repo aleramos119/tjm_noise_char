@@ -61,14 +61,16 @@ plt.savefig(f"{folder}/error_vs_L_15x5.pdf", dpi=300, bbox_inches='tight')
 # %%
 ### Plotting the average gamma values over iterations
 
-folder="results/optimization/d_2/"
-L=80
+
+L=10
 ntraj=512
-x_avg_file=folder + f"L_{L}/ntraj_{ntraj}/loss_x_history.txt"
+
+folder = "test/optimization/"
+x_avg_file=folder + f"loss_x_history.txt"
 
 data = np.genfromtxt(x_avg_file, skip_header=1)
 
-gammas_file=folder + f"L_{L}/ntraj_{ntraj}/gammas.txt"
+gammas_file=folder + f"gammas.txt"
 gammas = np.genfromtxt(gammas_file, skip_header=1)
 
 d=len(gammas)
@@ -89,15 +91,17 @@ plt.show()
 
 #%%
 # Plot the loss from loss_x_history.txt
-folder = "results/optimization/d_2/"
-L = 100
+
+L = 10
 ntraj = 512
-loss_file = folder + f"L_{L}/ntraj_{ntraj}/loss_x_history.txt"
+
+folder = "test/optimization/"
+loss_file = folder + f"loss_x_history.txt"
 
 if os.path.exists(loss_file):
     data = np.genfromtxt(loss_file, skip_header=1)
     plt.figure(figsize=(8, 5))
-    plt.plot(data[:, 0], data[:, 1], label="Loss")
+    plt.plot(data[:, 0], np.log10(data[:, 1]), label="Loss")
     plt.xlabel("Iterations")
     plt.ylabel("Loss")
     plt.title("Loss vs Iterations")
@@ -114,21 +118,26 @@ else:
 #%%
 
 #### Plot reference and optimized trajectory
-folder="results/optimization/d_2/"
-L=100
+
+L=10
 ntraj=512
 
 
-ref_traj_file = folder + f"L_{L}/ntraj_{ntraj}/ref_traj.txt"
-opt_traj_file = folder + f"L_{L}/ntraj_{ntraj}/opt_traj.txt"
+col=3
+
+
+folder="test/optimization/"
+
+ref_traj_file = folder + f"ref_traj.txt"
+opt_traj_file = folder + f"opt_traj.txt"
 
 if os.path.exists(ref_traj_file) and os.path.exists(opt_traj_file):
     ref_traj = np.genfromtxt(ref_traj_file, skip_header=1)
     opt_traj = np.genfromtxt(opt_traj_file, skip_header=1)
 
     plt.figure(figsize=(8, 5))
-    plt.plot(ref_traj[:, 0], ref_traj[:, 1], label="Reference Trajectory")
-    plt.plot(opt_traj[:, 0], opt_traj[:, 1], label="Optimized Trajectory", linestyle='--')
+    plt.plot(ref_traj[:, 0], ref_traj[:, col], label="Reference Trajectory")
+    plt.plot(opt_traj[:, 0], opt_traj[:, col], label="Optimized Trajectory", linestyle='--')
     plt.xlabel("Time")
     plt.ylabel("Trajectory Value")
     plt.legend()
@@ -143,7 +152,7 @@ else:
 
 #%%
 
-#### Plot reference and opptimized trajecotry
+#### Plot reference and optimized trajecotry
 folder="results/optimization/d_2/"
 L=100
 ntraj=512

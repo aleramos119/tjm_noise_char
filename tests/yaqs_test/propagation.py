@@ -49,7 +49,7 @@ def main_code(folder, ntraj, L, order , threshold, method, solver, req_cpus):
 
     if method == "scikit_tt":
         print("Using SciKit-TT method")
-        t, ref_traj, d_On_d_gk, avg_min_max_traj_time=scikit_tt_traj(sim_params)
+        t, ref_traj, d_On_d_gk, avg_min_max_traj_time, results=scikit_tt_traj(sim_params)
         print("SciKit-TT method completed")
 
     elif method == "tjm":
@@ -60,6 +60,16 @@ def main_code(folder, ntraj, L, order , threshold, method, solver, req_cpus):
 
 
     write_ref_traj(t, ref_traj, f"{folder}/ref_traj.txt")
+
+    n_obs_site, L, n_t = ref_traj.shape
+
+    for i in range(ntraj):
+        write_ref_traj(t, results[i][0].reshape(n_obs_site, L, n_t), f"{folder}/res_traj_{i}.txt")
+
+    
+    avg_traj = np.sum([res[0] for res in results], axis=0)/ntraj
+
+    write_ref_traj(t, avg_traj.reshape(n_obs_site, L, n_t), f"{folder}/avg_traj.txt")
 
     print("ref_traj saved!!!")
 
@@ -82,9 +92,9 @@ def main_code(folder, ntraj, L, order , threshold, method, solver, req_cpus):
 
 
 if __name__=="__main__":
-    args = sys.argv[1:]
+    # args = sys.argv[1:]
 
-    #args = ["test/propagation/", "100", "3", "1", "1e-4", "scikit_tt", "krylov_5", "4"]
+    args = ["test/propagation/", "100", "5", "1", "1e-4", "scikit_tt", "krylov_5", "4"]
 
     folder = args[0]
 

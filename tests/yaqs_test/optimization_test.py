@@ -35,7 +35,7 @@ stop_event = threading.Event()
 #
 args = sys.argv[1:]
 
-#args=["test/optimization", 20, 2, "False", "1", "1e-4", "2", "scikit_tt", "krylov_5", "6"]
+#args=["test/optimization", 20, 5, "False", "1", "1e-4", "2L", "qutip", "exact", "6"]
 
 folder = args[0]
 
@@ -121,6 +121,9 @@ if method == "tjm":
 if method == "scikit_tt":
     traj_function = scikit_tt_traj
 
+if method == "qutip":
+    traj_function = qutip_traj
+
 
 
 
@@ -187,7 +190,7 @@ loss_function.set_file_name(f"{folder}/loss_x_history", reset=not restart)
 ## Running the optimization
 print("running optimzation !!!")
 loss_function.reset()
-loss_history, x_history, x_avg_history, t_opt, opt_traj= ADAM_loss_class(loss_function, x0, alpha=0.1, max_iterations=500, threshhold = 1e-3, max_n_convergence = 20, tolerance=1e-8, beta1 = 0.5, beta2 = 0.99, epsilon = 1e-8, restart=restart)#, Ns=10e5)
+loss_history, x_history, x_avg_history, t_opt, opt_traj= ADAM_loss_class(loss_function, x0, alpha=0.07, max_iterations=500, threshhold = 1e-3, max_n_convergence = 50, tolerance=1e-8, beta1 = 0.5, beta2 = 0.99, epsilon = 1e-7, restart=restart)#, Ns=10e5)
 
 
 

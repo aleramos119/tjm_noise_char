@@ -130,7 +130,7 @@ print(cpu_usage_df.columns.tolist())
 
 fig, axs = plt.subplots(1, 2, figsize=(14, 5))
 col = 1
-ntraj_list = [1024, 2048, 4096, 8192]
+ntraj_list = [1024, 2048, 4096]
 
 for ntraj in ntraj_list:
     traj_file = f"results/cpu_traj_scan/method_tjm_new_calc_omp_1/solver_exact/order_1/threshold_1e-4/10_sites/96_cpus/{ntraj}_traj/ref_traj.txt"
@@ -143,7 +143,7 @@ axs[0].set_ylabel("Value")
 axs[0].legend()
 
 for ntraj in ntraj_list:
-    traj_file = f"results/cpu_traj_scan/method_scikit_tt_new_calc_omp_1/solver_krylov_5/order_1/threshold_1e-4/10_sites/96_cpus/{ntraj}_traj/ref_traj.txt"
+    traj_file = f"results/cpu_traj_scan/method_scikit_tt_new_calc_omp_1/solver_exact/order_1/threshold_1e-4/10_sites/32_cpus/{ntraj}_traj/ref_traj.txt"
     data = np.loadtxt(traj_file)
     axs[1].plot(data[:, 0], data[:, col], label=f"scikit_tt - {ntraj} trajs")
 
@@ -183,4 +183,52 @@ plt.legend()
 time_list
 # %%
 ntraj_list
+# %%
+
+
+
+fig, axs = plt.subplots(1, 2, figsize=(14, 5))
+
+col = 2
+ntraj_list=[1024,2048, 4096]
+
+ntraj=ntraj_list[0]
+traj_file = f"results/cpu_traj_scan/method_tjm_new_calc_omp_1/solver_exact/order_1/threshold_1e-4/10_sites/96_cpus/{ntraj}_traj/ref_traj.txt"
+data = np.loadtxt(traj_file)
+axs[0].plot(data[:, 0], data[:, col], label=f"tjm  N={ntraj}")
+axs[0].set_title(f"tjm N={ntraj}")
+axs[0].legend()
+
+
+# traj_file = f"results/cpu_traj_scan/method_scikit_tt_new_calc_omp_1/solver_exact/order_1/threshold_1e-4/10_sites/32_cpus/{ntraj}_traj/ref_traj.txt"
+# data = np.loadtxt(traj_file)
+# axs[1].plot(data[:, 0], data[:, col], 'o-', label="ref_traj")
+
+
+
+
+
+for i in range(ntraj):
+    traj_file = f"results/cpu_traj_scan/method_scikit_tt_new_calc_omp_1/solver_exact/order_1/threshold_1e-4/10_sites/32_cpus/{ntraj}_traj/res_traj_{i}.txt"
+    data = np.loadtxt(traj_file)
+    axs[1].plot(data[:, 0], data[:, col],linestyle=':', color = "gray", linewidth=1, alpha=0.7)
+
+
+
+traj_file = f"results/cpu_traj_scan/method_scikit_tt_new_calc_omp_1/solver_exact/order_1/threshold_1e-4/10_sites/32_cpus/{ntraj}_traj/avg_traj.txt"
+data = np.loadtxt(traj_file)
+axs[1].plot(data[:, 0], data[:, col], label="avg_traj", linewidth=3)
+
+
+
+axs[1].set_title(f"scikit_tt exact solver N={ntraj}")
+axs[1].set_xlabel("Time")
+axs[1].set_ylabel("Value")
+axs[1].legend()
+
+
+plt.tight_layout()
+plt.show()
+col=1
+
 # %%
