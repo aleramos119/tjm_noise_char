@@ -94,7 +94,7 @@ def main_code(folder, ntraj, L, order , threshold, method, solver, req_cpus):
 if __name__=="__main__":
     # args = sys.argv[1:]
 
-    args = ["test/propagation/", "100", "5", "1", "1e-4", "scikit_tt", "krylov_5", "4"]
+    args = ["test/propagation/", "100", "4", "1", "1e-4", "scikit_tt", "exact", "4"]
 
     folder = args[0]
 

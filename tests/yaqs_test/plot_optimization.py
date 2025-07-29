@@ -5,6 +5,8 @@ import numpy as np
 import os
 
 import pandas as pd
+import glob
+from matplotlib.widgets import Slider
 
 #%%
 L_list_initial=[10,20,40, 80, 100]
@@ -62,10 +64,10 @@ plt.savefig(f"{folder}/error_vs_L_15x5.pdf", dpi=300, bbox_inches='tight')
 ### Plotting the average gamma values over iterations
 
 
-L=10
-ntraj=512
+L=100
+ntraj=1024
 
-folder = "test/optimization/"
+folder = f"results/optimization/method_tjm_exact/d_2L_test/L_{L}/ntraj_{ntraj}/"
 x_avg_file=folder + f"loss_x_history.txt"
 
 data = np.genfromtxt(x_avg_file, skip_header=1)
@@ -75,7 +77,7 @@ gammas = np.genfromtxt(gammas_file, skip_header=1)
 
 d=len(gammas)
 
-for i in range(d):
+for i in np.random.choice(range(d), size=3, replace=False):
     plt.plot(data[:, 0], data[:, 2 + i], label=f"$\\gamma_{{{i+1}}}$")
     plt.axhline(gammas[i], color=plt.gca().lines[-1].get_color(), linestyle='--', linewidth=2)
 
@@ -92,10 +94,10 @@ plt.show()
 #%%
 # Plot the loss from loss_x_history.txt
 
-L = 10
-ntraj = 512
+L=80
+ntraj=512
 
-folder = "test/optimization/"
+folder = f"results/optimization/method_tjm_exact/d_2_test/L_{L}/ntraj_{ntraj}/"
 loss_file = folder + f"loss_x_history.txt"
 
 if os.path.exists(loss_file):
@@ -119,14 +121,14 @@ else:
 
 #### Plot reference and optimized trajectory
 
-L=10
+
+col=1
+
+
+L=80
 ntraj=512
 
-
-col=3
-
-
-folder="test/optimization/"
+folder = f"results/optimization/method_tjm_exact/d_2_test/L_{L}/ntraj_{ntraj}/"
 
 ref_traj_file = folder + f"ref_traj.txt"
 opt_traj_file = folder + f"opt_traj.txt"
@@ -146,6 +148,12 @@ if os.path.exists(ref_traj_file) and os.path.exists(opt_traj_file):
 else:
     print("Reference or optimized trajectory file not found.")
 
+
+
+#%%
+
+loss=np.sum((ref_traj-opt_traj)**2)
+print(loss)
 
 
 
@@ -208,6 +216,96 @@ else:
 
 #%%
 ref_traj.shape
+
+
+
+# %%
+
+# Folder and file pattern
+
+%matplotlib qt
+L=80
+ntraj=512
+col=1
+
+folder = f"test/optimization/"
+
+
+file_pattern = folder + f"opt_traj_*.txt"
+
+# Find all matching files and sort by index
+opt_traj_files = sorted(glob.glob(file_pattern), key=lambda x: int(x.split('_')[-1].split('.')[0]))
+if not opt_traj_files:
+    print("No opt_traj_{i}.txt files found.")
+else:
+    # Load all trajectories
+    opt_trajs = [np.genfromtxt(f, skip_header=1) for f in opt_traj_files]
+
+
+    ref_traj = np.genfromtxt(folder + f"ref_traj.txt", skip_header=1)
+
+    # Initial plot
+    fig, ax = plt.subplots(figsize=(8, 5))
+    plt.subplots_adjust(bottom=0.2)
+    ax.plot(ref_traj[:, 0], ref_traj[:, col], label="Reference Trajectory")
+    l, = ax.plot(opt_trajs[0][:, 0], opt_trajs[0][:, col], label="Optimized Trajectory", linestyle='--')
+
+    ax.set_xlabel("Time")
+    ax.set_ylabel("Trajectory Value")
+    ax.set_title("Optimized Trajectory (select index with slider)")
+    ax.legend()
+    
+
+    # Slider
+    ax_slider = plt.axes([0.2, 0.05, 0.6, 0.03])
+    slider = Slider(ax_slider, 'Index', 0, len(opt_trajs)-1, valinit=0, valstep=1)
+
+    def update(val):
+        idx = int(slider.val)
+        l.set_ydata(opt_trajs[idx][:, col])
+        l.set_xdata(opt_trajs[idx][:, 0])
+        # ax.relim()
+        # ax.autoscale_view()
+        fig.canvas.draw_idle()
+        ax.legend()
+
+    slider.on_changed(update)
+    plt.show()
+# %%
+ref_traj.shape
+# %%
+
+### Plot error gammas
+
+
+L=5
+ntraj_list=[512, 1024, 2048, 4096, 8192]
+
+error_list=[]
+
+for ntraj in ntraj_list:
+
+    folder = f"results/optimization/method_tjm_exact/d_2L_test/L_{L}/ntraj_{ntraj}/"
+    x_avg_file=folder + f"loss_x_history_avg.txt"
+
+    data = np.genfromtxt(x_avg_file, skip_header=1)
+
+    gammas_file=folder + f"gammas.txt"
+    gammas = np.genfromtxt(gammas_file, skip_header=1)
+
+    d=len(gammas)
+
+    error_list.append(np.log10(max(abs(data[-1,2:]-gammas))))
+    
+
+
+plt.plot(ntraj_list, error_list,'o-', label=f"L={L}")
+
+
+#%%
+
+
+data[-1, 2:].shape
 
 
 

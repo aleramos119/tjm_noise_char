@@ -33,9 +33,9 @@ stop_event = threading.Event()
 
 
 #
-args = sys.argv[1:]
+# args = sys.argv[1:]
 
-#args=["test/optimization", 20, 5, "False", "1", "1e-4", "2L", "qutip", "exact", "6"]
+args=["test/optimization", 20, 5, "False", "1", "1e-4", "2", "qutip", "exact", "6"]
 
 folder = args[0]
 
@@ -220,31 +220,30 @@ time.sleep(1)
 
 
 
+x_avg_file="test/optimization/loss_x_history.txt"
+gammas_file="test/optimization/gammas.txt"
 
-# L=100
-# ntraj=1024
-# x_avg_file="test/optimization/loss_x_history.txt"
-# gammas_file="test/optimization/gammas.txt"
-
-# data = np.genfromtxt(x_avg_file, skip_header=1)
-# gammas=np.genfromtxt(gammas_file, skip_header=1)
+data = np.genfromtxt(x_avg_file, skip_header=1)
+gammas=np.genfromtxt(gammas_file, skip_header=1)
 
 
-# nt,cols = data.shape
+nt,cols = data.shape
 
-# d=cols-2
+d=(cols-2)//2
 
-# L=d//2
+L=d//2
 
-# for i in range(d):
-#     plt.plot(data[:, 0], data[:, 2 + i], label=f"$\\gamma_{{{i+1}}}$")
-#     plt.axhline(gammas[i], color=plt.gca().lines[-1].get_color(), linestyle='--', linewidth=2)
+for i in range(d):
+    plt.plot(data[:, 0], data[:, 2 + i], label=f"$\\gamma_{{{i+1}}}$")
+    plt.axhline(gammas[i], color=plt.gca().lines[-1].get_color(), linestyle='--', linewidth=2)
 
 
-# plt.xlabel("Iterations")
-# plt.ylabel(r"$\gamma$")
-# plt.legend()
+plt.xlabel("Iterations")
+plt.ylabel(r"$\gamma$")
+plt.legend()
 
+#%%
+data.shape
 
 
 
