@@ -1,4 +1,3 @@
-
 #%%
 import matplotlib.pyplot as plt
 import numpy as np
@@ -26,163 +25,246 @@ os.environ["NUMEXPR_NUM_THREADS"] = "1"
 os.environ["VECLIB_MAXIMUM_THREADS"] = "1"
 
 
+
+
+
 #%%
-stop_event = threading.Event()
+
+def set_gammas(params):
+
+    sites=params["sites"]
+
+    # If it's a restart job gammas will be read from the file
+    if params["restart"]:
+
+        gammas = np.genfromtxt(f"{params["folder"]}/gammas.txt", skip_header=1)
+
+        if params["dim"] == "2":
+            gamma_rel=gammas[0]
+            gamma_deph=gammas[1]
+
+        if params["dim"] == "2L":
+            gamma_rel = gammas[:sites]
+            gamma_deph = gammas[sites:]
+
+    # If it's not a restart job gammas will be read from the file
+    else:
+        if params["dim"] == "2":
+            if params["g_rel"]=="random":
+                gamma_rel=np.random.rand()
+            if params["g_rel"]!="random":
+                gamma_rel=float(params["g_rel"])
+
+            if params["g_deph"]=="random":
+                gamma_deph=np.random.rand()
+            if params["g_deph"]!="random":
+                gamma_deph=float(params["g_deph"])
+
+
+        if params["dim"] == "2L":
+
+            if params["g_rel"]=="random":
+                gamma_rel=list(np.random.rand(sites))
+            if params["g_rel"]!="random":
+                gamma_rel=[float(params["g_rel"])]*sites
+
+            if params["g_deph"]=="random":
+                gamma_deph=list(np.random.rand(sites))
+            if params["g_deph"]!="random":
+                gamma_deph=[float(params["g_deph"])]*sites
+            
+            
+    if not params["restart"]:
+
+        if not os.path.exists(params["folder"]):
+                os.makedirs(params["folder"])
+
+
+        gamma_header = "  ".join([f"gr_{i+1}" for i in range(sites)] + [f"gd_{i+1}" for i in range(sites)])
+        gamma_file = f"{params["folder"]}/gammas.txt"
+        gamma_data = np.hstack([gamma_rel, gamma_deph])
+        np.savetxt(gamma_file, gamma_data.reshape(1, -1), header=gamma_header, fmt='%.6f')
+
+    
+    return gamma_rel, gamma_deph
 
 
 
 
-#
-# args = sys.argv[1:]
-
-args=["test/optimization", 20, 5, "False", "1", "1e-4", "2", "qutip", "exact", "6"]
-
-folder = args[0]
-
-ntraj = int(args[1])
-
-L = int(args[2])
-
-restart = args[3].lower() == "true" if len(args) > 3 else False
+def running_ref_traj(params,sim_params,traj_function):
 
 
-order = int(args[4])
-
-threshold = float(args[5])
-
-dimensions = args[6]
-
-
-
-
-method = args[7]
-
-solver = args[8]
-
-
-allocated_cpus = int(args[9])
-
-
-
-print("Input parameters:")
-print(f"folder = {folder}")
-print(f"ntraj = {ntraj}")
-print(f"L = {L}")
-print(f"restart = {restart}")
-print(f"order = {order}")
-print(f"threshold = {threshold}")
-print(f"dimensions = {dimensions}")
-print(f"method = {method}")
-print(f"solver = {solver}")
-print(f"allocated_cpus = {allocated_cpus}")
-
-
-
-
-pid = os.getpid()
-
-
-log_file = folder+"/self_memory_log.csv"
-
-# Start memory logging in a background thread
-logger_thread = threading.Thread(target=log_memory, args=(pid, log_file, 30,stop_event), daemon=True)
-logger_thread.start()
-
-
-
-
-
-
-## Defining the gammas
-if restart:
-    gammas = np.genfromtxt(f"{folder}/gammas.txt", skip_header=1)
-
-    if dimensions == "2":
-        gamma_rel=gammas[0]
-        gamma_deph=gammas[1]
-
-    if dimensions == "2L":
-        gamma_rel = gammas[:L]
-        gamma_deph = gammas[L:]
-
-else:
-    if dimensions == "2":
-        gamma_rel=0.1
-        gamma_deph=0.1
-
-    if dimensions == "2L":
-        gamma_rel=np.random.rand(L)
-        gamma_deph=np.random.rand(L)
+    ## Computing reference trajectory 
+    print("Running ref traj")
     
 
-if method == "tjm":
+
+    if params["restart"]:
+        data = np.genfromtxt(f"{params["folder"]}/ref_traj.txt", skip_header=1)
+
+        t=data[:,0]
+        n_t=len(t)
+
+        n_obs_site=(len(data[0,0])-1)//params["sites"]
+
+        qt_ref_traj=data[:,1:].reshape(n_obs_site, params["sites"], n_t)
+
+
+
+    if not params["restart"]:
+
+        t, qt_ref_traj, _, _=traj_function(sim_params)
+        write_ref_traj(t, qt_ref_traj, f"{params["folder"]}/ref_traj.txt")
+
+    
+    return t, qt_ref_traj
+
+
+
+def set_sim_params(gamma_rel, gamma_deph,params):
+
+    sim_params = SimulationParameters(params["sites"], gamma_rel, gamma_deph)
+    sim_params.T = params["T"]
+    sim_params.N = params["ntraj_0"]
+    sim_params.order = params["order"]
+    sim_params.threshold = params["threshold"]
+    sim_params.req_cpus = params["alloc_cpus"] - 1  ### I remove 1 cpu for the thread that logs the memory
+    sim_params.max_bond_dim = params["max_bond_dim"]
+    sim_params.set_solver("tdvp"+str(params["order"]),params["solver"])
+
+    sim_params.set_gammas(gamma_rel, gamma_deph)
+
+
+    return sim_params
+
+
+
+def set_loss_function(params, sim_params, qt_ref_traj, traj_function):
+    sites=params["sites"]
+
+    ## Defining the loss function and initial parameters
+    sim_params.N = params["ntraj"]
+
+    if params["dim"] == "2":
+
+        loss_function=loss_class_2d(sim_params, qt_ref_traj, traj_function, print_to_file=True)
+
+
+        if params["g_rel_0"]=="random":
+            gamma_rel_0=np.random.rand()
+        if params["g_rel_0"]!="random":
+            gamma_rel_0=float(params["g_rel_0"])
+
+        if params["g_deph_0"]=="random":
+            gamma_deph_0=np.random.rand()
+        if params["g_deph_0"]!="random":
+            gamma_deph_0=float(params["g_deph_0"])
+
+        x0 = [gamma_rel_0, gamma_deph_0]
+
+    if params["dim"] == "2L":
+
+        loss_function=loss_class_nd(sim_params, qt_ref_traj, traj_function, print_to_file=True)
+
+
+        if params["g_rel_0"]=="random":
+            gamma_rel_0=list(np.random.rand(sites))
+        if params["g_rel_0"]!="random":
+            gamma_rel_0=[float(params["g_rel_0"])]*sites
+
+        if params["g_deph_0"]=="random":
+            gamma_deph_0=list(np.random.rand(sites))
+        if params["g_deph_0"]!="random":
+            gamma_deph_0=[float(params["g_deph_0"])]*sites
+
+
+        x0 = gamma_rel_0 + gamma_deph_0
+
+    loss_function.set_file_name(f"{params["folder"]}/loss_x_history", reset=not params["restart"])
+
+
+
+    return loss_function, x0
+
+
+
+
+
+#%%
+
+default_params = {
+    "folder": ".",
+    "ntraj": 10,
+    "ntraj_0": 10,
+    "sites": 3,
+    "restart": False,
+    "order": 1,
+    "threshold": 1e-4,
+    "dim": "2",
+    "method": "tjm",
+    "solver": "exact",
+    "alloc_cpus": 1,
+    "max_bond_dim": 8,
+    "g_rel" : "random",
+    "g_deph" : "random",
+    "g_rel_0" : "random",
+    "g_deph_0" : "random",
+    "T": 5
+}
+
+
+
+#%%
+## Parsing and printing parameters
+
+params=parse_cli_kwargs(default_params)
+params["dim"] = str(params["dim"])
+print(params)
+
+
+
+#%%
+# Start memory logging in a background thread
+# stop_event = threading.Event()
+# pid = os.getpid()
+
+# log_file = params["folder"]+"/self_memory_log.csv"
+
+# logger_thread = threading.Thread(target=log_memory, args=(pid, log_file, 30,stop_event), daemon=True)
+# logger_thread.start()
+
+
+
+
+#%%
+
+gamma_rel,gamma_deph = set_gammas(params)
+
+
+#%%
+
+
+
+if params["method"] == "tjm":
     traj_function = tjm_traj
 
-if method == "scikit_tt":
+if params["method"] == "scikit_tt":
     traj_function = scikit_tt_traj
 
-if method == "qutip":
+if params["method"] == "qutip":
     traj_function = qutip_traj
 
 
 
 
-## Computing reference trajectory 
-print("Running ref traj")
-sim_params = SimulationParameters(L, gamma_rel, gamma_deph)
-sim_params.T = 5
-sim_params.N = 4096
-sim_params.order = order
-sim_params.threshold = threshold
-sim_params.req_cpus = allocated_cpus - 1
-sim_params.set_solver("tdvp"+str(order),solver)
 
+sim_params=set_sim_params(gamma_rel, gamma_deph, params)
 
-t, qt_ref_traj, d_On_d_gk, avg_min_max_traj_time=traj_function(sim_params)
+t, qt_ref_traj = running_ref_traj(params,sim_params,traj_function)
 
 
 
-
-## Saving reference trajectory and gammas
-gamma_header = "  ".join([f"gr_{i+1}" for i in range(L)] + [f"gd_{i+1}" for i in range(L)])
-
-
-
-if not restart:
-
-
-    if not os.path.exists(folder):
-        os.makedirs(folder)
-
-
-    write_ref_traj(t, qt_ref_traj, f"{folder}/ref_traj.txt")
-
-
-    # Save gamma values next to each other with appropriate header
-    gamma_file = f"{folder}/gammas.txt"
-    gamma_data = np.hstack([gamma_rel, gamma_deph])
-    np.savetxt(gamma_file, gamma_data.reshape(1, -1), header=gamma_header, fmt='%.6f')
-
-
-
-
-
-
-## Defining the loss function and initial parameters
-sim_params.N = ntraj
-
-if dimensions == "2":
-
-    loss_function=loss_class_2d(sim_params, qt_ref_traj, traj_function, print_to_file=True)
-    x0 = np.random.rand(2)
-
-if dimensions == "2L":
-
-    loss_function=loss_class_nd(sim_params, qt_ref_traj, traj_function, print_to_file=True)
-    x0 = np.random.rand(2*sim_params.L)
-
-loss_function.set_file_name(f"{folder}/loss_x_history", reset=not restart)
-
+loss_function, x0 = set_loss_function(params, sim_params, qt_ref_traj, traj_function)
 
 
 
@@ -190,97 +272,63 @@ loss_function.set_file_name(f"{folder}/loss_x_history", reset=not restart)
 ## Running the optimization
 print("running optimzation !!!")
 loss_function.reset()
-loss_history, x_history, x_avg_history, t_opt, opt_traj= ADAM_loss_class(loss_function, x0, alpha=0.07, max_iterations=500, threshhold = 1e-3, max_n_convergence = 50, tolerance=1e-8, beta1 = 0.5, beta2 = 0.99, epsilon = 1e-7, restart=restart)#, Ns=10e5)
+loss_history, x_history, x_avg_history, t_opt, opt_traj= ADAM_loss_class(loss_function, x0, alpha=0.07, max_iterations=500, threshhold = 1e-3, max_n_convergence = 50, tolerance=1e-8, beta1 = 0.5, beta2 = 0.99, epsilon = 1e-7, restart=params["restart"])#, Ns=10e5)
 
 
 
 
-write_ref_traj(t_opt, opt_traj, f"{folder}/opt_traj.txt" )
+write_ref_traj(t_opt, opt_traj, f"{params["folder"]}/opt_traj.txt" )
 
 
 
-stop_event.set()
+# stop_event.set()
 
-logger_thread.join()
-
-
-
-# Wait briefly to ensure logger finishes last write
-time.sleep(1)
-
-#%%
-
-
-# %%
+# logger_thread.join()
 
 
 
-
-
-
-
-
-x_avg_file="test/optimization/loss_x_history.txt"
-gammas_file="test/optimization/gammas.txt"
-
-data = np.genfromtxt(x_avg_file, skip_header=1)
-gammas=np.genfromtxt(gammas_file, skip_header=1)
-
-
-nt,cols = data.shape
-
-d=(cols-2)//2
-
-L=d//2
-
-for i in range(d):
-    plt.plot(data[:, 0], data[:, 2 + i], label=f"$\\gamma_{{{i+1}}}$")
-    plt.axhline(gammas[i], color=plt.gca().lines[-1].get_color(), linestyle='--', linewidth=2)
-
-
-plt.xlabel("Iterations")
-plt.ylabel(r"$\gamma$")
-plt.legend()
-
-#%%
-data.shape
-
-
-
-# %%
-
-# plt.plot(loss_function.diff_avg_history)
-# # %%
-# loss_function.diff_avg_history
-# # %%
-
-
-# %%
-# %matplotlib qt
-
-# mem_usage = pd.read_csv(f"test/optimization_klotz2/self_memory_log.csv")
-
-# plt.plot(np.array(mem_usage['ram_GB']), label="Memory Usage (GB)")
-
+# # Wait briefly to ensure logger finishes last write
+# time.sleep(1)
 
 # #%%
-# garbage = np.genfromtxt(f"test/optimization_klotz/garbage.txt", skip_header=1)
 
-# plt.plot(garbage[:,1], label="Memory Usage (GB)")
 
 # # %%
-# ref_traj = np.genfromtxt("results/optimization/d_2L/L_5/ntraj_512/ref_traj.txt", skip_header=1)
-# opt_traj = np.genfromtxt("results/optimization/d_2L/L_5/ntraj_512/opt_traj.txt", skip_header=1)
 
-# # Compare trajectories for each observable
-# plt.figure(figsize=(10, 6))
-# for i in range(1, ref_traj.shape[1]):  # skip time column
-#     plt.plot(ref_traj[:, 0], ref_traj[:, i], label=f"Ref obs {i}")
-#     plt.plot(opt_traj[:, 0], opt_traj[:, i], '--', color=plt.gca().lines[-1].get_color(), label=f"Opt obs {i}")
 
-# plt.xlabel("Time")
-# plt.ylabel("Observable value")
+
+
+
+
+
+
+# x_avg_file="test/optimization/loss_x_history.txt"
+# gammas_file="test/optimization/gammas.txt"
+
+# data = np.genfromtxt(x_avg_file, skip_header=1)
+# gammas=np.genfromtxt(gammas_file, skip_header=1)
+
+
+# nt,cols = data.shape
+
+# d=(cols-2)//2
+
+# L=d//2
+
+# for i in range(d):
+#     plt.plot(data[:, 0], data[:, 2 + i], label=f"$\\gamma_{{{i+1}}}$")
+#     plt.axhline(gammas[i], color=plt.gca().lines[-1].get_color(), linestyle='--', linewidth=2)
+
+
+# plt.xlabel("Iterations")
+# plt.ylabel(r"$\gamma$")
 # plt.legend()
-# plt.title("Reference vs Optimized Trajectories")
-# plt.tight_layout()
 # plt.show()
+
+# #%%
+# data.shape
+
+
+
+
+	

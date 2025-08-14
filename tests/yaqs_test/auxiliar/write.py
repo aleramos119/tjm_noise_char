@@ -1,7 +1,7 @@
 
 #%%
 import numpy as np
-
+import sys
 
 def write_ref_traj(t, ref_traj, file_name):
     """
@@ -59,7 +59,7 @@ def log_memory(pid, log_file, interval, stop_event):
             try:
                 parent_rss = parent.memory_info().rss
                 total_rss += parent_rss
-                entries.append((parent.pid, parent.name(), parent_rss, "parent"))
+                # entries.append((parent.pid, parent.name(), parent_rss, "parent"))
             except (psutil.NoSuchProcess, psutil.AccessDenied):
                 pass
 
@@ -69,7 +69,7 @@ def log_memory(pid, log_file, interval, stop_event):
                     try:
                         child_rss = child.memory_info().rss
                         total_rss += child_rss
-                        entries.append((child.pid, child.name(), child_rss, "child"))
+                        # entries.append((child.pid, child.name(), child_rss, "child"))
                     except (psutil.NoSuchProcess, psutil.AccessDenied):
                         continue
             except psutil.Error:
@@ -88,3 +88,35 @@ def log_memory(pid, log_file, interval, stop_event):
 
     except Exception:
         pass  # silent fail is safer for daemonized threads
+
+
+
+
+def convert_value(value: str):
+    """Convert string to int, float, bool, or leave as string."""
+    if value.lower() in ("true", "false"):
+        return value.lower() == "true"
+    try:
+        return int(value)
+    except ValueError:
+        try:
+            return float(value)
+        except ValueError:
+            return value
+
+
+def parse_cli_kwargs(defaults=None):
+    """
+    Parse CLI key=value args and merge with defaults.
+    Returns a dictionary with final parameters.
+    """
+    if defaults is None:
+        defaults = {}
+    
+    params = defaults.copy()
+    for arg in sys.argv[1:]:
+        if "=" in arg:
+            key, value = arg.split("=", 1)
+            params[key] = convert_value(value)
+    return params
+	
