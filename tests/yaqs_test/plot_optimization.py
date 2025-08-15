@@ -64,10 +64,13 @@ plt.savefig(f"{folder}/error_vs_L_15x5.pdf", dpi=300, bbox_inches='tight')
 ### Plotting the average gamma values over iterations
 
 
-L=100
-ntraj=1024
+L=120
+ntraj=256
+max_bond_dim=16
 
-folder = f"results/optimization/method_tjm_exact/d_2L_test/L_{L}/ntraj_{ntraj}/"
+dim="2"
+
+folder = f"results/optimization/method_tjm_exact_opt_script_test/max_bond_dim_{max_bond_dim}/d_{dim}/gamma_random/gamma_0_random/L_{L}/ntraj_{ntraj}/"
 x_avg_file=folder + f"loss_x_history.txt"
 
 data = np.genfromtxt(x_avg_file, skip_header=1)
@@ -77,7 +80,7 @@ gammas = np.genfromtxt(gammas_file, skip_header=1)
 
 d=len(gammas)
 
-for i in np.random.choice(range(d), size=3, replace=False):
+for i in np.random.choice(range(d), size=2, replace=False):
     plt.plot(data[:, 0], data[:, 2 + i], label=f"$\\gamma_{{{i+1}}}$")
     plt.axhline(gammas[i], color=plt.gca().lines[-1].get_color(), linestyle='--', linewidth=2)
 
@@ -88,8 +91,9 @@ plt.legend()
 plt.show()
 # plt.savefig(f"{folder}/gamma_avg_vs_iterations_L_{L}_ntraj_{ntraj}.pdf", dpi=300, bbox_inches='tight')
 
+#%%
 
-
+data
 
 #%%
 # Plot the loss from loss_x_history.txt
