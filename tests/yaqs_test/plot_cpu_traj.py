@@ -235,3 +235,210 @@ plt.show()
 col=1
 
 # %%
+#### Plot gamma_rel gamma_deph scan 
+
+
+%matplotlib qt
+
+import glob
+import numpy as np
+import matplotlib.pyplot as plt
+from matplotlib.widgets import Slider
+
+
+g_rel_list=[0.05,0.1,0.2,0.4,0.6,0.8]
+
+g_deph_list=[0.05,0.1,0.2,0.4,0.6,0.8]
+
+
+
+
+
+
+
+
+
+
+# default column to start with
+col_init = 15
+
+
+# Initial parameters
+g_rel_init = g_rel_list[0]
+g_deph_init = g_deph_list[0]
+
+def load_traj(g_rel, g_deph):
+    """Load trajectory file for given gamma_rel and gamma_deph."""
+    folder = f"results/cpu_traj_scan/method_tjm_gamma_scan/solver_exact/order_1/threshold_1e-4/100_sites/32_cpus/512_traj/gamma_rel_{g_rel}/gamma_deph_{g_deph}/"
+    file_path = os.path.join(folder, "ref_traj.txt")
+    if not os.path.exists(file_path):
+        raise FileNotFoundError(f"File not found: {file_path}")
+    return np.genfromtxt(file_path, skip_header=1)
+
+# Initial parameters
+g_rel_index_init = 0
+g_deph_index_init = 0
+traj = load_traj(g_rel_list[g_rel_index_init], g_deph_list[g_deph_index_init])
+
+# Plot setup
+fig, ax = plt.subplots(figsize=(8, 5))
+plt.subplots_adjust(bottom=0.3)
+l, = ax.plot(traj[:, 0], traj[:, col_init], label="Trajectory", linestyle='--')
+
+ax.set_xlabel("Time")
+ax.set_ylabel(f"Value (col={col_init})")
+ax.set_title("Trajectory vs gamma_rel & gamma_deph")
+ax.set_xlim(0,5)
+ax.set_ylim(0,1)
+ax.legend()
+
+# Sliders (index-based)
+ax_slider_grel = plt.axes([0.2, 0.15, 0.6, 0.03])
+slider_grel = Slider(ax_slider_grel, 'gamma_rel idx', 0, len(g_rel_list)-1, 
+                     valinit=g_rel_index_init, valstep=1)
+
+ax_slider_gdeph = plt.axes([0.2, 0.05, 0.6, 0.03])
+slider_gdeph = Slider(ax_slider_gdeph, 'gamma_deph idx', 0, len(g_deph_list)-1, 
+                      valinit=g_deph_index_init, valstep=1)
+
+def update(val):
+    g_rel = g_rel_list[int(slider_grel.val)]
+    g_deph = g_deph_list[int(slider_gdeph.val)]
+    try:
+        traj = load_traj(g_rel, g_deph)
+        l.set_xdata(traj[:, 0])
+        l.set_ydata(traj[:, col_init])
+        ax.set_ylabel(f"Value (col={col_init})")
+        ax.set_title(f"gamma_rel={g_rel}, gamma_deph={g_deph}")
+        ax.relim()
+        ax.autoscale_view()
+        ax.set_xlim(0,5)
+        ax.set_ylim(0,1)
+
+        fig.canvas.draw_idle()
+    except FileNotFoundError:
+        pass  # Ignore if file is missing
+
+slider_grel.on_changed(update)
+slider_gdeph.on_changed(update)
+
+plt.show()
+
+
+
+
+
+
+
+# %%
+## Plot loss function scan
+
+import matplotlib.pyplot as plt
+import numpy as np
+
+
+g_rel_list=[0.05,0.1,0.2,0.4,0.6,0.8]
+
+g_deph_list=[0.05,0.1,0.2,0.4,0.6,0.8]
+
+
+n_g_rel=len(g_rel_list)
+n_g_deph=len(g_deph_list)
+
+
+L=100
+ntraj=512
+
+folder=f"results/cpu_traj_scan/method_tjm_gamma_scan/solver_exact/order_1/threshold_1e-4/{L}_sites/32_cpus/{ntraj}_traj"
+
+
+def compute_loss(ref_traj,traj):
+    diff = ref_traj - traj
+    loss = np.sum(diff**2)
+    return loss
+
+
+def load_traj(g_rel,g_deph, folder):
+    traj_folder = f"{folder}/gamma_rel_{g_rel}/gamma_deph_{g_deph}/"
+
+    traj_file=traj_folder+"ref_traj.txt"
+
+    if os.path.exists(traj_file):
+    
+        traj_data = np.genfromtxt(traj_file)
+
+    else:
+
+        print(f"File {traj_file} not found!!!")
+
+
+    t=traj_data[:,0]
+
+    n_t=len(t)
+
+    n_obs_site=(len(traj_data[0])-1)//L
+
+    traj = traj_data[:,1:].reshape(n_obs_site,L,n_t)
+
+    return traj
+
+
+def scan_loss(ref_traj, folder):
+
+    g_rel_plt=[]
+
+    g_deph_plt=[]
+
+    loss_plt=[]
+
+    for i,g_rel in enumerate(g_rel_list):
+        for j,g_deph in enumerate(g_deph_list):
+
+            traj=load_traj(g_rel,g_deph, folder)
+
+            loss_plt.append( compute_loss(ref_traj,traj))
+
+            g_rel_plt.append(g_rel)
+            g_deph_plt.append(g_deph)
+
+
+    return g_rel_plt, g_deph_plt, loss_plt
+    
+
+def plot_loss(g_rel_plt, g_deph_plt, loss_plt, folder):
+
+    plt.figure(figsize=(8, 6))
+    contour = plt.tricontourf(g_rel_plt, g_deph_plt, loss_plt, levels=100, cmap='viridis', vmin=0, vmax=max(loss_plt))
+    plt.xlabel("gamma_rel")
+    plt.ylabel("gamma_deph")
+    # Add colorbar with label
+    cbar = plt.colorbar(contour)
+    cbar.set_label("Loss")
+    output_file =folder + "/loss.png"
+    plt.savefig(output_file, dpi=300, bbox_inches='tight')
+    plt.close()
+
+
+max_loss=[]
+min_loss=[]
+
+
+for g_rel in g_rel_list:
+    for g_deph in g_deph_list:
+
+
+        ref_traj=load_traj(g_rel,g_deph, folder)
+
+        g_rel_plt, g_deph_plt, loss_plt= scan_loss(ref_traj, folder)
+
+        max_loss.append(max(loss_plt))
+        min_loss.append(min(loss_plt))
+
+
+
+        plot_loss(g_rel_plt, g_deph_plt, loss_plt, f"{folder}/gamma_rel_{g_rel}/gamma_deph_{g_deph}/")
+
+
+
+# %%
+

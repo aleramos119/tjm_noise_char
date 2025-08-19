@@ -66,11 +66,11 @@ plt.savefig(f"{folder}/error_vs_L_15x5.pdf", dpi=300, bbox_inches='tight')
 
 L=120
 ntraj=256
-max_bond_dim=16
+max_bond_dim=8
+gamma="random"
+gamma_0="random"
 
-dim="2"
-
-folder = f"results/optimization/method_tjm_exact_opt_script_test/max_bond_dim_{max_bond_dim}/d_{dim}/gamma_random/gamma_0_random/L_{L}/ntraj_{ntraj}/"
+folder = f"results/optimization/method_tjm_exact_opt_script_test/max_bond_dim_{max_bond_dim}/d_2/gamma_{gamma}/gamma_0_{gamma_0}/L_{L}/ntraj_{ntraj}/"
 x_avg_file=folder + f"loss_x_history.txt"
 
 data = np.genfromtxt(x_avg_file, skip_header=1)
@@ -228,11 +228,16 @@ ref_traj.shape
 # Folder and file pattern
 
 %matplotlib qt
-L=80
-ntraj=512
-col=1
 
-folder = f"test/optimization/"
+col=300
+
+L=120
+ntraj=256
+max_bond_dim=12
+gamma="random"
+gamma_0="random"
+
+folder = f"results/optimization/method_tjm_exact_opt_script_test/max_bond_dim_{max_bond_dim}/d_2/gamma_{gamma}/gamma_0_{gamma_0}/L_{L}/ntraj_{ntraj}/"
 
 
 file_pattern = folder + f"opt_traj_*.txt"

@@ -26,6 +26,24 @@ os.environ["VECLIB_MAXIMUM_THREADS"] = "1"
 
 
 
+def print_gammas(gamma_rel, gamma_deph,params, sim_params=None):
+
+    print("Gamma_rel: ",gamma_rel)
+    print("Gamma_deph: ",gamma_deph)
+
+
+    gammas = np.genfromtxt(f"{params["folder"]}/gammas.txt", skip_header=1)
+
+    print("Folder gammas:", gammas)
+
+
+    if sim_params!=None:
+        print("Sim params gamma_rel: ", sim_params.gamma_rel)
+        print("Sim params gamma_deph: ", sim_params.gamma_deph)
+
+
+
+
 
 
 #%%
@@ -238,8 +256,11 @@ print(params)
 
 #%%
 
+print("Setting gammas")
+
 gamma_rel,gamma_deph = set_gammas(params)
 
+print_gammas(gamma_rel, gamma_deph,params, sim_params=None)
 
 #%%
 
@@ -256,15 +277,31 @@ if params["method"] == "qutip":
 
 
 
+print("Setting sim_params")
 
 
 sim_params=set_sim_params(gamma_rel, gamma_deph, params)
 
+print_gammas(gamma_rel, gamma_deph,params, sim_params)
+
+
+
+print("Running Ref traj")
+
 t, qt_ref_traj = running_ref_traj(params,sim_params,traj_function)
 
+print_gammas(gamma_rel, gamma_deph,params, sim_params)
+
+
+
+
+print("Setting Loss_function")
 
 
 loss_function, x0 = set_loss_function(params, sim_params, qt_ref_traj, traj_function)
+
+print_gammas(gamma_rel, gamma_deph,params, sim_params)
+
 
 
 
@@ -272,8 +309,9 @@ loss_function, x0 = set_loss_function(params, sim_params, qt_ref_traj, traj_func
 ## Running the optimization
 print("running optimzation !!!")
 loss_function.reset()
-loss_history, x_history, x_avg_history, t_opt, opt_traj= ADAM_loss_class(loss_function, x0, alpha=0.07, max_iterations=500, threshhold = 1e-3, max_n_convergence = 50, tolerance=1e-8, beta1 = 0.5, beta2 = 0.99, epsilon = 1e-7, restart=params["restart"])#, Ns=10e5)
+loss_history, x_history, x_avg_history, t_opt, opt_traj= ADAM_loss_class(loss_function, x0, alpha=0.07, max_iterations=2, threshhold = 1e-3, max_n_convergence = 50, tolerance=1e-8, beta1 = 0.5, beta2 = 0.99, epsilon = 1e-7, restart=params["restart"])#, Ns=10e5)
 
+print_gammas(gamma_rel, gamma_deph,params, sim_params=sim_params)
 
 
 

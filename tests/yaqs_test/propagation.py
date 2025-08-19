@@ -49,7 +49,7 @@ def main_code(folder, ntraj, L, order , threshold, method, solver, req_cpus, g_r
 
     if method == "scikit_tt":
         print("Using SciKit-TT method")
-        t, ref_traj, d_On_d_gk, avg_min_max_traj_time, results=scikit_tt_traj(sim_params)
+        t, ref_traj, d_On_d_gk, avg_min_max_traj_time=scikit_tt_traj(sim_params)
         print("SciKit-TT method completed")
 
     elif method == "tjm":
@@ -95,79 +95,80 @@ def main_code(folder, ntraj, L, order , threshold, method, solver, req_cpus, g_r
 
 
 if __name__=="__main__":
-    # args = sys.argv[1:]
+    args = sys.argv[1:]
 
 
-    g_rel_list=[0.05,0.1,0.2,0.4,0.6,0.8]
-    g_deph_list=[0.05,0.1,0.2,0.4,0.6,0.8]
+    folder_input = args[0]
+
+    ntraj = int(args[1])
+
+    L = int(args[2])
+
+    order= int(args[3])
 
 
-    for g_rel in g_rel_list:
-        for g_deph in g_deph_list:
+    threshold = float(args[4])
 
-            folder=f"test/propagation/gamma_rel_{g_rel}/gamma_deph_{g_deph}"
+    method = args[5]
 
-            os.makedirs(folder,exist_ok=True)
-                
+    solver = args[6]
 
 
-            args = [folder, "100", "5", "1", "1e-4", "qutip", "exact", "4"]
+    allocated_cpus = int(args[7])
 
-            folder = args[0]
-
-            ntraj = int(args[1])
-
-            L = int(args[2])
-
-            order= int(args[3])
-
-
-            threshold = float(args[4])
-
-            method = args[5]
-
-            solver = args[6]
-
-
-            allocated_cpus = int(args[7])
-
-
-            print("Inputs:")
-            print(f"  folder: {folder}")
-            print(f"  ntraj: {ntraj}")
-            print(f"  L: {L}")
-            print(f"  order: {order}")
-            print(f"  threshold: {threshold}")
-            print(f"  method: {method}")
-            print(f"  solver: {solver}")
-            print(f"  req_cpus: {allocated_cpus}")
-
-
-            pid = os.getpid()
+    g_rel=float(args[8])
+    g_deph=float(args[9])
 
 
 
-            # log_file = folder+"/self_memory_log.csv"
 
-            # # Start memory logging in a background thread
-            # logger_thread = threading.Thread(target=log_memory, args=(pid, log_file, 10, stop_event), daemon=True)
-            # logger_thread.start()
+    folder=f"{folder_input}/gamma_rel_{g_rel}/gamma_deph_{g_deph}"
 
-            # Run your main code
+    os.makedirs(folder,exist_ok=True)
+        
 
 
-            req_cpus=allocated_cpus-1
-
-            t, ref_traj, d_On_d_gk=main_code(folder, ntraj, L, order , threshold, method, solver, req_cpus, g_rel, g_deph)
-
-            # stop_event.set()
-
-            # logger_thread.join()
+    #args = [folder, "100", "5", "1", "1e-4", "qutip", "exact", "4"]
 
 
 
-            # Wait briefly to ensure logger finishes last write
-            # time.sleep(1)
+
+    print("Inputs:")
+    print(f"  folder: {folder}")
+    print(f"  ntraj: {ntraj}")
+    print(f"  L: {L}")
+    print(f"  order: {order}")
+    print(f"  threshold: {threshold}")
+    print(f"  method: {method}")
+    print(f"  solver: {solver}")
+    print(f"  req_cpus: {allocated_cpus}")
+
+
+    pid = os.getpid()
+
+
+
+    # log_file = folder+"/self_memory_log.csv"
+
+    # # Start memory logging in a background thread
+    # logger_thread = threading.Thread(target=log_memory, args=(pid, log_file, 10, stop_event), daemon=True)
+    # logger_thread.start()
+
+    # Run your main code
+
+
+    req_cpus=allocated_cpus-1
+
+    t, ref_traj, d_On_d_gk=main_code(folder, ntraj, L, order , threshold, method, solver, req_cpus, g_rel, g_deph)
+
+    # stop_event.set()
+
+    # logger_thread.join()
+
+
+
+    # Wait briefly to ensure logger finishes last write
+    # time.sleep(1)
 
 
 
@@ -323,75 +324,3 @@ if __name__=="__main__":
 
 #%%
 
-%matplotlib qt
-
-import glob
-import numpy as np
-import matplotlib.pyplot as plt
-from matplotlib.widgets import Slider
-
-# default column to start with
-col_init = 15
-
-
-# Initial parameters
-g_rel_init = g_rel_list[0]
-g_deph_init = g_deph_list[0]
-
-def load_traj(g_rel, g_deph):
-    """Load trajectory file for given gamma_rel and gamma_deph."""
-    folder = f"test/propagation/gamma_rel_{g_rel}/gamma_deph_{g_deph}/"
-    file_path = os.path.join(folder, "ref_traj.txt")
-    if not os.path.exists(file_path):
-        raise FileNotFoundError(f"File not found: {file_path}")
-    return np.genfromtxt(file_path, skip_header=1)
-
-# Initial parameters
-g_rel_index_init = 0
-g_deph_index_init = 0
-traj = load_traj(g_rel_list[g_rel_index_init], g_deph_list[g_deph_index_init])
-
-# Plot setup
-fig, ax = plt.subplots(figsize=(8, 5))
-plt.subplots_adjust(bottom=0.3)
-l, = ax.plot(traj[:, 0], traj[:, col_init], label="Trajectory", linestyle='--')
-
-ax.set_xlabel("Time")
-ax.set_ylabel(f"Value (col={col_init})")
-ax.set_title("Trajectory vs gamma_rel & gamma_deph")
-ax.set_xlim(0,5)
-ax.set_ylim(0,1)
-ax.legend()
-
-# Sliders (index-based)
-ax_slider_grel = plt.axes([0.2, 0.15, 0.6, 0.03])
-slider_grel = Slider(ax_slider_grel, 'gamma_rel idx', 0, len(g_rel_list)-1, 
-                     valinit=g_rel_index_init, valstep=1)
-
-ax_slider_gdeph = plt.axes([0.2, 0.05, 0.6, 0.03])
-slider_gdeph = Slider(ax_slider_gdeph, 'gamma_deph idx', 0, len(g_deph_list)-1, 
-                      valinit=g_deph_index_init, valstep=1)
-
-def update(val):
-    g_rel = g_rel_list[int(slider_grel.val)]
-    g_deph = g_deph_list[int(slider_gdeph.val)]
-    try:
-        traj = load_traj(g_rel, g_deph)
-        l.set_xdata(traj[:, 0])
-        l.set_ydata(traj[:, col_init])
-        ax.set_ylabel(f"Value (col={col_init})")
-        ax.set_title(f"gamma_rel={g_rel}, gamma_deph={g_deph}")
-        ax.relim()
-        ax.autoscale_view()
-        ax.set_xlim(0,5)
-        ax.set_ylim(0,1)
-
-        fig.canvas.draw_idle()
-    except FileNotFoundError:
-        pass  # Ignore if file is missing
-
-slider_grel.on_changed(update)
-slider_gdeph.on_changed(update)
-
-plt.show()
-# %%
