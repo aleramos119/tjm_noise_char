@@ -130,7 +130,7 @@ print(cpu_usage_df.columns.tolist())
 
 fig, axs = plt.subplots(1, 2, figsize=(14, 5))
 col = 1
-ntraj_list = [1024, 2048, 4096, 8192]
+ntraj_list = [1024]
 
 for ntraj in ntraj_list:
     traj_file = f"results/cpu_traj_scan/method_tjm_new_calc_omp_1/solver_exact/order_1/threshold_1e-4/10_sites/96_cpus/{ntraj}_traj/ref_traj.txt"
@@ -143,7 +143,7 @@ axs[0].set_ylabel("Value")
 axs[0].legend()
 
 for ntraj in ntraj_list:
-    traj_file = f"results/cpu_traj_scan/method_scikit_tt_comment_test/solver_exact/order_1/threshold_1e-4/10_sites/32_cpus/{ntraj}_traj/ref_traj.txt"
+    traj_file = f"results/cpu_traj_scan/method_scikit_tt_serial_test/solver_exact/order_1/threshold_1e-4/10_sites/32_cpus/{ntraj}_traj/gamma_0.1/gamma_0.1/ref_traj.txt"
     data = np.loadtxt(traj_file)
     axs[1].plot(data[:, 0], data[:, col], label=f"scikit_tt - {ntraj} trajs")
 
@@ -159,7 +159,7 @@ col=1
 
 #%%
 
-ntraj_list = [1024, 2048, 4096, 8192]
+ntraj_list = [1024]
 time_list = []
 for ntraj in ntraj_list:
     time_file = f"results/cpu_traj_scan/method_scikit_tt_new_calc_omp_1/solver_krylov_5/order_1/threshold_1e-4/10_sites/96_cpus/{ntraj}_traj/time_sec.txt"
@@ -442,3 +442,35 @@ for g_rel in g_rel_list:
 
 # %%
 
+
+
+fig, axs = plt.subplots(1, 1, figsize=(7, 5))
+col = 1
+
+ntraj = 2048
+
+
+traj_file=f"results/cpu_traj_scan/method_qutip/solver_exact/order_1/threshold_1e-4/5_sites/10_cpus/1_traj/gamma_rel_0.1/gamma_deph_0.1/ref_traj.txt"
+data = np.loadtxt(traj_file)
+axs.plot(data[:, 0], data[:, col], label=f"qutip")
+
+
+traj_file=f"results/cpu_traj_scan/method_tjm/solver_exact/order_1/threshold_1e-4/5_sites/10_cpus/{ntraj}_traj/gamma_rel_0.1/gamma_deph_0.1/ref_traj.txt"
+data = np.loadtxt(traj_file)
+axs.plot(data[:, 0], data[:, col], label=f"tjm - {ntraj} trajs")
+
+
+traj_file=f"results/cpu_traj_scan/method_scikit_tt/solver_exact/order_1/threshold_1e-4/5_sites/10_cpus/{ntraj}_traj/gamma_rel_0.1/gamma_deph_0.1/ref_traj.txt"
+data = np.loadtxt(traj_file)
+axs.plot(data[:, 0], data[:, col], label=f"scikit-tt - {ntraj} trajs")
+
+
+traj_file=f"results/cpu_traj_scan/method_scikit_tt/solver_exact/order_2/threshold_1e-6/5_sites/10_cpus/{ntraj}_traj/gamma_rel_0.1/gamma_deph_0.1/ref_traj.txt"
+data = np.loadtxt(traj_file)
+axs.plot(data[:, 0], data[:, col], label=f"scikit-tt order_2- {ntraj} trajs")
+
+
+axs.set_xlabel("Time")
+axs.set_ylabel("Value")
+axs.legend()
+# %%
