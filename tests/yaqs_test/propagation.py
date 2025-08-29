@@ -98,7 +98,7 @@ if __name__=="__main__":
     args = sys.argv[1:]
 
 
-    folder_input = args[0]
+    folder = args[0]
 
     ntraj = int(args[1])
 
@@ -119,10 +119,6 @@ if __name__=="__main__":
     g_rel=float(args[8])
     g_deph=float(args[9])
 
-
-
-
-    folder=f"{folder_input}/gamma_rel_{g_rel}/gamma_deph_{g_deph}"
 
     os.makedirs(folder,exist_ok=True)
         
