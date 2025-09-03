@@ -43,6 +43,8 @@ init_state = MPS(L, state='zeros')
 
 obs_list = [Observable(X(), site) for site in range(L)]  + [Observable(Y(), site) for site in range(L)] + [Observable(Z(), site) for site in range(L)]
 
+print("Reftraj results:", obs_list[0].results)
+
 
 
 
@@ -53,7 +55,7 @@ T=5
 
 dt=0.1
 
-N=10
+N=1000
 
 max_bond_dim=8
 
@@ -61,7 +63,7 @@ threshold=1e-6
 
 order=2
 
-sim_params = sim_params = AnalogSimParams(observables=obs_list, elapsed_time=T, dt=dt, num_traj=N, max_bond_dim=max_bond_dim, threshold=threshold, order=order, sample_timesteps=True)
+sim_params = AnalogSimParams(observables=obs_list, elapsed_time=T, dt=dt, num_traj=N, max_bond_dim=max_bond_dim, threshold=threshold, order=order, sample_timesteps=True)
 
 
 
@@ -70,9 +72,9 @@ sim_params = sim_params = AnalogSimParams(observables=obs_list, elapsed_time=T, 
 #%%
 ## Defining reference noise model and reference trajectory
 gamma_rel = 0.1
-gamma_deph = 0.2
+gamma_deph = 0.1
 sites_list = [i for i in range(L)]
-ref_noise_model =  NoiseModel([{"name": "relaxation", "sites": sites_list, "strength": gamma_rel},{"name": "dephasing", "sites": sites_list, "strength": gamma_deph}])
+ref_noise_model =  NoiseModel([{"name": "lowering", "sites": sites_list, "strength": gamma_rel},{"name": "pauli_z", "sites": sites_list, "strength": gamma_deph}])
 
 
 
@@ -91,18 +93,56 @@ ref_traj = propagator.obs_traj
 
 
 
+#%%
+for i in range(len(ref_traj)):
+    plt.plot( ref_traj[i].results, label=str(i))
 
 #%%
+## Defining reference noise model and reference trajectory
+gamma_rel = 0.1
+gamma_deph = 0.2
+sites_list = [i for i in range(L)]
+ref_noise_model =  NoiseModel([{"name": "lowering", "sites": sites_list, "strength": 0.1},{"name": "pauli_z", "sites": sites_list, "strength": 0.1}])
 
-guess_noise_model =  NoiseModel([{"name": "relaxation", "sites": sites_list, "strength": 0.4},{"name": "dephasing", "sites": sites_list, "strength": 0.5}])
+
+
+propagator = PropagatorWithGradients(
+    sim_params=sim_params,
+    hamiltonian=H_0,
+    noise_model=ref_noise_model,
+    init_state=init_state
+)
+
+propagator.set_observable_list(obs_list)
+
+propagator.run(ref_noise_model)
+
+ref_traj = propagator.obs_traj
+
+print("Reftraj results:", ref_traj[0].results[3])
+
+
+#%% Optimizing the model
+guess_noise_model =  NoiseModel([{"name": "lowering", "sites": sites_list, "strength": 0.4},{"name": "pauli_z", "sites": sites_list, "strength": 0.5}])
 
 characterizer = Characterizer(
     sim_params=sim_params,
     hamiltonian=H_0,
     init_guess=guess_noise_model,
     init_state=init_state,
-    ref_traj=ref_traj
+    ref_traj=ref_traj,
+    work_dir="test/characterizer"
 )
 
 
 characterizer.adam_optimize()
+
+
+#%%
+print(characterizer.optimal_model.processes)
+
+
+#%%
+
+
+# %%
