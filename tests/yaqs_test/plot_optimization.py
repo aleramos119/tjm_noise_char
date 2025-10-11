@@ -229,7 +229,7 @@ ref_traj.shape
 
 %matplotlib qt
 
-col=300
+col=1
 
 L=120
 ntraj=256
@@ -237,7 +237,8 @@ max_bond_dim=12
 gamma="random"
 gamma_0="random"
 
-folder = f"results/optimization/method_tjm_exact_opt_script_test/max_bond_dim_{max_bond_dim}/d_2/gamma_{gamma}/gamma_0_{gamma_0}/L_{L}/ntraj_{ntraj}/"
+# folder = f"results/optimization/method_tjm_exact_opt_script_test/max_bond_dim_{max_bond_dim}/d_2/gamma_{gamma}/gamma_0_{gamma_0}/L_{L}/ntraj_{ntraj}/"
+folder = f"test/characterizer/N_80/"
 
 
 file_pattern = folder + f"opt_traj_*.txt"
@@ -311,11 +312,38 @@ for ntraj in ntraj_list:
 plt.plot(ntraj_list, error_list,'o-', label=f"L={L}")
 
 
-#%%
+#%%int(sys.argv[1])
 
 
 data[-1, 2:].shape
 
 
 
+# %%
+
+
+### Plotting x history
+
+folder = f"test/characterizer/lowering/N_80/"
+x_avg_file=folder + f"loss_x_history.txt"
+gammas_file = folder +f"gammas.txt"
+
+
+data = np.genfromtxt(x_avg_file, skip_header=1)
+gammas = np.genfromtxt(gammas_file, skip_header=1, ndmin=1)
+
+
+d=(len(data[0])-1)//2
+
+for i in range(d):
+    plt.plot(data[:, 0], data[:, 2 + i], label=f"$\\gamma_{{{i+1}}}$")
+    plt.axhline(gammas[i], color=plt.gca().lines[-1].get_color(), linestyle='--', linewidth=2)
+
+
+plt.xlabel("Iterations")
+plt.ylabel(r"$\gamma$")
+plt.legend()
+plt.show()
+# %%
+gammas[0]
 # %%
