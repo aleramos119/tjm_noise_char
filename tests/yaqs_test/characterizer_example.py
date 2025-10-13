@@ -36,13 +36,24 @@ def write_gammas( noise_model: NoiseModel, file_name):
     np.savetxt(file_name, gammas, header="##", fmt="%.6f")
 
 
+#%%
+X().name
+
+#%%
 
 
 if __name__ == '__main__':
 #%%
 
-    for ntraj in [20, 40, 80]:
-        work_dir=f"test/characterizer/lowering/N_{ntraj}"
+    observable_list=[X(), Y(), Z()]
+
+    noise_list=[ "pauli_x", "pauli_y", "pauli_z", "lowering", "raising"]
+
+
+    # for obs_operator in observable_list:
+    for noise_operator in noise_list:
+
+        work_dir=f"test/characterizer/scan/observable_xyz_noise_{noise_operator}"
 
         work_dir_path = Path(work_dir)
 
@@ -51,7 +62,7 @@ if __name__ == '__main__':
 
 
         ## Defining Hamiltonian and observable list
-        L=2
+        L=3
 
         J=1
         g=0.5
@@ -65,12 +76,8 @@ if __name__ == '__main__':
         init_state = MPS(L, state='ones')
 
 
-        # obs_list = [Observable(X(), site) for site in range(L)]  + [Observable(Y(), site) for site in range(L)] + [Observable(Z(), site) for site in range(L)]
-        obs_list = [Observable(Z(), site) for site in range(L)]
-
-
-        print("Reftraj results:", obs_list[0].results)
-
+        obs_list = [Observable(X(), site) for site in range(L)]  + [Observable(Y(), site) for site in range(L)] + [Observable(Z(), site) for site in range(L)]
+        # obs_list = [Observable(obs_operator, site) for site in range(L)]
 
 
 
@@ -81,7 +88,7 @@ if __name__ == '__main__':
 
         dt=0.1
 
-        N=2000
+        N=1000
 
         max_bond_dim=8
 
@@ -106,7 +113,7 @@ if __name__ == '__main__':
         # ref_noise_model =  NoiseModel([{"name": "lowering", "sites": [i], "strength": gamma_rel} for i in range(L)] + [{"name": "pauli_z", "sites": [i], "strength": gamma_deph} for i in range(L)])
         # ref_noise_model =  NoiseModel( [{"name": "pauli_z", "sites": [i], "strength": gamma_deph} for i in range(L)])
 
-        ref_noise_model =  NoiseModel([{"name": "lowering", "sites": [i], "strength": gamma_rel} for i in range(L)] )
+        ref_noise_model =  NoiseModel([{"name": noise_operator, "sites": [i], "strength": gamma_rel} for i in range(L)] )
 
 
 
@@ -144,11 +151,11 @@ if __name__ == '__main__':
         #%% Optimizing the model
         gamma_rel_guess=0.6
         gamma_deph_guess=0.4
-        sim_params.num_traj=int(ntraj)
+        sim_params.num_traj=int(80)
 
         # guess_noise_model =  NoiseModel([{"name": "lowering", "sites": [i], "strength": gamma_rel_guess} for i in range(L)] + [{"name": "pauli_z", "sites": [i], "strength": gamma_deph_guess} for i in range(L)])
         # guess_noise_model =  NoiseModel( [{"name": "pauli_z", "sites": [i], "strength": gamma_deph_guess} for i in range(L)])
-        guess_noise_model =  NoiseModel([{"name": "lowering", "sites": [i], "strength": gamma_rel_guess} for i in range(L)] )
+        guess_noise_model =  NoiseModel([{"name": noise_operator, "sites": [i], "strength": gamma_rel_guess} for i in range(L)] )
 
 
         characterizer = Characterizer(
