@@ -45,9 +45,9 @@ def write_gammas( noise_model: NoiseModel, file_name):
 if __name__ == '__main__':
 #%%
 
-    observable_list=[%OBSERVABLE%]
+    observable_list=[X(), Y(), Z()]
 
-    noise_list=[ "%NOISE%"]
+    noise_list=[ "pauli_x", "pauli_y", "pauli_z", "lowering", "raising"]
 
 
     for obs_operator in observable_list:

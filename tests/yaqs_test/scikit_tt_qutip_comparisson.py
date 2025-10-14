@@ -2,6 +2,14 @@
 import numpy as np
 from mqt.yaqs.noise_char.propagation import *
 import matplotlib.pyplot as plt
+import re
+
+import qutip as qt
+
+import scikit_tt.tensor_train as tt
+from scikit_tt.tensor_train import TT
+import scikit_tt.solvers.ode as ode
+import scikit_tt
 
 #%%
 
@@ -107,13 +115,13 @@ def qutip_traj(sim_params_class: SimulationParameters):
 
     # Relaxation operators
     for i in range(L):
-        c_ops.append(np.sqrt(gamma_rel[i]) * qt.tensor([qt.destroy(2) if n==i else qt.qeye(2) for n in range(L)]))
+        c_ops.append(np.sqrt(gamma_rel[i]) * qt.tensor([sx if n==i else qt.qeye(2) for n in range(L)]))
         gammas.append(gamma_rel)
 
-    # Dephasing operators
-    for i in range(L):
-        c_ops.append(np.sqrt(gamma_deph[i]) * qt.tensor([sz if n==i else qt.qeye(2) for n in range(L)]))
-        gammas.append(gamma_deph)
+    # # Dephasing operators
+    # for i in range(L):
+    #     c_ops.append(np.sqrt(gamma_deph[i]) * qt.tensor([sz if n==i else qt.qeye(2) for n in range(L)]))
+    #     gammas.append(gamma_deph)
 
     #c_ops = [rel0, rel1, rel2,... rel(L-1), deph0, deph1,..., deph(L-1)]
 
@@ -197,8 +205,8 @@ def scikit_tt_traj(sim_params_class: SimulationParameters):
     cores[-1] = tt.build_core([I, Z, -g*X])
     hamiltonian = TT(cores)# jump operators and parameters
 
-    jump_operator_list = [[L_1, L_2] for _ in range(L)]
-    jump_parameter_list = [[np.sqrt(gamma_rel[i]), np.sqrt(gamma_deph[i])] for i in range(L)]
+    jump_operator_list = [[X] for _ in range(L)]
+    jump_parameter_list = [[np.sqrt(gamma_rel[i])] for i in range(L)]
 
 
     obs_list=[]
@@ -231,13 +239,18 @@ def scikit_tt_traj(sim_params_class: SimulationParameters):
         for j in range(n_obs_total):
            exp_vals[j,0] += initial_state.transpose(conjugate=True)@obs_list[j]@initial_state
         
+        trajectory = ode.tjm(hamiltonian, jump_operator_list, jump_parameter_list, initial_state, dt, timesteps, solver=scikit_tt_solver)
 
-        
         for i in range(timesteps):
-            initial_state = ode.tjm(hamiltonian, jump_operator_list, jump_parameter_list, initial_state, dt, 1, solver=scikit_tt_solver)[-1]
-
             for j in range(n_obs_total):                
-                exp_vals[j,i+1] += initial_state.transpose(conjugate=True)@obs_list[j]@initial_state
+                exp_vals[j,i+1] += trajectory[i].transpose(conjugate=True)@obs_list[j]@trajectory[i]
+
+
+        # for i in range(timesteps):
+        #     initial_state = ode.tjm(hamiltonian, jump_operator_list, jump_parameter_list, initial_state, dt, 1, solver=scikit_tt_solver)[-1]
+
+        #     for j in range(n_obs_total):                
+        #         exp_vals[j,i+1] += initial_state.transpose(conjugate=True)@obs_list[j]@initial_state
 
 
     exp_vals = (1/N)*exp_vals
@@ -258,13 +271,13 @@ def scikit_tt_traj(sim_params_class: SimulationParameters):
 
 if __name__=="__main__":
 
-    L=3
+    L=2
     g_rel=0.1
-    g_deph=0.1
+    g_deph=0.
     ntraj=400
     threshold=1e-6
 
-    local_solver="exact"
+    local_solver="krylov_5"
 
     sim_params = SimulationParameters(L,g_rel,g_deph)
     sim_params.N = ntraj
@@ -283,11 +296,14 @@ if __name__=="__main__":
 
 
 
-    col=0
-    plt.plot(scikit_time, scikit_ref_traj[:,col], label="SciKit-TT")
-    plt.plot(qutip_time, qutip_ref_traj[:,col], label="QuTiP")
-    plt.legend()
-    plt.show()
+#%%
+%matplotlib qt
+
+col=0
+plt.plot(scikit_time, scikit_ref_traj[:,col], label="SciKit-TT")
+plt.plot(qutip_time, qutip_ref_traj[:,col], label="QuTiP")
+plt.legend()
+plt.show()
 
 
 # %%
