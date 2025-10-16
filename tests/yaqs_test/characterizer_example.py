@@ -12,7 +12,7 @@ from pathlib import Path
 
 
 from mqt.yaqs.core.data_structures.networks import MPO, MPS
-from mqt.yaqs.core.data_structures.noise_model import NoiseModel
+from mqt.yaqs.core.data_structures.noise_model import NoiseModel, CompactNoiseModel
 from mqt.yaqs.core.data_structures.simulation_parameters import AnalogSimParams, Observable
 
 
@@ -24,11 +24,11 @@ import sys
 
 
 
-def write_gammas( noise_model: NoiseModel, file_name):
+def write_gammas( noise_model: CompactNoiseModel, file_name):
     
     gammas = []
 
-    for proc in noise_model.processes:
+    for proc in noise_model.compact_processes:
 
         gammas.append(proc["strength"])
     
@@ -45,132 +45,131 @@ def write_gammas( noise_model: NoiseModel, file_name):
 if __name__ == '__main__':
 #%%
 
-    observable_list=[%OBSERVABLE%]
 
-    noise_list=[ "%NOISE%"]
+    work_dir=f"test/characterizer/"
 
+    work_dir_path = Path(work_dir)
 
-    for obs_operator in observable_list:
-        for noise_operator in noise_list:
-
-            work_dir=f"test/characterizer/scan/init_state_zeros/observable_{obs_operator.name}_noise_{noise_operator}"
-
-            work_dir_path = Path(work_dir)
-
-            work_dir_path.mkdir(parents=True, exist_ok=True)
+    work_dir_path.mkdir(parents=True, exist_ok=True)
 
 
 
-            ## Defining Hamiltonian and observable list
-            L=3
+    ## Defining Hamiltonian and observable list
+    L=3
 
-            J=1
-            g=0.5
-
-
-            H_0 = MPO()
-            H_0.init_ising(L, J, g)
+    J=1
+    g=0.5
 
 
-            # Define the initial state
-            init_state = MPS(L, state='zeros')
+    H_0 = MPO()
+    H_0.init_ising(L, J, g)
 
 
-            #obs_list = [Observable(X(), site) for site in range(L)]  + [Observable(Y(), site) for site in range(L)] + [Observable(Z(), site) for site in range(L)]
-            obs_list = [Observable(obs_operator, site) for site in range(L)]
+    # Define the initial state
+    init_state = MPS(L, state='zeros')
+
+
+    obs_list = [Observable(X(), site) for site in range(L)]  + [Observable(Y(), site) for site in range(L)] + [Observable(Z(), site) for site in range(L)]
+    # obs_list = [Observable(obs_operator, site) for site in range(L)]
 
 
 
-            #%%
-            ## Defining simulation parameters
+    #%%
+    ## Defining simulation parameters
 
-            T=5
+    T=3
 
-            dt=0.1
+    dt=0.1
 
-            N=1000
+    N=1
 
-            max_bond_dim=8
+    max_bond_dim=8
 
-            threshold=1e-6
+    threshold=1e-6
 
-            order=2
+    order=2
 
-            sim_params = AnalogSimParams(observables=obs_list, elapsed_time=T, dt=dt, num_traj=N, max_bond_dim=max_bond_dim, threshold=threshold, order=order, sample_timesteps=True)
+    sim_params = AnalogSimParams(observables=obs_list, elapsed_time=T, dt=dt, num_traj=N, max_bond_dim=max_bond_dim, threshold=threshold, order=order, sample_timesteps=True)
 
 
 
 
 
-            #%%
+    #%%
 
 
-            #%%
-            ## Defining reference noise model and reference trajectory
-            gamma_rel = 0.1
+    #%%
+    ## Defining reference noise model and reference trajectory
+    gamma_rel = 0.1
 
-            gamma_deph = 0.1
-            # ref_noise_model =  NoiseModel([{"name": "lowering", "sites": [i], "strength": gamma_rel} for i in range(L)] + [{"name": "pauli_z", "sites": [i], "strength": gamma_deph} for i in range(L)])
-            # ref_noise_model =  NoiseModel( [{"name": "pauli_z", "sites": [i], "strength": gamma_deph} for i in range(L)])
+    gamma_deph = 0.1
+    ref_noise_model =  CompactNoiseModel([{"name": "lowering", "sites": [i for i in range(L)], "strength": gamma_rel}] + [{"name": "pauli_z", "sites": [i for i in range(L)], "strength": gamma_deph}])
+    # ref_noise_model =  NoiseModel( [{"name": "pauli_z", "sites": [i], "strength": gamma_deph} for i in range(L)])
 
-            ref_noise_model =  NoiseModel([{"name": noise_operator, "sites": [i], "strength": gamma_rel} for i in range(L)] )
-
-
-
-            propagator = PropagatorWithGradients(
-                sim_params=sim_params,
-                hamiltonian=H_0,
-                noise_model=ref_noise_model,
-                init_state=init_state
-            )
-
-            propagator.set_observable_list(obs_list)
-
-            propagator.run(ref_noise_model)
-
-            ref_traj = propagator.obs_traj
-
-
-            write_gammas(ref_noise_model, work_dir + "/gammas.txt")
-
-
-            
+    # ref_noise_model =  NoiseModel([{"name": noise_operator, "sites": [i], "strength": gamma_rel} for i in range(L)] )
 
 
 
+    propagator = PropagatorWithGradients(
+        sim_params=sim_params,
+        hamiltonian=H_0,
+        compact_noise_model=ref_noise_model,
+        init_state=init_state
+    )
 
-            # for i in range(len(propagator.obs_traj)):
-            #     plt.plot( sim_params.times, propagator.obs_array[i], label=f"obs_{str(i)}_gamma_deph_{gamma_deph}")
-
-            # plt.legend()
-            # plt.savefig(f"L_{L}_N_{N}_gamma_rel_{gamma_rel}_gamma_deph_{gamma_deph}.png")
-            # plt.show()
-
-
-
-            #%% Optimizing the model
-            gamma_rel_guess=0.6
-            gamma_deph_guess=0.4
-            sim_params.num_traj=int(80)
-
-            # guess_noise_model =  NoiseModel([{"name": "lowering", "sites": [i], "strength": gamma_rel_guess} for i in range(L)] + [{"name": "pauli_z", "sites": [i], "strength": gamma_deph_guess} for i in range(L)])
-            # guess_noise_model =  NoiseModel( [{"name": "pauli_z", "sites": [i], "strength": gamma_deph_guess} for i in range(L)])
-            guess_noise_model =  NoiseModel([{"name": noise_operator, "sites": [i], "strength": gamma_rel_guess} for i in range(L)] )
+    propagator.set_observable_list(obs_list)
 
 
-            characterizer = Characterizer(
-                sim_params=sim_params,
-                hamiltonian=H_0,
-                init_guess=guess_noise_model,
-                init_state=init_state,
-                ref_traj=ref_traj,
-                work_dir=work_dir
-            )
+    print("Computing reference trajectory ... ")
+
+    propagator.run(ref_noise_model)
+
+    ref_traj = propagator.obs_traj
 
 
-            print("Optimizing ... ")
+    print("Reference trajectory computed.")
 
-            characterizer.adam_optimize(max_iterations=100)
+
+    write_gammas(ref_noise_model, work_dir + "gammas.txt")
+
+
+    
+
+
+
+
+    # for i in range(len(propagator.obs_traj)):
+    #     plt.plot( sim_params.times, propagator.obs_array[i], label=f"obs_{str(i)}_gamma_deph_{gamma_deph}")
+
+    # plt.legend()
+    # plt.savefig(f"L_{L}_N_{N}_gamma_rel_{gamma_rel}_gamma_deph_{gamma_deph}.png")
+    # plt.show()
+
+
+
+    #%% Optimizing the model
+    gamma_rel_guess=0.6
+    gamma_deph_guess=0.4
+    sim_params.num_traj=int(1)
+
+    guess_noise_model =  CompactNoiseModel([{"name": "lowering", "sites": [i for i in range(L)], "strength": gamma_rel_guess} ] + [{"name": "pauli_z", "sites": [i for i in range(L)], "strength": gamma_deph_guess} ])
+    # guess_noise_model =  NoiseModel( [{"name": "pauli_z", "sites": [i], "strength": gamma_deph_guess} for i in range(L)])
+    # guess_noise_model =  NoiseModel([{"name": noise_operator, "sites": [i], "strength": gamma_rel_guess} for i in range(L)] )
+
+
+    characterizer = Characterizer(
+        sim_params=sim_params,
+        hamiltonian=H_0,
+        init_guess=guess_noise_model,
+        init_state=init_state,
+        ref_traj=ref_traj,
+        work_dir=work_dir
+    )
+
+
+    print("Optimizing ... ")
+
+    characterizer.adam_optimize(max_iterations=10)
 
 
 #%%

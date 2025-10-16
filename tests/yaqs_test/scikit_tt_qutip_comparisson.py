@@ -212,7 +212,7 @@ def scikit_tt_traj(sim_params_class: SimulationParameters):
     hamiltonian = TT(cores)# jump operators and parameters
 
     jump_operator_list = [[X] for _ in range(L)]
-    jump_parameter_list = [[np.sqrt(gamma_rel[i])] for i in range(L)]
+    jump_parameter_list = [[gamma_rel[i]] for i in range(L)]
 
 
     obs_list=[]
@@ -242,26 +242,26 @@ def scikit_tt_traj(sim_params_class: SimulationParameters):
         initial_state = (1 / initial_state.norm()) * initial_state
 
         
-        for j in range(n_obs_total):
-           exp_vals[j,0] += initial_state.transpose(conjugate=True)@obs_list[j]@initial_state
+        # for j in range(n_obs_total):
+        #    exp_vals[j,0] += initial_state.transpose(conjugate=True)@obs_list[j]@initial_state
         
-        trajectory = ode.tjm(hamiltonian, jump_operator_list, jump_parameter_list, initial_state, dt, timesteps, solver=scikit_tt_solver)
+        # trajectory = ode.tjm(hamiltonian, jump_operator_list, jump_parameter_list, initial_state, dt, timesteps, solver=scikit_tt_solver)
 
         # print(len(trajectory), timesteps)
 
-        for i in range(timesteps):
-            for j in range(n_obs_total):                
-                exp_vals[j,i+1] += trajectory[i+1].transpose(conjugate=True)@obs_list[j]@trajectory[i+1]
+        # for i in range(timesteps):
+        #     for j in range(n_obs_total):                
+        #         exp_vals[j,i+1] += trajectory[i+1].transpose(conjugate=True)@obs_list[j]@trajectory[i+1]
 
         
 
 
 
-        # for i in range(timesteps):
-        #     initial_state = ode.tjm(hamiltonian, jump_operator_list, jump_parameter_list, initial_state, dt, 1, solver=scikit_tt_solver)[-1]
+        for i in range(timesteps):
+            initial_state = ode.tjm(hamiltonian, jump_operator_list, jump_parameter_list, initial_state, dt, 1, solver=scikit_tt_solver)[-1]
 
-        #     for j in range(n_obs_total):                
-        #         exp_vals[j,i+1] += initial_state.transpose(conjugate=True)@obs_list[j]@initial_state
+            for j in range(n_obs_total):                
+                exp_vals[j,i+1] += initial_state.transpose(conjugate=True)@obs_list[j]@initial_state
 
 
     exp_vals = (1/N)*exp_vals
@@ -406,14 +406,14 @@ if __name__=="__main__":
     L=2
     g_rel=0.1
     g_deph=0.
-    ntraj=1
+    ntraj=500
     threshold=1e-6
 
     local_solver="krylov_5"
 
     sim_params = SimulationParameters(L,g_rel,g_deph)
     sim_params.N = ntraj
-    sim_params.T = 1
+    sim_params.T = 5
     sim_params.threshold = threshold
 
 

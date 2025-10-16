@@ -324,34 +324,34 @@ data[-1, 2:].shape
 
 ### Plotting x history
 
-observable_list=["x", "y", "z"]
+observable_list=["X", "Y", "Z"]
 noise_list=[ "pauli_x", "pauli_y", "pauli_z", "lowering", "raising"]
 
 
-# for obs_operator in observable_list:
-for noise_operator in noise_list:
+for obs_operator in observable_list:
+    for noise_operator in noise_list:
 
-    folder = f"test/characterizer/scan/observable_xyz_noise_{noise_operator}/"
-    x_avg_file=folder + f"loss_x_history.txt"
-    gammas_file = folder +f"gammas.txt"
-
-
-    data = np.genfromtxt(x_avg_file, skip_header=1)
-    gammas = np.genfromtxt(gammas_file, skip_header=1, ndmin=1)
+        folder = f"test/characterizer/scan_z1/init_state_ones/observable_{obs_operator}_noise_{noise_operator}/"
+        x_avg_file=folder + f"loss_x_history.txt"
+        gammas_file = folder +f"gammas.txt"
 
 
-    d=(len(data[0])-1)//2
-
-    for i in range(d):
-        plt.plot(data[:, 0], data[:, 2 + i], label=f"$\\gamma_{{{i+1}}}$")
-        plt.axhline(gammas[i], color=plt.gca().lines[-1].get_color(), linestyle='--', linewidth=2)
+        data = np.genfromtxt(x_avg_file, skip_header=1)
+        gammas = np.genfromtxt(gammas_file, skip_header=1, ndmin=1)
 
 
-    plt.xlabel("Iterations")
-    plt.ylabel(r"$\gamma$")
-    plt.legend()
-    plt.savefig(folder + "optimization.pdf")
-    plt.close()
+        d=(len(data[0])-1)//2
+
+        for i in range(d):
+            plt.plot(data[:, 0], data[:, 2 + i], label=f"$\\gamma_{{{i+1}}}$")
+            plt.axhline(gammas[i], color=plt.gca().lines[-1].get_color(), linestyle='--', linewidth=2)
+
+
+        plt.xlabel("Iterations")
+        plt.ylabel(r"$\gamma$")
+        plt.legend()
+        plt.savefig(folder + "optimization.pdf")
+        plt.close()
 # %%
 gammas[0]
 # %%
