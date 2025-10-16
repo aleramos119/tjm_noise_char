@@ -11,10 +11,16 @@ from scikit_tt.tensor_train import TT
 import scikit_tt.solvers.ode as ode
 import scikit_tt
 
+from mqt.yaqs.core.libraries.gate_library import X, Y, Z, Destroy, Create
+
+from mqt.yaqs.core.data_structures.networks import MPO, MPS
+from mqt.yaqs.core.data_structures.noise_model import NoiseModel
+from mqt.yaqs.core.data_structures.simulation_parameters import Observable,AnalogSimParams
+
 #%%
 
 class SimulationParameters:
-    T: float = 5
+    T: float = 1
     dt: float = 0.1
     J: float = 1
     g: float = 0.5
@@ -241,9 +247,14 @@ def scikit_tt_traj(sim_params_class: SimulationParameters):
         
         trajectory = ode.tjm(hamiltonian, jump_operator_list, jump_parameter_list, initial_state, dt, timesteps, solver=scikit_tt_solver)
 
+        # print(len(trajectory), timesteps)
+
         for i in range(timesteps):
             for j in range(n_obs_total):                
-                exp_vals[j,i+1] += trajectory[i].transpose(conjugate=True)@obs_list[j]@trajectory[i]
+                exp_vals[j,i+1] += trajectory[i+1].transpose(conjugate=True)@obs_list[j]@trajectory[i+1]
+
+        
+
 
 
         # for i in range(timesteps):
@@ -257,6 +268,127 @@ def scikit_tt_traj(sim_params_class: SimulationParameters):
     
 
     return t, np.array(exp_vals).T
+
+
+
+
+
+
+
+def tjm_traj(sim_params_class: SimulationParameters):
+    """
+    Simulates the time evolution of an open quantum system using the Lindblad master equation with TJM.
+    This function constructs the system Hamiltonian and collapse operators for a spin chain with relaxation and dephasing noise,
+    initializes the system state, and computes the expectation values of specified observables and their derivatives with respect
+    to the noise parameters over time.
+    Parameters
+    ----------
+    sim_params_class : SimulationParameters
+        An instance of SimulationParameters containing simulation parameters:
+            - T (float): Total simulation time.
+            - dt (float): Time step.
+            - L (int): Number of sites (spins) in the chain.
+            - J (float): Ising coupling strength.
+            - g (float): Transverse field strength.
+            - gamma_rel (array-like): Relaxation rates for each site.
+            - gamma_deph (array-like): Dephasing rates for each site.
+            - observables (list of str): List of observables to measure ('x', 'y', 'z').
+    Returns
+    -------
+    t : numpy.ndarray
+        Array of time points at which the system was evolved.
+    original_exp_vals : numpy.ndarray
+        Expectation values of the specified observables at each site and time, shape (n_obs_site, L, n_t).
+    d_On_d_gk : numpy.ndarray
+        Derivatives of the observables with respect to the noise parameters, shape (n_jump_site, n_obs_site, L, n_t).
+    avg_min_max_traj_time : list
+        Placeholder list [None, None, None] for compatibility with other interfaces.
+    Notes
+    -----
+    - The function uses QuTiP for quantum object and solver operations.
+    - The system is initialized in the ground state |0>^{⊗L}.
+    - The Hamiltonian is an Ising model with a transverse field.
+    - Collapse operators are constructed for both relaxation and dephasing noise.
+    - The function computes both the expectation values of observables and their derivatives with respect to noise parameters
+      using the Lindblad master equation.
+    """
+
+
+    T = sim_params_class.T
+    dt = sim_params_class.dt
+    L = sim_params_class.L
+    J = sim_params_class.J
+    g = sim_params_class.g
+    gamma_rel = sim_params_class.gamma_rel
+    gamma_deph = sim_params_class.gamma_deph
+    N=sim_params_class.N
+
+
+    threshold = sim_params_class.threshold
+    max_bond_dim = sim_params_class.max_bond_dim
+    order = sim_params_class.order
+
+
+
+    t = np.arange(0, T + dt, dt) 
+    n_t = len(t)
+
+
+    # Define the system Hamiltonian
+    H_0 = MPO()
+
+    H_0.init_ising(L, J, g)
+    # Define the initial state
+    state = MPS(L, state='zeros')
+
+    # Define the noise model
+    # gamma_relaxation = noise_params[0]
+    # gamma_dephasing = noise_params[1]
+
+
+    noise_model = NoiseModel([{"name": "pauli_x", "sites": [i], "strength": gamma_rel[i]} for i in range(L)])
+
+
+    sample_timesteps = True
+
+    
+    obs_list = [Observable(X(), site) for site in range(L)]  + [Observable(Y(), site) for site in range(L)] + [Observable(Z(), site) for site in range(L)]
+
+
+    n_obs = len(obs_list)
+
+
+    
+
+    new_obs_list = obs_list
+
+
+
+
+    sim_params = AnalogSimParams(observables=new_obs_list, elapsed_time=T, dt=dt, num_traj=N, max_bond_dim=max_bond_dim, threshold=threshold, order=order, sample_timesteps=True)
+    simulator.run(state, H_0, sim_params, noise_model)
+
+    exp_vals = []
+    for observable in sim_params.observables:
+        exp_vals.append(observable.results)
+
+
+
+
+    # Separate original and new expectation values from result_lindblad.
+    n_obs = len(obs_list)  # number of measurement operators (should be L * n_types)
+    original_exp_vals = exp_vals[:n_obs]
+
+
+
+    original_exp_vals = np.array(original_exp_vals).reshape(n_obs, n_t)
+
+
+    return t, original_exp_vals.T
+
+
+
+
 
 
 
@@ -274,14 +406,14 @@ if __name__=="__main__":
     L=2
     g_rel=0.1
     g_deph=0.
-    ntraj=400
+    ntraj=1
     threshold=1e-6
 
     local_solver="krylov_5"
 
     sim_params = SimulationParameters(L,g_rel,g_deph)
     sim_params.N = ntraj
-    sim_params.T = 5
+    sim_params.T = 1
     sim_params.threshold = threshold
 
 
@@ -294,16 +426,27 @@ if __name__=="__main__":
     qutip_time, qutip_ref_traj = qutip_traj(sim_params)
 
 
+    yaqs_time, yaqs_ref_traj = tjm_traj(sim_params)
+
+
+    col=0
+    plt.plot(scikit_time, scikit_ref_traj[:,col],"o", label="SciKit-TT")
+    plt.plot(qutip_time, qutip_ref_traj[:,col],"x", label="QuTiP")
+    plt.plot(yaqs_time, yaqs_ref_traj[:,col], label="YAQS")
+
+    plt.legend()
+    plt.show()
 
 
 #%%
-%matplotlib qt
-
-col=0
-plt.plot(scikit_time, scikit_ref_traj[:,col], label="SciKit-TT")
-plt.plot(qutip_time, qutip_ref_traj[:,col], label="QuTiP")
-plt.legend()
-plt.show()
 
 
-# %%
+
+# #%%
+# %matplotlib qt
+
+
+
+# # %%
+# yaqs_ref_traj.shape
+# # %%
