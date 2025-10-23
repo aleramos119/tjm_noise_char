@@ -69,8 +69,8 @@ if __name__ == '__main__':
     init_state = MPS(L, state='zeros')
 
 
-    obs_list = [Observable(X(), site) for site in range(L)]  + [Observable(Y(), site) for site in range(L)] + [Observable(Z(), site) for site in range(L)]
-    # obs_list = [Observable(obs_operator, site) for site in range(L)]
+    # obs_list = [Observable(X(), site) for site in range(L)]  + [Observable(Y(), site) for site in range(L)] + [Observable(Z(), site) for site in range(L)]
+    obs_list = [Observable(Y(), site) for site in range(L)]
 
 
 
@@ -103,11 +103,14 @@ if __name__ == '__main__':
     gamma_rel = 0.1
 
     gamma_deph = 0.1
-    ref_noise_model =  CompactNoiseModel([{"name": "lowering", "sites": [i for i in range(L)], "strength": gamma_rel}] + [{"name": "pauli_z", "sites": [i for i in range(L)], "strength": gamma_deph}])
-    # ref_noise_model =  NoiseModel( [{"name": "pauli_z", "sites": [i], "strength": gamma_deph} for i in range(L)])
+    # ref_noise_model =  CompactNoiseModel([{"name": "lowering", "sites": [i for i in range(L)], "strength": gamma_rel}] + [{"name": "pauli_z", "sites": [i for i in range(L)], "strength": gamma_deph}])
+    ref_noise_model =  CompactNoiseModel( [{"name": "pauli_z", "sites": [i for i in range(L)], "strength": gamma_deph} ])
 
-    # ref_noise_model =  NoiseModel([{"name": noise_operator, "sites": [i], "strength": gamma_rel} for i in range(L)] )
+    # ref_noise_model =  CompactNoiseModel([{"name": noise_operator, "sites": [i], "strength": gamma_rel} for i in range(L)] )
 
+
+    ## Writing reference gammas to file
+    np.savetxt(work_dir + "gammas.txt", ref_noise_model.strength_list, header="##", fmt="%.6f")
 
 
     propagator = PropagatorWithGradients(
@@ -130,7 +133,6 @@ if __name__ == '__main__':
     print("Reference trajectory computed.")
 
 
-    write_gammas(ref_noise_model, work_dir + "gammas.txt")
 
 
     
@@ -152,9 +154,9 @@ if __name__ == '__main__':
     gamma_deph_guess=0.4
     sim_params.num_traj=int(1)
 
-    guess_noise_model =  CompactNoiseModel([{"name": "lowering", "sites": [i for i in range(L)], "strength": gamma_rel_guess} ] + [{"name": "pauli_z", "sites": [i for i in range(L)], "strength": gamma_deph_guess} ])
-    # guess_noise_model =  NoiseModel( [{"name": "pauli_z", "sites": [i], "strength": gamma_deph_guess} for i in range(L)])
-    # guess_noise_model =  NoiseModel([{"name": noise_operator, "sites": [i], "strength": gamma_rel_guess} for i in range(L)] )
+    # guess_noise_model =  CompactNoiseModel([{"name": "lowering", "sites": [i for i in range(L)], "strength": gamma_rel_guess} ] + [{"name": "pauli_z", "sites": [i for i in range(L)], "strength": gamma_deph_guess} ])
+    guess_noise_model =  CompactNoiseModel( [{"name": "pauli_z", "sites": [i for i in range(L)], "strength": gamma_deph_guess} ])
+    # guess_noise_model =  CompactNoiseModel([{"name": noise_operator, "sites": [i], "strength": gamma_rel_guess} for i in range(L)] )
 
 
     characterizer = Characterizer(
@@ -169,138 +171,6 @@ if __name__ == '__main__':
 
     print("Optimizing ... ")
 
-    characterizer.adam_optimize(max_iterations=10)
+    characterizer.adam_optimize(max_iterations=100)
 
 
-#%%
-# on = Z() 
-# lk = Destroy()
-
-# res = lk.dag() * on * lk - 0.5 * on * lk.dag() * lk - 0.5 * lk.dag() * lk * on
-
-
-# rho0= np.array([[1, 0], [0, 0]])
-# rho1= np.array([[0, 0], [0, 1]])
-
-
-# expected_value_0= np.trace(res.matrix @ rho0)
-# expected_value_1= np.trace(res.matrix @ rho1)
-
-
-
-# print("Result matrix: ",res.matrix, " Expected_value_0: ", expected_value_0, " Expected_value_1: ", expected_value_1 )
-#%%
-
- 
-    # %%
-
-    # import qutip as qt
-    # t = np.arange(0, T + dt, dt) 
-
-    # n_t = len(t)
-
-    # '''QUTIP Initialization + Simulation'''
-
-    # # Define Pauli matrices
-    # sx = qt.sigmax()
-    # sy = qt.sigmay()
-    # sz = qt.sigmaz()
-
-    # # Construct the Ising Hamiltonian
-    # H = 0
-    # for i in range(L-1):
-    #     H += -J * qt.tensor([sz if n==i or n==i+1 else qt.qeye(2) for n in range(L)])
-    # for i in range(L):
-    #     H += -g * qt.tensor([sx if n==i else qt.qeye(2) for n in range(L)])
-
-
-
-    # # Construct collapse operators
-    # c_ops = []
-    # gammas = []
-
-    # # Relaxation operators
-    # for i in range(L):
-    #     c_ops.append(np.sqrt(gamma_rel[i]) * qt.tensor([qt.destroy(2) if n==i else qt.qeye(2) for n in range(L)]))
-    #     gammas.append(gamma_rel)
-
-    # # Dephasing operators
-    # for i in range(L):
-    #     c_ops.append(np.sqrt(gamma_deph[i]) * qt.tensor([sz if n==i else qt.qeye(2) for n in range(L)]))
-    #     gammas.append(gamma_deph)
-
-    # #c_ops = [rel0, rel1, rel2,... rel(L-1), deph0, deph1,..., deph(L-1)]
-
-    # # Initial state
-    # psi0 = qt.tensor([qt.basis(2, 0) for _ in range(L)])
-
-
-
-    # # Create obs_list based on the observables in sim_params_class.observables
-    # obs_list = []
-
-
-    # for obs_type in sim_params_class.observables:
-    #     if obs_type.lower() == 'x':
-    #         # For each site, create the measurement operator for 'x'
-    #         obs_list.extend([qt.tensor([sx if n == i else qt.qeye(2) for n in range(L)]) for i in range(L)])
-    #     elif obs_type.lower() == 'y':
-    #         obs_list.extend([qt.tensor([sy if n == i else qt.qeye(2) for n in range(L)]) for i in range(L)])
-    #     elif obs_type.lower() == 'z':
-    #         obs_list.extend([qt.tensor([sz if n == i else qt.qeye(2) for n in range(L)]) for i in range(L)])
-
-
-
-
-
-    # jump_site_list = [ qt.destroy(2)  ,  sz]
-
-    # obs_site_list = [sx, sy, sz]
-
-
-    # A_kn_site_list = []
-
-
-    # n_jump_site = len(jump_site_list)
-    # n_obs_site = len(obs_site_list)
-
-
-    # for lk in jump_site_list:
-    #     for on in obs_site_list:
-    #         for k in range(L):
-    #             A_kn_site_list.append( qt.tensor([  lk.dag()*on*lk  -  0.5*on*lk.dag()*lk  -  0.5*lk.dag()*lk*on   if n == k else qt.qeye(2) for n in range(L)]) )
-
-
-
-    # new_obs_list = obs_list + A_kn_site_list
-
-    # n_obs= len(obs_list)
-    # n_jump= len(c_ops)
-
-    #     # Exact Lindblad solution
-    # result_lindblad = qt.mesolve(H, psi0, t, c_ops, new_obs_list, progress_bar=True)
-
-    # exp_vals = []
-    # for i in range(len(new_obs_list)):
-    #     exp_vals.append(result_lindblad.expect[i])
-
-
-
-    # # Separate original and new expectation values from result_lindblad.
-    # n_obs = len(obs_list)  # number of measurement operators (should be L * n_types)
-    # original_exp_vals = exp_vals[:n_obs]
-    # new_exp_vals = exp_vals[n_obs:]  # these correspond to the A_kn operators
-
-
-
-    # # Compute the integral of the new expectation values to obtain the derivatives
-    # d_On_d_gk = [ trapezoidal(new_exp_vals[i],t)  for i in range(len(A_kn_site_list)) ]
-
-    # d_On_d_gk = np.array(d_On_d_gk).reshape(n_jump_site, n_obs_site, L, n_t)
-    # original_exp_vals = np.array(original_exp_vals).reshape(n_obs_site, L, n_t)
-
-
-    # avg_min_max_traj_time = [None, None, None]
-
-
-    # return t, original_exp_vals, d_On_d_gk, avg_min_max_traj_time
