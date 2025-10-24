@@ -326,7 +326,7 @@ data[-1, 2:].shape
 
 
 
-folder = f"test/characterizer/"
+folder = f"test/scikit_tt_characterizer/"
 x_avg_file=folder + f"loss_x_history.txt"
 gammas_file = folder +f"gammas.txt"
 
@@ -346,7 +346,6 @@ plt.xlabel("Iterations")
 plt.ylabel(r"$\gamma$")
 plt.legend()
 plt.savefig(folder + "optimization.pdf")
-plt.close()
 # %%
 gammas[0]
 # %%

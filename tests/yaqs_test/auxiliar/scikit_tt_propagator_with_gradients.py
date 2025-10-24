@@ -18,7 +18,13 @@ from mqt.yaqs.core.data_structures.simulation_parameters import AnalogSimParams,
 from mqt.yaqs.noise_char.optimization import trapezoidal
 import copy
 
-from mqt.yaqs.core.libraries.gate_library import X, Y, Z, Create, Destroy
+
+import scikit_tt.tensor_train as tt
+from scikit_tt.tensor_train import TT
+import scikit_tt.solvers.ode as ode
+
+
+from mqt.yaqs.core.libraries.gate_library import X, Y, Z, Create, Destroy, Id
 
 # from auxiliar.write import *
 from mqt.yaqs.core.libraries.gate_library import GateLibrary, Zero
@@ -197,7 +203,7 @@ class PropagatorWithGradients:
             msg = "Noise site index exceeds number of sites in the Hamiltonian."
             raise ValueError(msg)
 
-    def noise_model_to_scikit_tt_noise_list(self, noise_model: NoiseModel):
+    def scikit_tt_noise_list(self, noise_model: NoiseModel):
         
         jump_operator_list = [[] for _ in range(self.sites)]
         jump_parameter_list = [[] for _ in range(self.sites)]
@@ -209,6 +215,74 @@ class PropagatorWithGradients:
                 jump_parameter_list[site].append(proc["strength"])
 
         return jump_operator_list, jump_parameter_list
+    
+
+    def scikit_tt_obs_list(self, obs_list: list[Observable]):
+        scikit_obs_list = []
+
+        for obs in obs_list:
+            site = obs.sites
+            mat = obs.gate.matrix
+            if site < self.sites:
+                scikit_tt_obs= tt.eye(dims=[2]*self.sites)
+                scikit_tt_obs.cores[site]=np.zeros([1,2,2,1], dtype=complex)
+                scikit_tt_obs.cores[site][0,:,:,0]=mat
+                scikit_obs_list.append(scikit_tt_obs)
+
+        return scikit_obs_list
+    
+    def scikit_tt_init_state(self, init_state: MPS):
+        indices = [int(np.argmax(np.isclose(a, 1+0j))) for a in init_state.tensors]
+        
+        initial_state = tt.unit([2] * self.sites, indices)
+        for i in range(self.sim_params.max_bond_dim - 1):
+            initial_state += tt.unit([2] * self.sites, indices)
+        initial_state = initial_state.ortho()
+        initial_state = (1 / initial_state.norm()) * initial_state
+
+        return initial_state
+    
+    def extract_J_g(self, mpo: MPO) -> tuple[float, float]:
+        """Extract J and g from an Ising MPO instance."""
+        # Grab the first tensor (left boundary)
+        left = mpo.tensors[0]  # shape (2, 2, 1, 3) after transpose (sigma, sigma', left, right)
+        left = np.transpose(left, (2, 3, 0, 1)) if left.shape[2] != 1 else left  # just in case
+
+
+        # Extract relevant operator blocks
+        # Depending on shape, you may need to index [0,1] vs [:,1]
+        # Here we assume the original (1, 3, 2, 2) structure before transpose:
+        if mpo.tensors[0].shape[-1] == 3:  # sanity check
+            I_block, J_block, g_block = [np.squeeze(a) for a in np.transpose(mpo.tensors[0], (2, 3, 0, 1))[0]]
+        else:
+            # If shapes differ, we handle it more generically
+            left_untransposed = np.transpose(mpo.tensors[0], (2, 3, 0, 1))
+            I_block, J_block, g_block = left_untransposed[0]
+
+        # Estimate J, g by projection
+        # J_block ≈ -J * Z
+        J = -np.real(J_block[0, 0])
+        g = -np.real(g_block[0, 1])
+
+        return J, g
+    
+
+    def scikit_tt_hamiltonian(self, hamiltonian: MPO):
+
+        j, g = self.extract_J_g(hamiltonian)
+
+
+
+        cores = [None] * self.sites
+        cores[0] = tt.build_core([[-g * X().matrix, - j * Z().matrix, Id().matrix]])
+        for i in range(1, self.sites - 1):
+            cores[i] = tt.build_core([[Id().matrix, 0, 0], [Z().matrix, 0, 0], [-g * X().matrix, - j * Z().matrix, Id().matrix]])
+        cores[-1] = tt.build_core([Id().matrix, Z().matrix, -g*X().matrix])
+
+        hamiltonian = TT(cores)# jump operators and parameters
+
+
+        return hamiltonian
 
     def set_observable_list(self, obs_list: list[Observable]) -> None:
         """Set the list of observables to be used for propagation.
@@ -329,39 +403,78 @@ class PropagatorWithGradients:
             sample_timesteps=True,
         )
 
-        simulator.run(self.init_state, self.hamiltonian, new_sim_params, noise_model.expanded_noise_model)
+
+
+
+
+        ##### Scikitt-tt part #####
+
+        scikit_new_obs_list = self.scikit_tt_obs_list(new_obs_list)
+
+        n_new_obs = len(new_obs_list)
+
+        scikit_hamiltonian = self.scikit_tt_hamiltonian(self.hamiltonian)
+        scikit_jump_operator_list, scikit_jump_parameter_list = self.scikit_tt_noise_list(noise_model.expanded_noise_model)
+
+
+        scikit_tt_solver: dict = {"solver": 'tdvp'+str(self.sim_params.order), "method": 'krylov', "dimension": 5}
+
+
+        exp_vals = np.zeros([n_new_obs,self.n_t], dtype=complex)
+
+        for k in range(self.sim_params.num_traj):
+            scikit_initial_state = self.scikit_tt_init_state(self.init_state)
+
+
+            for j in range(n_new_obs):
+
+                exp_vals[j,0] += scikit_initial_state.transpose(conjugate=True)@scikit_new_obs_list[j]@scikit_initial_state
+
+
+            for i in range(self.n_t - 1):
+                scikit_initial_state = ode.tjm(scikit_hamiltonian, scikit_jump_operator_list, scikit_jump_parameter_list, scikit_initial_state, self.sim_params.dt, 1, solver=scikit_tt_solver)[-1]
+
+                for j in range(n_new_obs):
+                    exp_vals[j,i+1] += scikit_initial_state.transpose(conjugate=True)@scikit_new_obs_list[j]@scikit_initial_state
+
+
+        exp_vals = (1/self.sim_params.num_traj)*exp_vals
+
+        ##### Scikitt-tt part #####
+
+
+
+
+
+
+
+
+
+
 
         # Separate original and new expectation values from result_lindblad.
-        self.obs_traj = new_sim_params.observables[: self.n_obs]
+        self.obs_array = np.real(exp_vals[:self.n_obs])
 
-        d_on_d_gk_list = new_sim_params.observables[self.n_obs :]  # these correspond to the A_kn operators
+        d_on_d_gk_list = np.real(exp_vals[self.n_obs:]) # these correspond to the A_kn operators
 
-        for obs in d_on_d_gk_list:
-            obs.results = trapezoidal(obs.results, self.sim_params.times)
-
-        zero_obs = Observable(Zero(), 0)
-        zero_obs.results = np.zeros(self.n_t)
-
-        d_on_d_gk = np.zeros((self.n_jump, self.n_obs), dtype=object)
+        self.d_on_d_gk_array = np.zeros((self.n_jump, self.n_obs, self.n_t), dtype=float)
 
         count = 0
         for i, lk in enumerate(self.noise_list):
             for j, on in enumerate(self.obs_list):
                 if lk.sites == on.sites:
-                    d_on_d_gk[i, j] = d_on_d_gk_list[count]
+                    self.d_on_d_gk_array[i, j] = trapezoidal(d_on_d_gk_list[count], self.sim_params.times)
                     count += 1
                 else:
-                    d_on_d_gk[i, j] = zero_obs
+                    self.d_on_d_gk_array[i, j] = np.zeros(self.n_t, dtype=float)
 
         self.times = self.sim_params.times
 
-        self.obs_array = np.array([obs.results for obs in self.obs_traj])
+        self.obs_traj = copy.deepcopy(self.obs_list)
+        
+        for i in range(self.n_obs):
+            self.obs_traj[i].results = self.obs_array[i]
 
-        self.d_on_d_gk_array = np.array([
-            [d_on_d_gk[i, j].results for j in range(self.n_obs)] for i in range(self.n_jump)
-        ])
-
-    
 
 
 
@@ -450,13 +563,6 @@ propagator = PropagatorWithGradients(
     init_state=init_state
 )
 # %%
-ref_noise_model =  CompactNoiseModel( [{"name": "pauli_z", "sites": [i for i in range(L)], "strength": gamma_deph} ] + [{"name": "lowering", "sites": [i for i in range(L)], "strength": 0.2} ])
-
-jump_operator_list, jump_parameter_list = propagator.noise_model_to_scikit_tt_noise_list(ref_noise_model.expanded_noise_model)
-# %%
-jump_operator_list
-# %%
-jump_parameter_list
-
-
+scikit_init_state=propagator.scikit_tt_init_state(init_state)
+print("scikit_init_state shape:", scikit_init_state.col_dims, scikit_init_state.row_dims)
 # %%

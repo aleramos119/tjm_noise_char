@@ -2,8 +2,6 @@
 import matplotlib.pyplot as plt
 import numpy as np
 
-# from mqt.yaqs.noise_char.propagation import PropagatorWithGradients
-from auxiliar.scikit_tt_propagator_with_gradients import PropagatorWithGradients
 
 from mqt.yaqs.noise_char.characterizer import Characterizer
 
@@ -83,7 +81,7 @@ if __name__ == '__main__':
 
     dt=0.1
 
-    N=500
+    N=1000
 
     max_bond_dim=8
 
@@ -96,8 +94,6 @@ if __name__ == '__main__':
 
 
 
-
-    #%%
 
 
     #%%
@@ -115,65 +111,61 @@ if __name__ == '__main__':
     np.savetxt(work_dir + "gammas.txt", ref_noise_model.strength_list, header="##", fmt="%.6f")
 
 
-    propagator = PropagatorWithGradients(
+    from mqt.yaqs.noise_char.propagation import PropagatorWithGradients
+    yaqs_propagator = PropagatorWithGradients(
         sim_params=sim_params,
         hamiltonian=H_0,
         compact_noise_model=ref_noise_model,
         init_state=init_state
     )
 
-    propagator.set_observable_list(obs_list)
+    yaqs_propagator.set_observable_list(obs_list)
 
 
     print("Computing reference trajectory ... ")
 
-    propagator.run(ref_noise_model)
+    yaqs_propagator.run(ref_noise_model)
 
-    ref_traj = propagator.obs_traj
+    yaqs_obs_array=yaqs_propagator.obs_array
 
-
-    print("Reference trajectory computed.")
-
+    yaqs_d_on_d_gk_array = yaqs_propagator.d_on_d_gk_array
 
 
-
+    #%%
+    from auxiliar.scikit_tt_propagator_with_gradients import PropagatorWithGradients
     
-
-
-
-
-    # for i in range(len(propagator.obs_traj)):
-    #     plt.plot( sim_params.times, propagator.obs_array[i], label=f"obs_{str(i)}_gamma_deph_{gamma_deph}")
-
-    # plt.legend()
-    # plt.savefig(f"L_{L}_N_{N}_gamma_rel_{gamma_rel}_gamma_deph_{gamma_deph}.png")
-    # plt.show()
-
-
-
-    #%% Optimizing the model
-    gamma_rel_guess=0.6
-    gamma_deph_guess=0.4
-    sim_params.num_traj=int(100)
-
-    # guess_noise_model =  CompactNoiseModel([{"name": "lowering", "sites": [i for i in range(L)], "strength": gamma_rel_guess} ] + [{"name": "pauli_z", "sites": [i for i in range(L)], "strength": gamma_deph_guess} ])
-    guess_noise_model =  CompactNoiseModel( [{"name": "pauli_y", "sites": [i for i in range(L)], "strength": gamma_deph_guess} ])
-    # guess_noise_model =  CompactNoiseModel([{"name": noise_operator, "sites": [i], "strength": gamma_rel_guess} for i in range(L)] )
-
-
-    characterizer = Characterizer(
+    scikit_propagator = PropagatorWithGradients(
         sim_params=sim_params,
         hamiltonian=H_0,
-        init_guess=guess_noise_model,
-        init_state=init_state,
-        ref_traj=ref_traj,
-        work_dir=work_dir
+        compact_noise_model=ref_noise_model,
+        init_state=init_state
     )
 
+    scikit_propagator.set_observable_list(obs_list)
 
-    print("Optimizing ... ")
 
-    characterizer.adam_optimize(max_iterations=100)
+    print("Computing reference trajectory ... ")
+
+    scikit_propagator.run(ref_noise_model)
+
+    scikit_obs_array=scikit_propagator.obs_array
+    scikit_d_on_d_gk_array = scikit_propagator.d_on_d_gk_array
+
+
+    #%%
+    i = 0
+
+    plt.plot( sim_params.times, yaqs_obs_array[i, :], label=f"yaqs obs_{str(i)}")
+    plt.plot( sim_params.times, scikit_obs_array[i, :], '--', label=f"scikit obs_{str(i)}")
+    plt.legend()
+
+    #%%
+    i = 0
+    j=0
+
+    plt.plot( sim_params.times, yaqs_d_on_d_gk_array[i,j, :], label=f"yaqs obs_{str(i)}")
+    plt.plot( sim_params.times, scikit_d_on_d_gk_array[i,j, :], '--', label=f"scikit obs_{str(i)}")
+    plt.legend()
 
 
 
