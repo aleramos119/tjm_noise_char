@@ -238,7 +238,7 @@ gamma="random"
 gamma_0="random"
 
 # folder = f"results/optimization/method_tjm_exact_opt_script_test/max_bond_dim_{max_bond_dim}/d_2/gamma_{gamma}/gamma_0_{gamma_0}/L_{L}/ntraj_{ntraj}/"
-folder = f"test/characterizer/N_80/"
+folder = f"test/scikit_tt_characterizer/"
 
 
 file_pattern = folder + f"opt_traj_*.txt"

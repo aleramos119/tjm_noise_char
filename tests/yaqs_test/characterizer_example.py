@@ -2,8 +2,11 @@
 import matplotlib.pyplot as plt
 import numpy as np
 
-# from mqt.yaqs.noise_char.propagation import PropagatorWithGradients
-from auxiliar.scikit_tt_propagator_with_gradients import PropagatorWithGradients
+from mqt.yaqs.noise_char.propagation import PropagatorWithGradients
+# from auxiliar.scikit_tt_propagator_with_gradients import PropagatorWithGradients
+
+from mqt.yaqs.noise_char.optimization import LossClass
+
 
 from mqt.yaqs.noise_char.characterizer import Characterizer
 
@@ -48,7 +51,7 @@ if __name__ == '__main__':
 
 
 
-    work_dir=f"test/scikit_tt_characterizer/"
+    work_dir=f"test/yaqs_characterizer/"
 
     work_dir_path = Path(work_dir)
 
@@ -71,9 +74,10 @@ if __name__ == '__main__':
     init_state = MPS(L, state='zeros')
 
 
-    obs_list = [Observable(X(), site) for site in range(L)]  + [Observable(Y(), site) for site in range(L)] + [Observable(Z(), site) for site in range(L)]
-    # obs_list = [Observable(X(), site) for site in range(L)]
+    # obs_list = [Observable(X(), site) for site in range(L)]  + [Observable(Y(), site) for site in range(L)] + [Observable(Z(), site) for site in range(L)]
+    obs_list = [Observable(X(), site) for site in range(L)]
 
+    noise_operator = "pauli_y"
 
 
     #%%
@@ -83,7 +87,7 @@ if __name__ == '__main__':
 
     dt=0.1
 
-    N=500
+    N=1000
 
     max_bond_dim=8
 
@@ -106,7 +110,7 @@ if __name__ == '__main__':
 
     gamma_deph = 0.1
     # ref_noise_model =  CompactNoiseModel([{"name": "lowering", "sites": [i for i in range(L)], "strength": gamma_rel}] + [{"name": "pauli_z", "sites": [i for i in range(L)], "strength": gamma_deph}])
-    ref_noise_model =  CompactNoiseModel( [{"name": "pauli_y", "sites": [i for i in range(L)], "strength": gamma_deph} ])
+    ref_noise_model =  CompactNoiseModel( [{"name": noise_operator, "sites": [i for i in range(L)], "strength": gamma_deph} ])
 
     # ref_noise_model =  CompactNoiseModel([{"name": noise_operator, "sites": [i], "strength": gamma_rel} for i in range(L)] )
 
@@ -154,26 +158,35 @@ if __name__ == '__main__':
     #%% Optimizing the model
     gamma_rel_guess=0.6
     gamma_deph_guess=0.4
-    sim_params.num_traj=int(100)
+    sim_params.num_traj=int(300)
 
     # guess_noise_model =  CompactNoiseModel([{"name": "lowering", "sites": [i for i in range(L)], "strength": gamma_rel_guess} ] + [{"name": "pauli_z", "sites": [i for i in range(L)], "strength": gamma_deph_guess} ])
-    guess_noise_model =  CompactNoiseModel( [{"name": "pauli_y", "sites": [i for i in range(L)], "strength": gamma_deph_guess} ])
+    guess_noise_model =  CompactNoiseModel( [{"name": noise_operator, "sites": [i for i in range(L)], "strength": gamma_deph_guess} ])
     # guess_noise_model =  CompactNoiseModel([{"name": noise_operator, "sites": [i], "strength": gamma_rel_guess} for i in range(L)] )
 
 
-    characterizer = Characterizer(
+    opt_propagator = PropagatorWithGradients(
         sim_params=sim_params,
         hamiltonian=H_0,
+        compact_noise_model=guess_noise_model,
+        init_state=init_state
+    )
+
+    loss=LossClass(
+            ref_traj=ref_traj, traj_gradients=opt_propagator, working_dir=work_dir, print_to_file=True
+        )
+
+
+    characterizer = Characterizer(
+        traj_gradients=opt_propagator,
         init_guess=guess_noise_model,
-        init_state=init_state,
-        ref_traj=ref_traj,
-        work_dir=work_dir
+        loss=loss,
     )
 
 
     print("Optimizing ... ")
 
-    characterizer.adam_optimize(max_iterations=100)
+    characterizer.adam_optimize(max_iterations=50)
 
 
 

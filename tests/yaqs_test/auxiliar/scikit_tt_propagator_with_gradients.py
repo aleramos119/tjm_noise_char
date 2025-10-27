@@ -2,10 +2,6 @@
 import matplotlib.pyplot as plt
 import numpy as np
 
-from mqt.yaqs.noise_char.propagation import PropagatorWithGradients
-from mqt.yaqs.noise_char.characterizer import Characterizer
-
-
 
 from pathlib import Path
 
@@ -23,6 +19,11 @@ import scikit_tt.tensor_train as tt
 from scikit_tt.tensor_train import TT
 import scikit_tt.solvers.ode as ode
 
+import multiprocessing
+import os
+
+
+from mqt.yaqs.simulator import available_cpus
 
 from mqt.yaqs.core.libraries.gate_library import X, Y, Z, Create, Destroy, Id
 
@@ -48,6 +49,23 @@ def noise_model_to_operator_list(noise_model: NoiseModel) -> list[Observable]:
     return noise_list
 
 
+def process_k(k, n_new_obs, scikit_new_obs_list, scikit_hamiltonian, scikit_jump_operator_list, scikit_jump_parameter_list, n_t, dt, scikit_tt_solver, init_state):
+
+
+    exp_vals = np.zeros([n_new_obs,n_t], dtype=complex)
+
+    scikit_initial_state = copy.deepcopy(init_state)
+
+    for j in range(n_new_obs):
+        exp_vals[j,0] = scikit_initial_state.transpose(conjugate=True)@scikit_new_obs_list[j]@scikit_initial_state
+
+    for i in range(n_t - 1):
+        scikit_initial_state = ode.tjm(scikit_hamiltonian, scikit_jump_operator_list, scikit_jump_parameter_list, scikit_initial_state, dt, 1, solver=scikit_tt_solver)[-1]
+
+        for j in range(n_new_obs):
+            exp_vals[j,i+1] = scikit_initial_state.transpose(conjugate=True)@scikit_new_obs_list[j]@scikit_initial_state
+
+    return exp_vals
 
 class PropagatorWithGradients:
     r"""High-level propagator that runs an MPS-based Lindblad simulation.
@@ -419,26 +437,26 @@ class PropagatorWithGradients:
 
         scikit_tt_solver: dict = {"solver": 'tdvp'+str(self.sim_params.order), "method": 'krylov', "dimension": 5}
 
-
-        exp_vals = np.zeros([n_new_obs,self.n_t], dtype=complex)
-
-        for k in range(self.sim_params.num_traj):
-            scikit_initial_state = self.scikit_tt_init_state(self.init_state)
+        scikit_initial_state = self.scikit_tt_init_state(self.init_state)
 
 
-            for j in range(n_new_obs):
+        self.scikit_new_obs_list = scikit_new_obs_list
+        self.scikit_hamiltonian = scikit_hamiltonian
+        self.scikit_jump_operator_list = scikit_jump_operator_list
+        self.scikit_jump_parameter_list = scikit_jump_parameter_list
+        self.scikit_tt_solver = scikit_tt_solver
+        self.scikit_initial_state = scikit_initial_state
+        
 
-                exp_vals[j,0] += scikit_initial_state.transpose(conjugate=True)@scikit_new_obs_list[j]@scikit_initial_state
+        arg_list = [ (k, n_new_obs, scikit_new_obs_list, scikit_hamiltonian, scikit_jump_operator_list, scikit_jump_parameter_list, self.n_t, self.sim_params.dt, scikit_tt_solver, scikit_initial_state) for k in range(self.sim_params.num_traj) ]
+
+        with multiprocessing.Pool(processes=available_cpus()-1) as pool:
+            results = pool.starmap(process_k, arg_list)
 
 
-            for i in range(self.n_t - 1):
-                scikit_initial_state = ode.tjm(scikit_hamiltonian, scikit_jump_operator_list, scikit_jump_parameter_list, scikit_initial_state, self.sim_params.dt, 1, solver=scikit_tt_solver)[-1]
-
-                for j in range(n_new_obs):
-                    exp_vals[j,i+1] += scikit_initial_state.transpose(conjugate=True)@scikit_new_obs_list[j]@scikit_initial_state
+        exp_vals = np.sum(results, axis=0)/self.sim_params.num_traj
 
 
-        exp_vals = (1/self.sim_params.num_traj)*exp_vals
 
         ##### Scikitt-tt part #####
 
@@ -488,81 +506,84 @@ class PropagatorWithGradients:
 ###########################
 ###########################
 
-#%%
-work_dir=f"test/characterizer/"
-
-work_dir_path = Path(work_dir)
-
-work_dir_path.mkdir(parents=True, exist_ok=True)
 
 
+if __name__ == "__main__":
+    #%%
+    work_dir=f"test/characterizer/"
 
-## Defining Hamiltonian and observable list
-L=3
+    work_dir_path = Path(work_dir)
 
-J=1
-g=0.5
-
-
-H_0 = MPO()
-H_0.init_ising(L, J, g)
-
-
-# Define the initial state
-init_state = MPS(L, state='zeros')
-
-
-# obs_list = [Observable(X(), site) for site in range(L)]  + [Observable(Y(), site) for site in range(L)] + [Observable(Z(), site) for site in range(L)]
-obs_list = [Observable(Y(), site) for site in range(L)]
+    work_dir_path.mkdir(parents=True, exist_ok=True)
 
 
 
-#%%
-## Defining simulation parameters
+    ## Defining Hamiltonian and observable list
+    L=3
 
-T=3
-
-dt=0.1
-
-N=1
-
-max_bond_dim=8
-
-threshold=1e-6
-
-order=2
-
-sim_params = AnalogSimParams(observables=obs_list, elapsed_time=T, dt=dt, num_traj=N, max_bond_dim=max_bond_dim, threshold=threshold, order=order, sample_timesteps=True)
+    J=1
+    g=0.5
 
 
+    H_0 = MPO()
+    H_0.init_ising(L, J, g)
+
+
+    # Define the initial state
+    init_state = MPS(L, state='zeros')
+
+
+    # obs_list = [Observable(X(), site) for site in range(L)]  + [Observable(Y(), site) for site in range(L)] + [Observable(Z(), site) for site in range(L)]
+    obs_list = [Observable(Y(), site) for site in range(L)]
 
 
 
-#%%
+    #%%
+    ## Defining simulation parameters
+
+    T=3
+
+    dt=0.1
+
+    N=1
+
+    max_bond_dim=8
+
+    threshold=1e-6
+
+    order=2
+
+    sim_params = AnalogSimParams(observables=obs_list, elapsed_time=T, dt=dt, num_traj=N, max_bond_dim=max_bond_dim, threshold=threshold, order=order, sample_timesteps=True)
 
 
-#%%
-## Defining reference noise model and reference trajectory
-gamma_rel = 0.1
-
-gamma_deph = 0.1
-# ref_noise_model =  CompactNoiseModel([{"name": "lowering", "sites": [i for i in range(L)], "strength": gamma_rel}] + [{"name": "pauli_z", "sites": [i for i in range(L)], "strength": gamma_deph}])
-ref_noise_model =  CompactNoiseModel( [{"name": "pauli_z", "sites": [i for i in range(L)], "strength": gamma_deph} ])
-
-# ref_noise_model =  CompactNoiseModel([{"name": noise_operator, "sites": [i], "strength": gamma_rel} for i in range(L)] )
 
 
-## Writing reference gammas to file
-np.savetxt(work_dir + "gammas.txt", ref_noise_model.strength_list, header="##", fmt="%.6f")
+
+    #%%
 
 
-propagator = PropagatorWithGradients(
-    sim_params=sim_params,
-    hamiltonian=H_0,
-    compact_noise_model=ref_noise_model,
-    init_state=init_state
-)
-# %%
-scikit_init_state=propagator.scikit_tt_init_state(init_state)
-print("scikit_init_state shape:", scikit_init_state.col_dims, scikit_init_state.row_dims)
-# %%
+    #%%
+    ## Defining reference noise model and reference trajectory
+    gamma_rel = 0.1
+
+    gamma_deph = 0.1
+    # ref_noise_model =  CompactNoiseModel([{"name": "lowering", "sites": [i for i in range(L)], "strength": gamma_rel}] + [{"name": "pauli_z", "sites": [i for i in range(L)], "strength": gamma_deph}])
+    ref_noise_model =  CompactNoiseModel( [{"name": "pauli_z", "sites": [i for i in range(L)], "strength": gamma_deph} ])
+
+    # ref_noise_model =  CompactNoiseModel([{"name": noise_operator, "sites": [i], "strength": gamma_rel} for i in range(L)] )
+
+
+    ## Writing reference gammas to file
+    np.savetxt(work_dir + "gammas.txt", ref_noise_model.strength_list, header="##", fmt="%.6f")
+
+
+    propagator = PropagatorWithGradients(
+        sim_params=sim_params,
+        hamiltonian=H_0,
+        compact_noise_model=ref_noise_model,
+        init_state=init_state
+    )
+    # %%
+    # scikit_init_state=propagator.scikit_tt_init_state(init_state)
+    # print("scikit_init_state shape:", scikit_init_state.col_dims, scikit_init_state.row_dims)
+    # %%

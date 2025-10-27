@@ -233,6 +233,10 @@ def scikit_tt_traj(sim_params_class: SimulationParameters):
     exp_vals = np.zeros([n_obs_total,timesteps+1])
 
 
+    print("Hamiltonian", hamiltonian.cores)
+    print("Jump operators", jump_operator_list)
+    print("Jump parameters", jump_parameter_list)
+    print("Solver", scikit_tt_solver)
 
     for k in range(N):
         initial_state = tt.unit([2] * L, [0] * L)
@@ -406,14 +410,18 @@ if __name__=="__main__":
     L=2
     g_rel=0.1
     g_deph=0.
-    ntraj=500
+    ntraj=1000
     threshold=1e-6
 
     local_solver="krylov_5"
 
     sim_params = SimulationParameters(L,g_rel,g_deph)
     sim_params.N = ntraj
-    sim_params.T = 5
+    sim_params.T = 1
+    sim_params.dt = 0.1
+    sim_params.order = 1
+    sim_params.max_bond_dim = 8
+    sim_params.rank = 8
     sim_params.threshold = threshold
 
 
@@ -423,19 +431,21 @@ if __name__=="__main__":
     scikit_time, scikit_ref_traj=scikit_tt_traj(sim_params)
 
 
-    qutip_time, qutip_ref_traj = qutip_traj(sim_params)
+    # qutip_time, qutip_ref_traj = qutip_traj(sim_params)
 
 
-    yaqs_time, yaqs_ref_traj = tjm_traj(sim_params)
+    # yaqs_time, yaqs_ref_traj = tjm_traj(sim_params)
 
 
-    col=0
-    plt.plot(scikit_time, scikit_ref_traj[:,col],"o", label="SciKit-TT")
-    plt.plot(qutip_time, qutip_ref_traj[:,col],"x", label="QuTiP")
-    plt.plot(yaqs_time, yaqs_ref_traj[:,col], label="YAQS")
+#%%
+# %matplotlib qt
+col=0
+plt.plot(scikit_time, scikit_ref_traj[:,col],"o", label="SciKit-TT")
+plt.plot(qutip_time, qutip_ref_traj[:,col],"x", label="QuTiP")
+plt.plot(yaqs_time, yaqs_ref_traj[:,col], label="YAQS")
 
-    plt.legend()
-    plt.show()
+plt.legend()
+plt.show()
 
 
 #%%
