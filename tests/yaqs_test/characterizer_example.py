@@ -2,8 +2,8 @@
 import matplotlib.pyplot as plt
 import numpy as np
 
-from mqt.yaqs.noise_char.propagation import PropagatorWithGradients
-# from auxiliar.scikit_tt_propagator_with_gradients import PropagatorWithGradients
+# from mqt.yaqs.noise_char.propagation import PropagatorWithGradients
+from auxiliar.scikit_tt_propagator_with_gradients import PropagatorWithGradients
 
 from mqt.yaqs.noise_char.optimization import LossClass
 
@@ -51,7 +51,7 @@ if __name__ == '__main__':
 
 
 
-    work_dir=f"test/yaqs_characterizer/"
+    work_dir=f"test/scikit_characterizer/"
 
     work_dir_path = Path(work_dir)
 
