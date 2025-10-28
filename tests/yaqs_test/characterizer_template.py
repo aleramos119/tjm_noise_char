@@ -46,10 +46,7 @@ if __name__ == '__main__':
     for obs_operator in observable_list:
         for noise_operator in noise_list:
 
-            if obs_operator == "XYZ":
-                work_dir=f"characterizer/parameters_{parameters}/init_state_{state_str}/observable_{obs_operator}_noise_{noise_operator}/sites_{L}/num_traj_{N}"
-            else:
-                work_dir=f"characterizer/parameters_{parameters}/init_state_{state_str}/observable_{obs_operator.name}_noise_{noise_operator}/sites_{L}/num_traj_{N}"
+            work_dir = "."
 
             work_dir_path = Path(work_dir)
 
