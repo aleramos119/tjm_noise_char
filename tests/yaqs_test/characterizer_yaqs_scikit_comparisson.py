@@ -245,8 +245,8 @@ def scikit_tt_traj(sim_params_class: SimulationParameters, propagator):
         initial_state = (1 / initial_state.norm()) * initial_state
 
         
-        # for j in range(n_obs_total):
-        #    exp_vals[j,0] += initial_state.transpose(conjugate=True)@obs_list[j]@initial_state
+        for j in range(n_obs_total):
+           exp_vals[j,0] += initial_state.transpose(conjugate=True)@obs_list[j]@initial_state
         
         # trajectory = ode.tjm(hamiltonian, jump_operator_list, jump_parameter_list, initial_state, dt, timesteps, solver=scikit_tt_solver)
 
@@ -283,10 +283,6 @@ def scikit_tt_traj(sim_params_class: SimulationParameters, propagator):
     print("Propagator Initial state", (propagator.scikit_initial_state).cores)
 
     print("Comparisson of results:", N, propagator.sim_params.num_traj)
-
-
-    plt.plot(t, exp_vals[0, :],'-', label="scikit_tt_traj")
-    plt.plot(t, propagator.obs_array[0, :],'x', label="propagator")
  
 
     return t, np.array(exp_vals).T
@@ -344,11 +340,11 @@ if __name__ == '__main__':
     #%%
     ## Defining simulation parameters
 
-    T=3
+    T=1.5
 
     dt=0.1
 
-    N=500
+    N=4000
 
     max_bond_dim=8
 
@@ -366,7 +362,6 @@ if __name__ == '__main__':
     #%%
     ## Defining reference noise model and reference trajectory
     gamma_rel = 0.1
-
     gamma_deph = 0.1
     # ref_noise_model =  CompactNoiseModel([{"name": "lowering", "sites": [i for i in range(L)], "strength": gamma_rel}] + [{"name": "pauli_z", "sites": [i for i in range(L)], "strength": gamma_deph}])
     ref_noise_model =  CompactNoiseModel( [{"name": "pauli_x", "sites": [i for i in range(L)], "strength": gamma_deph} ])
@@ -421,8 +416,6 @@ if __name__ == '__main__':
 
     #%%
 
-    threshold=1e-6
-
     local_solver="krylov_5"
 
     sim_params = SimulationParameters(L,gamma_rel,gamma_deph)
@@ -435,37 +428,36 @@ if __name__ == '__main__':
     sim_params.threshold = threshold
 
 
-    sim_params.set_solver("tdvp1",local_solver)
-    scikit_time, scikit_ref_traj=scikit_tt_traj(sim_params, propagator=scikit_propagator)
+    # sim_params.set_solver("tdvp1",local_solver)
+    # scikit_time, scikit_ref_traj=scikit_tt_traj(sim_params, propagator=scikit_propagator)
 
 
-    qutip_time, qutip_ref_traj=qutip_traj(sim_params)
+    # qutip_time, qutip_ref_traj=qutip_traj(sim_params)
 
-    plt.plot(qutip_time, qutip_ref_traj.T[0, :],'o', label="qutip")
-    plt.plot(yaqs_propagator.sim_params.times, yaqs_obs_array[0, :],'o', label="yaqs")
-
-    plt.legend()
-    plt.show()
 
 #%%
 
 
 #%%
+# %matplotlib qt
+i = 0
+
+plt.plot( yaqs_propagator.sim_params.times, yaqs_obs_array[i, :],'-', label=f"propagator_yaqs obs_{str(i)}")
+plt.plot( yaqs_propagator.sim_params.times, scikit_obs_array[i, :], 'x', label=f"propagator_scikit obs_{str(i)}")
+# plt.plot( yaqs_propagator.sim_params.times, scikit_ref_traj.T[i, :], '-', label=f"scikit obs_{str(i)}")
+# plt.plot( yaqs_propagator.sim_params.times, qutip_ref_traj.T[i, :], '-', label=f"qutip obs_{str(i)}")
+
+
+plt.legend()
+plt.show()
 # #%%
-# # %matplotlib qt
-# i = 0
+i = 0
+j=2
 
-# plt.plot( sim_params.times, yaqs_obs_array[i, :], label=f"yaqs obs_{str(i)}")
-# plt.plot( sim_params.times, scikit_obs_array[i, :], '--', label=f"scikit obs_{str(i)}")
-# plt.legend()
-
-# #%%
-# i = 0
-# j=0
-
-# plt.plot( sim_params.times, yaqs_d_on_d_gk_array[i,j, :], label=f"yaqs obs_{str(i)}")
-# plt.plot( sim_params.times, scikit_d_on_d_gk_array[i,j, :], '--', label=f"scikit obs_{str(i)}")
-# plt.legend()
+plt.plot( yaqs_propagator.sim_params.times, yaqs_d_on_d_gk_array[i,j, :], label=f"yaqs obs_{str(i)}")
+plt.plot( scikit_propagator.sim_params.times, scikit_d_on_d_gk_array[i,j, :], '--', label=f"scikit obs_{str(i)}")
+plt.legend()
+plt.show()
 
 
 

@@ -22,8 +22,6 @@ from mqt.yaqs.core.libraries.gate_library import X, Y, Z, Create, Destroy
 from mqt.yaqs.core.libraries.gate_library import GateLibrary
 
 
-from auxiliar.write import *
-
 import sys
 
 
@@ -147,7 +145,7 @@ if __name__ == '__main__':
             propagator = PropagatorWithGradients(
                 sim_params=sim_params,
                 hamiltonian=H_0,
-                noise_model=ref_noise_model,
+                compact_noise_model=ref_noise_model,
                 init_state=init_state
             )
 
