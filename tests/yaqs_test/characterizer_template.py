@@ -19,6 +19,9 @@ from mqt.yaqs.core.data_structures.simulation_parameters import AnalogSimParams,
 
 from mqt.yaqs.core.libraries.gate_library import X, Y, Z, Create, Destroy
 
+from mqt.yaqs.core.libraries.gate_library import GateLibrary
+
+
 from auxiliar.write import *
 
 import sys
@@ -30,7 +33,7 @@ import sys
 if __name__ == '__main__':
 
 
-    observable_list=[%OBSERVABLE%]
+    observable_list=["%OBSERVABLE%"]
 
     noise_list=[ "%NOISE%"]
 
@@ -38,9 +41,9 @@ if __name__ == '__main__':
 
     L=%SITES%
 
-    state_str=%STATE%
+    state_str="%STATE%"
 
-    parameters=%PARAMETERS%
+    parameters="%PARAMETERS%"
 
 
     for obs_operator in observable_list:
@@ -71,7 +74,7 @@ if __name__ == '__main__':
             if obs_operator == "XYZ":
                 obs_list = [Observable(X(), site) for site in range(L)]  + [Observable(Y(), site) for site in range(L)] + [Observable(Z(), site) for site in range(L)]
             else:
-                obs_list = [Observable(obs_operator, site) for site in range(L)]
+                obs_list = [Observable(getattr(GateLibrary, obs_operator)(), site) for site in range(L)]
 
 
 
