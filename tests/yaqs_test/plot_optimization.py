@@ -8,6 +8,8 @@ import pandas as pd
 import glob
 from matplotlib.widgets import Slider
 
+
+
 #%%
 L_list_initial=[10,20,40, 80, 100]
 
@@ -238,7 +240,7 @@ gamma="random"
 gamma_0="random"
 
 # folder = f"results/optimization/method_tjm_exact_opt_script_test/max_bond_dim_{max_bond_dim}/d_2/gamma_{gamma}/gamma_0_{gamma_0}/L_{L}/ntraj_{ntraj}/"
-folder = f"test/scikit_characterizer/"
+folder = f"test/gradient_descent_T_4_characterizer/"
 
 
 file_pattern = folder + f"opt_traj_*.txt"
@@ -312,40 +314,137 @@ for ntraj in ntraj_list:
 plt.plot(ntraj_list, error_list,'o-', label=f"L={L}")
 
 
-#%%int(sys.argv[1])
+
+#%%
+
+def plot_gamma_optimization(folder: str) -> None:
+    """Plot the optimization history of gamma parameters from a given folder.
+
+    Parameters
+    ----------
+    folder : str
+        The folder containing the optimization data files.
+    """
+    x_avg_file = folder + "loss_x_history.txt"
+    gammas_file = folder + "gammas.txt"
+
+    data = np.genfromtxt(x_avg_file, skip_header=1, ndmin=2)
+    gammas = np.array(np.genfromtxt(gammas_file, skip_header=1, ndmin=1))
+
+    d = len(gammas)
+
+    for i in range(d):
+        plt.plot(data[:, 0], data[:, 2 + i], label=f"$\\gamma_{{{i+1}}}$")
+        plt.axhline(gammas[i], color=plt.gca().lines[-1].get_color(), linestyle='--', linewidth=2)
+
+    plt.xlabel("Iterations")
+    plt.ylabel(r"$\gamma$")
+    plt.legend()
+    plt.title("Gamma Parameter Optimization History")
+    plt.savefig(folder + "gamma.pdf")
+    plt.close()
+
+    max_diff=max(abs(np.mean(data[10:,2:2+d],axis=0)-gammas))
+
+    plt.plot(data[:,0], data[:,1], label="Loss")
+    plt.title("Loss Optimization History")
+
+    plt.legend()
+    plt.savefig(folder + "loss.pdf")
+    plt.close()
 
 
-data[-1, 2:].shape
+
+    return max_diff
+#%%
+
+obs_list = [ "pauli_z","XYZ"]
+noise_list = ["pauli_x", "pauli_y", "pauli_z","XYZ"]
+
+sites=1
+ntraj=400
+
+
+diff_array=np.full((len(obs_list), len(noise_list)), np.nan)
+
+for i,obs in enumerate(obs_list):
+    for j,noise in enumerate(noise_list):
+
+
+        if noise==obs and noise!="XYZ":
+            continue
+
+        if obs == "XYZ" and noise=="pauli_z":
+            continue
+
+
+        folder=f"results/characterizer/sites_{sites}/num_traj_{ntraj}/parameters_global/init_state_zeros/observable_{obs}/noise_{noise}/"
+
+        diff_max=plot_gamma_optimization(folder)
+
+        diff_array[i,j]=diff_max
+
+
+plt.figure(figsize=(8, 6))
+im = plt.imshow(diff_array, origin='lower', cmap='viridis', aspect='auto')
+cbar = plt.colorbar(im)
+cbar.set_label("max |mean(gamma) - gamma_opt|")
+plt.xticks(np.arange(len(noise_list)), noise_list, rotation=45, ha='right')
+plt.yticks(np.arange(len(obs_list)), obs_list)
+plt.xlabel("Noise")
+plt.ylabel("Observable")
+plt.title("Max difference between averaged and optimized gammas")
+
+# Annotate cells with values
+vmax = np.nanmax(diff_array)
+for i in range(diff_array.shape[0]):
+    for j in range(diff_array.shape[1]):
+        val = diff_array[i, j]
+        color = "white" if (not np.isnan(vmax) and val > 0.5 * vmax) else "black"
+        plt.text(j, i, f"{val:.2e}", ha="center", va="center", color=color, fontsize=9)
+
+plt.tight_layout()
+plt.savefig(f"results/characterizer/sites_{sites}/num_traj_{ntraj}/diff_gamma_obs_vs_noise_sites_{sites}_ntraj_{ntraj}.pdf", dpi=300, bbox_inches='tight')
+plt.show()
+
+
 
 
 
 # %%
 
+folder="test/gradient_descent_T_4_characterizer/"
 
-### Plotting x history
+plot_gamma_optimization(folder)
+# %%
 
+obs_y_traj_file="test/obs_y_characterizer/ref_traj.txt"
 
-
-folder = f"test/scikit_N_300_characterizer/"
-x_avg_file=folder + f"loss_x_history.txt"
-gammas_file = folder +f"gammas.txt"
-
-
-data = np.genfromtxt(x_avg_file, skip_header=1)
-gammas = np.genfromtxt(gammas_file, skip_header=1, ndmin=1)
+z1_traj_file="results/characterizer/sites_2/num_traj_400/parameters_global/init_state_zeros/observable_pauli_y/noise_pauli_z/ref_traj.txt"
 
 
-d=(len(data[0])-1)//2
+obs_y_traj=np.genfromtxt(obs_y_traj_file)
+z1_traj=np.genfromtxt(z1_traj_file)
 
-for i in range(d):
-    plt.plot(data[:, 0], data[:, 2 + i], label=f"$\\gamma_{{{i+1}}}$")
-    plt.axhline(gammas[i], color=plt.gca().lines[-1].get_color(), linestyle='--', linewidth=2)
-
-
-plt.xlabel("Iterations")
-plt.ylabel(r"$\gamma$")
+i=1
+plt.plot(obs_y_traj[:,0], obs_y_traj[:,i],'x',label="obs_y_"+str(i) )
+plt.plot(z1_traj[:,0], z1_traj[:,i],'x',label="z1_"+str(i) )
 plt.legend()
-plt.savefig(folder + "optimization.pdf")
+plt.show()
+
+
 # %%
-gammas[0]
+
+work_dir="test/gradient_descent_T_3_characterizer/"
+loss_list=np.genfromtxt(work_dir + "/loss_list.txt")
+grad_list=np.genfromtxt(work_dir + "/grad_list.txt")
+gamma_list=np.genfromtxt(work_dir + "/gamma_list.txt")
+
+# %%
+plt.plot(gamma_list, loss_list,'o', label="loss")
+plt.plot(gamma_list, grad_list,'x', label="grad")
+plt.grid(True)
+plt.legend()
+
+
 # %%

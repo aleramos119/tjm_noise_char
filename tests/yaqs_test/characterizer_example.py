@@ -1,9 +1,8 @@
 #%%
-import matplotlib.pyplot as plt
 import numpy as np
 
-# from mqt.yaqs.noise_char.propagation import PropagatorWithGradients
-from auxiliar.scikit_tt_propagator_with_gradients import PropagatorWithGradients
+from mqt.yaqs.noise_char.propagation import PropagatorWithGradients
+# from auxiliar.scikit_tt_propagator_with_gradients import PropagatorWithGradients
 
 from mqt.yaqs.noise_char.optimization import LossClass
 
@@ -17,28 +16,12 @@ from pathlib import Path
 
 
 from mqt.yaqs.core.data_structures.networks import MPO, MPS
-from mqt.yaqs.core.data_structures.noise_model import NoiseModel, CompactNoiseModel
+from mqt.yaqs.core.data_structures.noise_model import  CompactNoiseModel
 from mqt.yaqs.core.data_structures.simulation_parameters import AnalogSimParams, Observable
 
 
 from mqt.yaqs.core.libraries.gate_library import X, Y, Z, Create, Destroy
 
-# from auxiliar.write import *
-
-import sys
-
-
-
-def write_gammas( noise_model: CompactNoiseModel, file_name):
-    
-    gammas = []
-
-    for proc in noise_model.compact_processes:
-
-        gammas.append(proc["strength"])
-    
-
-    np.savetxt(file_name, gammas, header="##", fmt="%.6f")
 
 
 #%%
@@ -51,7 +34,7 @@ if __name__ == '__main__':
 
 
 
-    work_dir=f"test/scikit_characterizer/"
+    work_dir=f"test/gradient_descent_T_3_characterizer"
 
     work_dir_path = Path(work_dir)
 
@@ -63,7 +46,7 @@ if __name__ == '__main__':
     L=2
 
     J=1
-    g=0.5
+    g=1
 
 
     H_0 = MPO()
@@ -75,9 +58,9 @@ if __name__ == '__main__':
 
 
     # obs_list = [Observable(X(), site) for site in range(L)]  + [Observable(Y(), site) for site in range(L)] + [Observable(Z(), site) for site in range(L)]
-    obs_list = [Observable(X(), site) for site in range(L)]
+    obs_list = [Observable(Y(), site) for site in range(L)]
 
-    noise_operator = "pauli_y"
+    noise_operator = "pauli_z"
 
 
     #%%
@@ -87,7 +70,7 @@ if __name__ == '__main__':
 
     dt=0.1
 
-    N=1000
+    N=500
 
     max_bond_dim=8
 
@@ -106,17 +89,15 @@ if __name__ == '__main__':
 
     #%%
     ## Defining reference noise model and reference trajectory
-    gamma_rel = 0.1
-
-    gamma_deph = 0.1
+    gamma_reference = 0.38
     # ref_noise_model =  CompactNoiseModel([{"name": "lowering", "sites": [i for i in range(L)], "strength": gamma_rel}] + [{"name": "pauli_z", "sites": [i for i in range(L)], "strength": gamma_deph}])
-    ref_noise_model =  CompactNoiseModel( [{"name": noise_operator, "sites": [i for i in range(L)], "strength": gamma_deph} ])
+    ref_noise_model =  CompactNoiseModel( [{"name": noise_operator, "sites": [i for i in range(L)], "strength": gamma_reference} ])
 
     # ref_noise_model =  CompactNoiseModel([{"name": noise_operator, "sites": [i], "strength": gamma_rel} for i in range(L)] )
 
 
     ## Writing reference gammas to file
-    np.savetxt(work_dir + "gammas.txt", ref_noise_model.strength_list, header="##", fmt="%.6f")
+    np.savetxt(work_dir + "/gammas.txt", ref_noise_model.strength_list, header="##", fmt="%.6f")
 
 
     propagator = PropagatorWithGradients(
@@ -140,12 +121,6 @@ if __name__ == '__main__':
 
 
 
-
-    
-
-
-
-
     # for i in range(len(propagator.obs_traj)):
     #     plt.plot( sim_params.times, propagator.obs_array[i], label=f"obs_{str(i)}_gamma_deph_{gamma_deph}")
 
@@ -156,12 +131,11 @@ if __name__ == '__main__':
 
 
     #%% Optimizing the model
-    gamma_rel_guess=0.6
-    gamma_deph_guess=0.4
-    sim_params.num_traj=int(300)
+    gamma_guess=0.06
+    sim_params.num_traj=int(100)
 
     # guess_noise_model =  CompactNoiseModel([{"name": "lowering", "sites": [i for i in range(L)], "strength": gamma_rel_guess} ] + [{"name": "pauli_z", "sites": [i for i in range(L)], "strength": gamma_deph_guess} ])
-    guess_noise_model =  CompactNoiseModel( [{"name": noise_operator, "sites": [i for i in range(L)], "strength": gamma_deph_guess} ])
+    guess_noise_model =  CompactNoiseModel( [{"name": noise_operator, "sites": [i for i in range(L)], "strength": gamma_guess} ])
     # guess_noise_model =  CompactNoiseModel([{"name": noise_operator, "sites": [i], "strength": gamma_rel_guess} for i in range(L)] )
 
 
@@ -184,9 +158,99 @@ if __name__ == '__main__':
     )
 
 
-    print("Optimizing ... ")
+    #%%
 
-    characterizer.adam_optimize(max_iterations=50)
+    # print("Optimizing ... ")
+
+    # characterizer.gradient_descent_optimize(max_iterations=20)
+
+    # print("Optimization complete.")
+
+
+
+
+#%%
+
+
+# from mqt.yaqs.noise_char.optimization import trapezoidal
+# import matplotlib.pyplot as plt
+
+# obs=1
+
+# noise = 1
+# plt.plot(propagator.times, propagator.obs_traj[obs].results,'o')
+
+# # %%
+
+# int_obst = trapezoidal(propagator.obs_traj[obs].results, propagator.times)
+# plt.plot(propagator.times, propagator.d_on_d_gk_array[noise,obs],'o', label="d_on_d_gk")
+# plt.plot(propagator.times, -2*int_obst,'x-', label="obs_int")
+# plt.legend()
+
+# # %%
+# x_guess=np.array([0.06,0.06])
+
+# loss_value, grad, sim_time=loss(x_guess)
+# # %%
+# print(loss, grad)
+# # %%
+# obs=0
+
+# noise = 0
+# plt.plot(loss.traj_gradients.times, loss.obs_array[obs],'o', label="obs traj")
+# plt.plot(loss.traj_gradients.times, loss.ref_traj_array[obs],'x', label="ref traj")
+# plt.plot(loss.traj_gradients.times, loss.obs_array[obs]-loss.ref_traj_array[obs],'x', label="diff")
+# plt.plot(loss.traj_gradients.times, loss.d_on_d_gk[noise,obs],'-', label="d_on_d_gk")
+# # plt.plot(loss.traj_gradients.times, -2*trapezoidal(loss.obs_array[obs], loss.traj_gradients.times),'x', label="int obs traj")
+
+# inside_sum = 2*(loss.obs_array[obs]-loss.ref_traj_array[obs])*loss.d_on_d_gk[noise,obs]
+# plt.plot(loss.traj_gradients.times, inside_sum, 'o',label="inside sum" )
+
+
+# plt.legend(loc='lower left')
+
+
+
+    # %%
+
+    gamma_list = np.linspace(0.06, 1, num=30)
+
+    loss_list=[]
+
+    grad_list=[]
+
+    obs_array_list=[]
+
+    d_on_list=[]
+
+    np.savetxt(work_dir + "/gamma_list.txt", gamma_list, header="##", fmt="%.6f")
+
+
+    for i,gamma in enumerate(gamma_list):
+
+        loss_value, grad, sim_time=loss(np.array([gamma]))
+
+        loss_list.append(loss_value)
+        grad_list.append(grad[0])
+
+        obs_array_list.append(loss.obs_array)
+
+        d_on_list.append(loss.d_on_d_gk)
+
+        np.savetxt(work_dir + f"/obs_array_{i}.txt", loss.obs_array, header="##", fmt="%.6f")
+        np.savetxt(work_dir + f"/d_on_list_{i}.txt", loss.d_on_d_gk.reshape(L*L,len(loss.traj_gradients.times)), header="##", fmt="%.6f")
+
+
+
+
+
+    np.savetxt(work_dir + "/loss_list.txt", loss_list, header="##", fmt="%.6f")
+
+    np.savetxt(work_dir + "/grad_list.txt", grad_list, header="##", fmt="%.6f")
+
+
+
+
 
 
 
