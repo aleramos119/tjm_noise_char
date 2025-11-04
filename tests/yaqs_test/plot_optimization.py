@@ -413,7 +413,7 @@ plt.show()
 
 # %%
 
-folder="test/gradient_descent_T_4_characterizer/"
+folder="test/nelder_mead_opt/"
 
 plot_gamma_optimization(folder)
 # %%
@@ -435,15 +435,19 @@ plt.show()
 
 # %%
 
-work_dir="test/gamma_scan_T_3/"
+work_dir="test/gamma_scan_T_6/"
 loss_list=np.genfromtxt(work_dir + "/loss_list.txt")
 grad_list=np.genfromtxt(work_dir + "/grad_list.txt")
 gamma_list=np.genfromtxt(work_dir + "/gamma_list.txt")
 
+num_grad=np.gradient(loss_list, gamma_list)
+
 # %%
+%matplotlib qt
 plt.plot(gamma_list, loss_list,'o', label="loss")
 plt.plot(gamma_list, grad_list,'x', label="grad")
-plt.plot(gamma_list[:-1], [(loss_list[i+1] - loss_list[i])/gamma_list[i] for i in range(len(loss_list)-1)], label="numeric gradient")
+plt.plot(gamma_list, num_grad, label="numeric gradient")
+plt.plot(gamma_list, num_grad/grad_list, label="relation")
 plt.grid(True)
 plt.legend()
 
