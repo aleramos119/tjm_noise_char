@@ -13,6 +13,7 @@ from mqt.yaqs.noise_char.characterizer import Characterizer
 
 from pathlib import Path
 
+import copy
 
 
 from mqt.yaqs.core.data_structures.networks import MPO, MPS
@@ -26,6 +27,119 @@ from mqt.yaqs.core.libraries.gate_library import X, Y, Z, Create, Destroy
 from scipy.optimize import minimize
 from scipy.optimize._optimize import _minimize_neldermead
 #%%
+
+
+def construct_init_simplex(x0, disp):
+
+    init_simplex=[]
+
+    d=len(x0)
+
+    init_simplex.append(x0)
+
+    for i in range(d):
+        displaced=copy.deepcopy(x0)
+
+        displaced[i] = x0[i] + disp
+
+        init_simplex.append(displaced)
+
+    
+    return np.array(init_simplex)
+
+
+def nelder_mead(
+    func,
+    x_start,
+    step=0.1,
+    tol=1e-6,
+    max_iter=1000,
+    alpha=1.0,    # reflection
+    gamma=2.0,    # expansion
+    rho=0.5,      # contraction
+    sigma=0.5     # shrink
+):
+    """
+    Basic Nelder-Mead optimizer (unconstrained)
+    """
+
+    n = len(x_start)
+    # Construct the initial simplex
+    simplex = np.zeros((n + 1, n))
+    simplex[0] = x_start
+    for i in range(n):
+        y = np.copy(x_start)
+        y[i] = y[i] + step
+        simplex[i + 1] = y
+
+    # Evaluate function at simplex points
+    f_values = np.apply_along_axis(func, 1, simplex)
+
+    for iteration in range(max_iter):
+        # Order by function value
+        order = np.argsort(f_values)
+        simplex = simplex[order]
+        f_values = f_values[order]
+
+        # Check convergence (simple criterion)
+        if np.std(f_values) < tol:
+            break
+
+        # Centroid of best n points
+        centroid = np.mean(simplex[:-1], axis=0)
+
+        # Reflection
+        x_r = centroid + alpha * (centroid - simplex[-1])
+        f_r = func(x_r)
+
+        if f_values[0] <= f_r < f_values[-2]:
+            simplex[-1] = x_r
+            f_values[-1] = f_r
+            continue
+
+        # Expansion
+        if f_r < f_values[0]:
+            x_e = centroid + gamma * (x_r - centroid)
+            f_e = func(x_e)
+            if f_e < f_r:
+                simplex[-1] = x_e
+                f_values[-1] = f_e
+            else:
+                simplex[-1] = x_r
+                f_values[-1] = f_r
+            continue
+
+        # Contraction
+        x_c = centroid + rho * (simplex[-1] - centroid)
+        f_c = func(x_c)
+        if f_c < f_values[-1]:
+            simplex[-1] = x_c
+            f_values[-1] = f_c
+            continue
+
+        # Shrink
+        for i in range(1, n + 1):
+            simplex[i] = simplex[0] + sigma * (simplex[i] - simplex[0])
+            f_values[i] = func(simplex[i])
+
+    return {
+        "x": simplex[0],
+        "fun": f_values[0],
+        "nit": iteration + 1,
+        "simplex": simplex,
+        "success": iteration < max_iter - 1
+    }
+
+
+
+
+
+#%%
+
+
+construct_init_simplex([0.3], 0.3)
+
+
 
 
 #%%
@@ -157,27 +271,25 @@ if __name__ == '__main__':
         )
 
 
-    # res = minimize(loss, guess_noise_model.strength_list, method='Nelder-Mead',
-    #            options={'disp': True, 
-    #                     'adaptive': True,
-    #                     'xatol': 1e-10,        # tolerance in x
-    #                     'fatol': 1e-10,   
-    #                     'maxiter': 100})
+    res = minimize(loss, guess_noise_model.strength_list)
     
 
+
+
     
-    res = _minimize_neldermead(
-        loss, guess_noise_model.strength_list,
-        options={
-            'maxiter': 1000,
-            'xatol': 1e-6,
-            'fatol': 1e-6,
-            'alpha': 1.0,   # reflection
-            'gamma': 2.0,   # expansion
-            'rho': 0.8,     # contraction (higher = slower shrink)
-            'sigma': 0.8,   # shrink (higher = slower reduction)
-            'disp': True,
-        }
-    )
+    # res = _minimize_neldermead(
+    #     loss, guess_noise_model.strength_list,
+    #     options={
+    #         'maxiter': 1000,
+    #         'initial_simplex': construct_init_simplex(guess_noise_model.strength_list, 0.3),
+    #         'xatol': 1e-6,
+    #         'fatol': 1e-6,
+    #         'alpha': 1.0,   # reflection
+    #         'gamma': 2.0,   # expansion
+    #         'rho': 0.8,     # contraction (higher = slower shrink)
+    #         'sigma': 0.8,   # shrink (higher = slower reduction)
+    #         'disp': True,
+    #     }
+    # )
 
 
