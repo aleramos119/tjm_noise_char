@@ -34,7 +34,7 @@ if __name__ == '__main__':
 
 
 
-    work_dir=f"test/gradient_descent_T_3_characterizer"
+    work_dir=f"test/gamma_scan_T_6"
 
     work_dir_path = Path(work_dir)
 
@@ -58,7 +58,7 @@ if __name__ == '__main__':
 
 
     # obs_list = [Observable(X(), site) for site in range(L)]  + [Observable(Y(), site) for site in range(L)] + [Observable(Z(), site) for site in range(L)]
-    obs_list = [Observable(Y(), site) for site in range(L)]
+    obs_list = [Observable(Y(), site) for site in range(1)]
 
     noise_operator = "pauli_z"
 
@@ -66,11 +66,11 @@ if __name__ == '__main__':
     #%%
     ## Defining simulation parameters
 
-    T=3
+    T=6
 
     dt=0.1
 
-    N=500
+    N=1000
 
     max_bond_dim=8
 
@@ -91,7 +91,7 @@ if __name__ == '__main__':
     ## Defining reference noise model and reference trajectory
     gamma_reference = 0.38
     # ref_noise_model =  CompactNoiseModel([{"name": "lowering", "sites": [i for i in range(L)], "strength": gamma_rel}] + [{"name": "pauli_z", "sites": [i for i in range(L)], "strength": gamma_deph}])
-    ref_noise_model =  CompactNoiseModel( [{"name": noise_operator, "sites": [i for i in range(L)], "strength": gamma_reference} ])
+    ref_noise_model =  CompactNoiseModel( [{"name": noise_operator, "sites": [i for i in range(1)], "strength": gamma_reference} ])
 
     # ref_noise_model =  CompactNoiseModel([{"name": noise_operator, "sites": [i], "strength": gamma_rel} for i in range(L)] )
 
@@ -132,10 +132,10 @@ if __name__ == '__main__':
 
     #%% Optimizing the model
     gamma_guess=0.06
-    sim_params.num_traj=int(100)
+    sim_params.num_traj=int(1000)
 
     # guess_noise_model =  CompactNoiseModel([{"name": "lowering", "sites": [i for i in range(L)], "strength": gamma_rel_guess} ] + [{"name": "pauli_z", "sites": [i for i in range(L)], "strength": gamma_deph_guess} ])
-    guess_noise_model =  CompactNoiseModel( [{"name": noise_operator, "sites": [i for i in range(L)], "strength": gamma_guess} ])
+    guess_noise_model =  CompactNoiseModel( [{"name": noise_operator, "sites": [i for i in range(1)], "strength": gamma_guess} ])
     # guess_noise_model =  CompactNoiseModel([{"name": noise_operator, "sites": [i], "strength": gamma_rel_guess} for i in range(L)] )
 
 
@@ -238,7 +238,7 @@ if __name__ == '__main__':
         d_on_list.append(loss.d_on_d_gk)
 
         np.savetxt(work_dir + f"/obs_array_{i}.txt", loss.obs_array, header="##", fmt="%.6f")
-        np.savetxt(work_dir + f"/d_on_list_{i}.txt", loss.d_on_d_gk.reshape(L*L,len(loss.traj_gradients.times)), header="##", fmt="%.6f")
+        np.savetxt(work_dir + f"/d_on_list_{i}.txt", loss.d_on_d_gk.reshape(1*1,len(loss.traj_gradients.times)), header="##", fmt="%.6f")
 
 
 

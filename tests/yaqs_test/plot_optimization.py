@@ -8,7 +8,7 @@ import pandas as pd
 import glob
 from matplotlib.widgets import Slider
 
-
+from mqt.yaqs.noise_char.optimization import trapezoidal
 
 #%%
 L_list_initial=[10,20,40, 80, 100]
@@ -435,7 +435,7 @@ plt.show()
 
 # %%
 
-work_dir="test/gradient_descent_T_3_characterizer/"
+work_dir="test/gamma_scan_T_3/"
 loss_list=np.genfromtxt(work_dir + "/loss_list.txt")
 grad_list=np.genfromtxt(work_dir + "/grad_list.txt")
 gamma_list=np.genfromtxt(work_dir + "/gamma_list.txt")
@@ -443,8 +443,62 @@ gamma_list=np.genfromtxt(work_dir + "/gamma_list.txt")
 # %%
 plt.plot(gamma_list, loss_list,'o', label="loss")
 plt.plot(gamma_list, grad_list,'x', label="grad")
+plt.plot(gamma_list[:-1], [(loss_list[i+1] - loss_list[i])/gamma_list[i] for i in range(len(loss_list)-1)], label="numeric gradient")
 plt.grid(True)
 plt.legend()
 
+
+# %%
+work_dir="test/gamma_scan_T_6/"
+i=4
+%matplotlib qt
+for i in range(1):
+    d_on_d_gk=np.genfromtxt(work_dir + f"/d_on_list_{i}.txt", ndmin = 2)
+    obs_array=np.genfromtxt(work_dir + f"/obs_array_{i}.txt", ndmin = 2)
+    ref_traj_data=np.genfromtxt(work_dir + f"/ref_traj.txt", ndmin = 2)
+
+    t=ref_traj_data[:,0]
+
+    ref_traj=ref_traj_data[:,1:].T
+
+    diff=obs_array-ref_traj
+
+
+    inside_sum=2*diff[0]*d_on_d_gk[0]
+
+    sumation=[]
+    total=0
+
+    for j in range(len(diff[0])):
+        total=total+inside_sum[j]
+        sumation.append(total)
+
+
+    if i==0:
+        sumation0=sumation
+
+    result=np.array(sumation)
+
+    plt.plot(t,diff[0],'x', label=f"diff {i}")
+    plt.plot(t,ref_traj[0],'-', label=f"ref_traj {i}")
+    plt.plot(t,obs_array[0],'x', label=f"obs_array {i}")
+    plt.plot(t,inside_sum,'o-', label=f"inside sum {i}")
+    plt.plot(t,sumation,'o-', label=f"sumation {i}")
+
+
+
+
+    plt.plot(t,d_on_d_gk[0],'x', label=f"d_on_d_gk {i}")
+    plt.plot(t,-2*trapezoidal(obs_array[0], t),'-', label=f"trapezoidal {i}")
+plt.grid(True)
+plt.legend()
+
+#%%
+ref_traj.shape
+
+
+# %%
+plt.plot(t,sumation0)
+# %%
 
 # %%
