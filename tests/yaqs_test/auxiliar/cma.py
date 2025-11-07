@@ -8,7 +8,8 @@ def cma_opt(f, x0,sigma0, popsize=4):
 
     es = cma.CMAEvolutionStrategy(x0, sigma0, {
         'popsize': popsize,
-        'verb_disp': 1,
+        'verb_disp': 0,
+        'bounds': [0, 1],
         # 'CMA_dampfac': 2.0,
     })
 

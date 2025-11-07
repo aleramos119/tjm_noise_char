@@ -9,6 +9,12 @@ from pathlib import Path
 
 from scipy.optimize import minimize_scalar
 
+import torch
+
+from auxiliar.bayesian_optimization import bayesian_opt
+from auxiliar.differential_evolution import differential_evolution_opt
+
+
 #%%
 
 
@@ -112,11 +118,14 @@ def plot_gamma_optimization(folder: str, gammas) -> None:
 if __name__ == '__main__':
 
 
-    d_list = [2*(i+1) for i in range(25)]
+    d_list = [i+1 for i in range(1,25)]
 
     std_list = [0, 0.2]
 
-    method_list = ["nelder_mead", "cma"]
+    # method_list = ["bo_ucb", "bo_ei", "bo_pi"]
+
+    method_list = ["diff_evol"]
+
 
 
     data_dir="test/gamma_scan_T_4/"
@@ -138,11 +147,12 @@ if __name__ == '__main__':
         for d in d_list:
             for std in std_list:
 
-                print(d)
+                print(f"Method: {method}, d: {d}, std: {std}")
+
 
                 gammas = [0.368159153509982]*d
 
-                work_dir=f"test/opt_{method}/std_{std}/d_{d}/"
+                work_dir=f"test/optimization_comparisson/opt_{method}/std_{std}/d_{d}/"
 
                 work_dir_path = Path(work_dir)
 
@@ -166,6 +176,45 @@ if __name__ == '__main__':
 
                 if method == "cma":
                     cma_opt(f, x0, 0.2, popsize=4)
+                
+
+
+                if method == "bo_ucb" or method == "bo_ei" or method == "bo_pi":
+
+                    bounds = torch.tensor([[0.0]*d, [1.0]*d], dtype=torch.double)
+
+                    acq=method.rsplit("_", 1)[-1].upper()
+
+                    if std==0:
+                        std = 10**(-2.8)
+
+
+                    best_x, best_y, X, Y = bayesian_opt(
+                            f=f,
+                            bounds=bounds,
+                            n_init=5,
+                            n_iter=500,
+                            std=std,
+                            acq_name=acq,  # <-- Try "EI", "PI", or "UCB"
+                    )
+
+                if method == "diff_evol":
+
+                    bounds = [(0,1)]*d
+
+                    differential_evolution_opt(
+                        f,
+                        bounds,
+                        pop_size=5*d,
+                        F=0.15,
+                        Cr=0.8,
+                        max_iter=500,
+                        tol=1e-6,
+                        workers=1,
+                        noise_averaging=2,
+                        seed=None,
+                        verbose=True,
+                    )
 
                 plot_gamma_optimization(work_dir, gammas)
 
@@ -204,4 +253,11 @@ if __name__ == '__main__':
 
 # # %%
 # gammas.shape
+# # %%
+
+#%%
+# d=10
+# bounds = [(0,1)]*d
+# # %%
+# np.array(bounds).shape
 # # %%
