@@ -144,7 +144,7 @@ if __name__ == '__main__':
 
     # for method in method_list:
 
-    method=sys.argv[0]
+    method=sys.argv[1]
 
     for d in d_list:
         for std in std_list:
