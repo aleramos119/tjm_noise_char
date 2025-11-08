@@ -14,7 +14,7 @@ import torch
 from auxiliar.bayesian_optimization import bayesian_opt
 from auxiliar.differential_evolution import differential_evolution_opt
 
-
+import sys
 #%%
 
 
@@ -122,9 +122,9 @@ if __name__ == '__main__':
 
     std_list = [0, 0.2]
 
-    # method_list = ["bo_ucb", "bo_ei", "bo_pi"]
+    method_list = ["bo_ucb", "bo_ei", "bo_pi"]
 
-    method_list = ["diff_evol"]
+    # method_list = ["diff_evol"]
 
 
 
@@ -142,81 +142,83 @@ if __name__ == '__main__':
     )
 
 
-    for method in method_list:
+    # for method in method_list:
 
-        for d in d_list:
-            for std in std_list:
+    method=sys.argv[0]
 
-                print(f"Method: {method}, d: {d}, std: {std}")
+    for d in d_list:
+        for std in std_list:
 
-
-                gammas = [0.368159153509982]*d
-
-                work_dir=f"test/optimization_comparisson/opt_{method}/std_{std}/d_{d}/"
-
-                work_dir_path = Path(work_dir)
-
-                work_dir_path.mkdir(parents=True, exist_ok=True)
+            print(f"Method: {method}, d: {d}, std: {std}")
 
 
+            gammas = [0.368159153509982]*d
 
-                for file in work_dir_path.iterdir():
-                    if file.is_file():
-                        file.unlink()  # delete the file
+            work_dir=f"test/optimization_comparisson/opt_{method}/std_{std}/d_{d}/"
 
-                
+            work_dir_path = Path(work_dir)
 
-
-                f=InterpolatedFunction(f1d, d, std=std, path = work_dir)
-
-                x0=np.random.rand(d)  
-
-                if method == "nelder_mead":
-                    nelder_mead_opt(f,x0, max_iter=500, step=0.3)
-
-                if method == "cma":
-                    cma_opt(f, x0, 0.2, popsize=4)
-                
+            work_dir_path.mkdir(parents=True, exist_ok=True)
 
 
-                if method == "bo_ucb" or method == "bo_ei" or method == "bo_pi":
 
-                    bounds = torch.tensor([[0.0]*d, [1.0]*d], dtype=torch.double)
+            for file in work_dir_path.iterdir():
+                if file.is_file():
+                    file.unlink()  # delete the file
 
-                    acq=method.rsplit("_", 1)[-1].upper()
-
-                    if std==0:
-                        std = 10**(-2.8)
+            
 
 
-                    best_x, best_y, X, Y = bayesian_opt(
-                            f=f,
-                            bounds=bounds,
-                            n_init=5,
-                            n_iter=500,
-                            std=std,
-                            acq_name=acq,  # <-- Try "EI", "PI", or "UCB"
-                    )
+            f=InterpolatedFunction(f1d, d, std=std, path = work_dir)
 
-                if method == "diff_evol":
+            x0=np.random.rand(d)  
 
-                    bounds = [(0,1)]*d
+            if method == "nelder_mead":
+                nelder_mead_opt(f,x0, max_iter=500, step=0.3)
 
-                    differential_evolution_opt(
-                        f,
-                        bounds,
-                        pop_size=5*d,
-                        F=0.15,
-                        Cr=0.8,
-                        max_iter=500,
-                        tol=1e-6,
-                        workers=1,
-                        noise_averaging=2,
-                        seed=None,
-                        verbose=True,
-                    )
+            if method == "cma":
+                cma_opt(f, x0, 0.2, popsize=4)
+            
 
-                plot_gamma_optimization(work_dir, gammas)
+
+            if method == "bo_ucb" or method == "bo_ei" or method == "bo_pi":
+
+                bounds = torch.tensor([[0.0]*d, [1.0]*d], dtype=torch.double)
+
+                acq=method.rsplit("_", 1)[-1].upper()
+
+                if std==0:
+                    std = 10**(-2.8)
+
+
+                best_x, best_y, X, Y = bayesian_opt(
+                        f=f,
+                        bounds=bounds,
+                        n_init=5,
+                        n_iter=200,
+                        std=std,
+                        acq_name=acq,  # <-- Try "EI", "PI", or "UCB"
+                )
+
+            if method == "diff_evol":
+
+                bounds = [(0,1)]*d
+
+                differential_evolution_opt(
+                    f,
+                    bounds,
+                    pop_size=5*d,
+                    F=0.15,
+                    Cr=0.8,
+                    max_iter=500,
+                    tol=1e-6,
+                    workers=1,
+                    noise_averaging=2,
+                    seed=None,
+                    verbose=True,
+                )
+
+            plot_gamma_optimization(work_dir, gammas)
 
 
 
