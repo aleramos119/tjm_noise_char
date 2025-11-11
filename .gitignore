@@ -152,5 +152,6 @@ tests/yaqs_test/results/cpu_traj_scan/*/seff_output
 
 tests/yaqs_test/results/*/optimization_test.py
 
-
+tests/yaqs_test/results/*
+tests/yaqs_test/test/*
  
