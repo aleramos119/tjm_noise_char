@@ -227,6 +227,9 @@ if __name__ == '__main__':
     np.savetxt(work_dir + "/gamma_list.txt", gamma_list, header="##", fmt="%.6f")
 
 
+    np.savetxt(work_dir + f"/ref_traj.txt", loss.ref_traj_array, header="##", fmt="%.6f")
+
+
     for i,gamma in enumerate(gamma_list):
 
         loss_value, grad, sim_time=loss(np.array([gamma]))
