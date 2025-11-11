@@ -22,7 +22,7 @@ from mqt.yaqs.core.data_structures.simulation_parameters import AnalogSimParams,
 
 from mqt.yaqs.core.libraries.gate_library import X, Y, Z, Create, Destroy
 
-
+import sys
 
 #%%
 
@@ -32,9 +32,17 @@ from mqt.yaqs.core.libraries.gate_library import X, Y, Z, Create, Destroy
 
 if __name__ == '__main__':
 
+    T=sys.argv[1]
+
+    obs=sys.argv[2]
+
+    noise=sys.argv[3]
 
 
-    work_dir=f"test/gamma_scan_T_4_gamma_ref_0.01"
+
+
+
+    work_dir=f"test/gamma_scan_T_{T}_gamma_ref_0.01_obs_{obs}_noise_{noise}"
 
     work_dir_path = Path(work_dir)
 
@@ -57,16 +65,31 @@ if __name__ == '__main__':
     init_state = MPS(L, state='zeros')
 
 
-    # obs_list = [Observable(X(), site) for site in range(L)]  + [Observable(Y(), site) for site in range(L)] + [Observable(Z(), site) for site in range(L)]
-    obs_list = [Observable(Y(), site) for site in range(1)]
+    if obs=="X":
+        obs=X()
+    
+    if obs=="Y":
+        obs=Y()
 
-    noise_operator = "pauli_z"
+    if obs=="Z":
+        obs=Z()
+
+    if noise=="X":
+        noise_operator="pauli_x"
+    
+    if noise=="Y":
+        noise_operator="pauli_y"
+
+    if noise=="Z":
+        noise_operator="pauli_z"
+
+
+    # obs_list = [Observable(X(), site) for site in range(L)]  + [Observable(Y(), site) for site in range(L)] + [Observable(Z(), site) for site in range(L)]
+    obs_list = [Observable(obs, site) for site in range(L)]
 
 
     #%%
     ## Defining simulation parameters
-
-    T=4
 
     dt=0.1
 
@@ -91,7 +114,7 @@ if __name__ == '__main__':
     ## Defining reference noise model and reference trajectory
     gamma_reference = 0.01
     # ref_noise_model =  CompactNoiseModel([{"name": "lowering", "sites": [i for i in range(L)], "strength": gamma_rel}] + [{"name": "pauli_z", "sites": [i for i in range(L)], "strength": gamma_deph}])
-    ref_noise_model =  CompactNoiseModel( [{"name": noise_operator, "sites": [i for i in range(1)], "strength": gamma_reference} ])
+    ref_noise_model =  CompactNoiseModel( [{"name": noise_operator, "sites": [i for i in range(L)], "strength": gamma_reference} ])
 
     # ref_noise_model =  CompactNoiseModel([{"name": noise_operator, "sites": [i], "strength": gamma_rel} for i in range(L)] )
 
@@ -135,7 +158,7 @@ if __name__ == '__main__':
     sim_params.num_traj=int(4000)
 
     # guess_noise_model =  CompactNoiseModel([{"name": "lowering", "sites": [i for i in range(L)], "strength": gamma_rel_guess} ] + [{"name": "pauli_z", "sites": [i for i in range(L)], "strength": gamma_deph_guess} ])
-    guess_noise_model =  CompactNoiseModel( [{"name": noise_operator, "sites": [i for i in range(1)], "strength": gamma_guess} ])
+    guess_noise_model =  CompactNoiseModel( [{"name": noise_operator, "sites": [i for i in range(L)], "strength": gamma_guess} ])
     # guess_noise_model =  CompactNoiseModel([{"name": noise_operator, "sites": [i], "strength": gamma_rel_guess} for i in range(L)] )
 
 

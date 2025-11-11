@@ -10,6 +10,10 @@ from matplotlib.widgets import Slider
 
 from mqt.yaqs.noise_char.optimization import trapezoidal
 
+
+
+
+
 #%%
 L_list_initial=[10,20,40, 80, 100]
 
@@ -505,4 +509,50 @@ ref_traj.shape
 plt.plot(t,sumation0)
 # %%
 
+# %%
+
+%matplotlib qt
+def loss(obs_traj, ref_traj, sigma, exponent=2):
+
+    diff = obs_traj-ref_traj
+
+    error = np.random.normal(loc=0.0, scale=sigma, size=ref_traj.shape)
+
+    diff_err = diff + error
+
+
+    result = np.sum(diff_err**exponent)
+    return result
+
+
+
+data_dir = "test/gamma_scan_T_4_gamma_ref_0.01/"
+
+
+gamma_list=np.genfromtxt(data_dir + "gamma_list.txt")
+
+
+
+ref_traj = np.genfromtxt(data_dir + "ref_traj.txt")
+
+exponent=2
+
+sigma = 0.03
+
+sigma_values=[0.01, 0.02, 0.03, 0.04, 0.05]
+
+
+
+for sigma in sigma_values:
+    loss_list = []
+
+    for i in range(len(gamma_list)):
+
+        obs_traj = np.genfromtxt(data_dir + f"obs_array_{i}.txt")
+
+        loss_list.append(loss(obs_traj, ref_traj, sigma, exponent=exponent))
+
+
+    plt.plot(gamma_list,loss_list, 'x-', label=f"sigma_{sigma}, exponent_{exponent}")
+plt.legend()
 # %%
