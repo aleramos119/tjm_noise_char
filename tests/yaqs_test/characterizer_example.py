@@ -32,14 +32,14 @@ import sys
 
 if __name__ == '__main__':
 
-    T=sys.argv[1]
+    T=float(sys.argv[1])
 
     obs=sys.argv[2]
 
     noise=sys.argv[3]
 
 
-
+    N=4000
 
 
     work_dir=f"test/gamma_scan_T_{T}_gamma_ref_0.01_obs_{obs}_noise_{noise}"
@@ -93,7 +93,7 @@ if __name__ == '__main__':
 
     dt=0.1
 
-    N=4000
+    
 
     max_bond_dim=8
 
@@ -155,7 +155,7 @@ if __name__ == '__main__':
 
     #%% Optimizing the model
     gamma_guess=0.06
-    sim_params.num_traj=int(4000)
+    sim_params.num_traj=int(N)
 
     # guess_noise_model =  CompactNoiseModel([{"name": "lowering", "sites": [i for i in range(L)], "strength": gamma_rel_guess} ] + [{"name": "pauli_z", "sites": [i for i in range(L)], "strength": gamma_deph_guess} ])
     guess_noise_model =  CompactNoiseModel( [{"name": noise_operator, "sites": [i for i in range(L)], "strength": gamma_guess} ])
