@@ -118,17 +118,20 @@ def plot_gamma_optimization(folder: str, gammas) -> None:
 if __name__ == '__main__':
 
 
-    d_list = [i+1 for i in range(1,25)]
+    d_list = [i+1 for i in range(1,4)]
 
     std_list = [0, 0.2]
 
-    method_list = ["bo_ucb", "bo_ei", "bo_pi"]
+    # method_list = ["bo_ucb", "bo_ei", "bo_pi"]
+
+    method_list = ["bo_ucb"]
+
 
     # method_list = ["diff_evol"]
 
 
 
-    data_dir="test/gamma_scan_T_4/"
+    data_dir="test/gamma_scan_T_4_gamma_ref_0.01/"
 
     loss_list=np.genfromtxt(data_dir+"loss_list.txt")
     gamma_list=np.genfromtxt(data_dir+"gamma_list.txt")
@@ -152,9 +155,9 @@ if __name__ == '__main__':
             print(f"Method: {method}, d: {d}, std: {std}")
 
 
-            gammas = [0.368159153509982]*d
+            gammas = [0.01]*d
 
-            work_dir=f"test/optimization_comparisson/opt_{method}/std_{std}/d_{d}/"
+            work_dir=f"test/optimization_comparisson_2/opt_{method}/std_{std}/d_{d}/"
 
             work_dir_path = Path(work_dir)
 
@@ -197,6 +200,7 @@ if __name__ == '__main__':
                         n_init=5,
                         n_iter=200,
                         std=std,
+                        beta=2.0,
                         acq_name=acq,  # <-- Try "EI", "PI", or "UCB"
                 )
 

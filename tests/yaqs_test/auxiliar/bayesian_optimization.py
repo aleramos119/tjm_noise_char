@@ -5,6 +5,7 @@ from botorch.acquisition import (
     ExpectedImprovement,
     ProbabilityOfImprovement,
     UpperConfidenceBound,
+    LogExpectedImprovement
 )
 from botorch.optim import optimize_acqf
 from botorch.models.transforms import Standardize, Normalize
@@ -19,6 +20,8 @@ def get_acquisition_function(name, model, best_f=None, beta=2.0):
     name = name.upper()
     if name == "EI":
         return ExpectedImprovement(model=model, best_f=best_f, maximize=True)
+    elif name == "LEI":
+        return LogExpectedImprovement(model=model, best_f=best_f, maximize=True)
     elif name == "PI":
         return ProbabilityOfImprovement(model=model, best_f=best_f, maximize=True)
     elif name == "UCB":
@@ -41,6 +44,7 @@ def bayesian_opt(
     n_iter=15,
     acq_name="EI",
     std=1e-6,
+    beta=2.0,
     dtype=torch.double,
     device="cpu",
 ):
@@ -102,7 +106,7 @@ def bayesian_opt(
         fit_gpytorch_mll(mll)
 
         best_f = Y_train.max()
-        acq_func = get_acquisition_function(acq_name, model, best_f=best_f)
+        acq_func = get_acquisition_function(acq_name, model, best_f=best_f, beta=beta)
 
         new_x_unit, _ = optimize_acqf(
             acq_function=acq_func,

@@ -34,7 +34,7 @@ if __name__ == '__main__':
 
 
 
-    work_dir=f"test/gamma_scan_T_6"
+    work_dir=f"test/gamma_scan_T_4_gamma_ref_0.01"
 
     work_dir_path = Path(work_dir)
 
@@ -66,11 +66,11 @@ if __name__ == '__main__':
     #%%
     ## Defining simulation parameters
 
-    T=6
+    T=4
 
     dt=0.1
 
-    N=1000
+    N=4000
 
     max_bond_dim=8
 
@@ -89,7 +89,7 @@ if __name__ == '__main__':
 
     #%%
     ## Defining reference noise model and reference trajectory
-    gamma_reference = 0.38
+    gamma_reference = 0.01
     # ref_noise_model =  CompactNoiseModel([{"name": "lowering", "sites": [i for i in range(L)], "strength": gamma_rel}] + [{"name": "pauli_z", "sites": [i for i in range(L)], "strength": gamma_deph}])
     ref_noise_model =  CompactNoiseModel( [{"name": noise_operator, "sites": [i for i in range(1)], "strength": gamma_reference} ])
 
@@ -132,7 +132,7 @@ if __name__ == '__main__':
 
     #%% Optimizing the model
     gamma_guess=0.06
-    sim_params.num_traj=int(1000)
+    sim_params.num_traj=int(4000)
 
     # guess_noise_model =  CompactNoiseModel([{"name": "lowering", "sites": [i for i in range(L)], "strength": gamma_rel_guess} ] + [{"name": "pauli_z", "sites": [i for i in range(L)], "strength": gamma_deph_guess} ])
     guess_noise_model =  CompactNoiseModel( [{"name": noise_operator, "sites": [i for i in range(1)], "strength": gamma_guess} ])
@@ -213,7 +213,8 @@ if __name__ == '__main__':
 
     # %%
 
-    gamma_list = np.linspace(0.06, 1, num=30)
+    gamma_list = np.array([0.001*1.3**i for i in range(27)]
+)
 
     loss_list=[]
 
@@ -254,4 +255,5 @@ if __name__ == '__main__':
 
 
 
+# %%
 # %%

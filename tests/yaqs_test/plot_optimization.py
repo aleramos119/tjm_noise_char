@@ -435,7 +435,7 @@ plt.show()
 
 # %%
 
-work_dir="test/gamma_scan_T_6/"
+work_dir="test/gamma_scan_T_4_gamma_ref_0.01/"
 loss_list=np.genfromtxt(work_dir + "/loss_list.txt")
 grad_list=np.genfromtxt(work_dir + "/grad_list.txt")
 gamma_list=np.genfromtxt(work_dir + "/gamma_list.txt")
