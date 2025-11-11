@@ -262,10 +262,10 @@ if __name__ == '__main__':
 
         obs_array_list.append(loss.obs_array)
 
-        d_on_list.append(loss.d_on_d_gk)
+        # d_on_list.append(loss.d_on_d_gk)
 
         np.savetxt(work_dir + f"/obs_array_{i}.txt", loss.obs_array, header="##", fmt="%.6f")
-        np.savetxt(work_dir + f"/d_on_list_{i}.txt", loss.d_on_d_gk.reshape(1*1,len(loss.traj_gradients.times)), header="##", fmt="%.6f")
+        # np.savetxt(work_dir + f"/d_on_list_{i}.txt", loss.d_on_d_gk.reshape(L*L,len(loss.traj_gradients.times)), header="##", fmt="%.6f")
 
 
 
