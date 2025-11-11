@@ -3,7 +3,11 @@
 #SBATCH --time=2-00:00:00 # Specify a Time limit in the format days-hrs:min:sec. Use sinfo to see node time limits
 #SBATCH --chdir=/home/htc/aramos/simulation_of_open_quantum_systems/tjm_noise_char/tests/yaqs_test  # Navigate to the working directory where your script lies
 #SBATCH --output=/home/htc/aramos/simulation_of_open_quantum_systems/tjm_noise_char/tests/yaqs_test/%JOB_DIR%/%j.log     # Standard output and error log
+<<<<<<< HEAD
+#SBATCH --partition=%PARTITION%  # Specify the desired partition, e.g. gpu or big. Note that small is the default partition.
+=======
 #SBATCH --partition=big  # Specify the desired partition, e.g. gpu or big. Note that small is the default partition.
+>>>>>>> 49f37b7d0e8f7b0d79baf042b688e97b1c38ef6b
 #SBATCH --cpus-per-task=%NCPUS%
 ##SBATCH --mem=100G 
 
@@ -85,7 +89,11 @@ echo "CPU_LIST:  $CPU_LIST "
 
 
 
+<<<<<<< HEAD
+python optimization_test.py folder=%JOB_DIR% ntraj=%NTRAJ% ntraj_0=%NTRAJ0% sites=%L% restart=%RESTART% order=%ORDER% threshold=%THRESHOLD% dim=%D% method=%METHOD% solver=%SOLVER% alloc_cpus=%NCPUS% max_bond_dim=%MAX_BOND_DIM% g_rel=%GAMMA% g_deph=%GAMMA% g_rel_0=%GAMMA0% g_deph_0=%GAMMA0% T=5 > %JOB_DIR%/python_output.log 2>&1
+=======
 python optimization_test.py %JOB_DIR% %NTRAJ% %L% %RESTART% %ORDER% %THRESHOLD% %D% %METHOD% %SOLVER% %NCPUS% > %JOB_DIR%/python_output.log 2>&1
+>>>>>>> 49f37b7d0e8f7b0d79baf042b688e97b1c38ef6b
 
 
 # Stop background loggers after script ends

@@ -1,10 +1,20 @@
 #!/bin/bash
 #SBATCH --job-name=%JOB_NAME% # Job name
+<<<<<<< HEAD
+#SBATCH --time=4:00:00 # Specify a Time limit in the format days-hrs:min:sec. Use sinfo to see node time limits
+=======
 #SBATCH --time=24:00:00 # Specify a Time limit in the format days-hrs:min:sec. Use sinfo to see node time limits
+>>>>>>> 49f37b7d0e8f7b0d79baf042b688e97b1c38ef6b
 #SBATCH --chdir=/home/htc/aramos/simulation_of_open_quantum_systems/tjm_noise_char/tests/yaqs_test  # Navigate to the working directory where your script lies
 #SBATCH --output=/home/htc/aramos/simulation_of_open_quantum_systems/tjm_noise_char/tests/yaqs_test/results/cpu_traj_scan/%JOB_DIR%/%j.log     # Standard output and error log
 #SBATCH --partition=high-mem  # Specify the desired partition, e.g. gpu or big. Note that small is the default partition.
 #SBATCH --cpus-per-task=%NCPUS%
+<<<<<<< HEAD
+##SBATCH --exclusive
+
+##SBATCH --mem=50G
+=======
+>>>>>>> 49f37b7d0e8f7b0d79baf042b688e97b1c38ef6b
 
 ##SBATCH --exclude=htc-cmp[101-148,501-532] # exclude nodes. Your job will run on nodes not in the list.
 
@@ -46,6 +56,47 @@ CPU_LIST=$(taskset -cp $$ | awk -F: '{print $2}' | tr -d ' ')
 
 echo "CPU_LIST:  $CPU_LIST "
 
+<<<<<<< HEAD
+#LC_NUMERIC=C mpstat -P $CPU_LIST 30 600 | awk '
+#BEGIN {
+#  print "timestamp,cpu,usr"
+#}
+#$2 ~ /^[0-9]+$/ {
+#  cpu = $2
+#  usr = $3
+#  print $1 "," cpu "," usr
+#}' > results/cpu_traj_scan/%JOB_DIR%/cpu_usage.csv &
+#
+#MPSTAT_PID=$!
+#
+#
+#
+#
+## Start sstat logging in the background
+#{
+#  echo "timestamp,MaxRSS"
+#  while true; do
+#    timestamp=$(date '+%Y-%m-%d %H:%M:%S')
+#    #maxrss=$(sstat -j ${SLURM_JOB_ID}.batch --format=MaxRSS --noheader 2>/dev/null | awk '{print $1}')
+#    maxrss_kb=$(sstat -j ${SLURM_JOB_ID}.batch --format=MaxRSS --noheader 2>/dev/null | awk '{print $1}')
+#    maxrss_gb=$(awk -v kb="$maxrss_kb" 'BEGIN { printf "%.2f", kb / 1024 / 1024 }')
+#    if [ -z "$maxrss_gb" ]; then
+#      break
+#    fi
+#    echo "$timestamp,$maxrss_gb"
+#    sleep 30
+#  done
+#} > results/cpu_traj_scan/%JOB_DIR%/sstat_log.csv &
+#SSTAT_PID=$!
+#
+#
+
+python propagation.py results/cpu_traj_scan/%JOB_DIR% %NTRAJ% %L% %ORDER% %THRESHOLD% %METHOD% %SOLVER% %NCPUS% %GAMMA_REL% %GAMMA_DEPH%> results/cpu_traj_scan/%JOB_DIR%/python_output.log 2>&1
+
+# Stop background loggers after script ends
+#kill $MPSTAT_PID
+#kill $SSTAT_PID
+=======
 LC_NUMERIC=C mpstat -P $CPU_LIST 1 300 | awk '
 BEGIN {
   print "timestamp,cpu,usr"
@@ -85,6 +136,7 @@ python propagation.py results/cpu_traj_scan/%JOB_DIR% %NTRAJ% %L% %ORDER% %THRES
 # Stop background loggers after script ends
 kill $MPSTAT_PID
 kill $SSTAT_PID
+>>>>>>> 49f37b7d0e8f7b0d79baf042b688e97b1c38ef6b
 
 
 

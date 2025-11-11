@@ -42,7 +42,7 @@ if __name__ == '__main__':
     N=4000
 
 
-    work_dir=f"test/gamma_scan_T_{T}_gamma_ref_0.01_obs_{obs}_noise_{noise}"
+    work_dir=sys.argv[4]
 
     work_dir_path = Path(work_dir)
 
