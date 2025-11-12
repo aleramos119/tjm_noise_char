@@ -543,7 +543,7 @@ noise="Z"
 
 N_list=[4000]
 
-op_list=["X"]
+op_list=["X", "Y", "Z"]
 
 
 for N in N_list:
@@ -562,7 +562,7 @@ for N in N_list:
 
         exponent=2
 
-        sigma = 0.02
+        sigma = 0.00
 
         # sigma_values=[0.01, 0.02, 0.03, 0.04, 0.05]
 

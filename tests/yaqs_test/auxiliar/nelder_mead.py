@@ -85,14 +85,12 @@ def nelder_mead_opt(
             simplex[i] = np.clip(simplex[i], x_low, x_up)
             f_values[i] = func(simplex[i])
 
-    return {
-        "x": simplex[0],
-        "fun": f_values[0],
-        "nit": iteration + 1,
-        "simplex": simplex,
-        "success": iteration < max_iter - 1
-    }
+        if func.converged:
+            print(f"Average stable at iteration {func.n_eval}.")
+            break
 
+
+    return simplex[0], f_values[0]
 
 
 

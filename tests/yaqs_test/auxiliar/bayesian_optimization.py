@@ -39,7 +39,8 @@ def get_acquisition_function(name, model, best_f=None, beta=2.0):
 # --------------------------------------------
 def bayesian_opt(
     f,
-    bounds,
+    x_low,
+    x_up,
     n_init=5,
     n_iter=15,
     acq_name="EI",
@@ -60,6 +61,10 @@ def bayesian_opt(
         acq_name: "EI", "PI", or "UCB"
         std: Known standard deviation of noise
     """
+
+
+    bounds = torch.tensor([x_low, x_up], dtype=torch.double)
+
 
     d = bounds.shape[1]
 
@@ -128,16 +133,23 @@ def bayesian_opt(
             [Yvar_train, torch.full_like(new_y, std**2)]
         )
 
-        print(f"Iter {i+1:02d} | Best value (min): {-Y_train.max().item():.6f}")
+        best_idx = torch.argmax(Y_train)
+        best_x = scale_to_bounds(X_train[best_idx])
+        best_y = -Y_train[best_idx]
+
+        print(f"Iter {i+1:02d} | Best Loss (min): {-Y_train.max().item():.6f} |  Best x: {best_x}")
+
+
+        if f.converged:
+            print(f"Average stable at iteration {f.n_eval}.")
+            break
 
     # -----------------------
     # Return best found point
     # -----------------------
-    best_idx = torch.argmax(Y_train)
-    best_x = scale_to_bounds(X_train[best_idx])
-    best_y = -Y_train[best_idx]  # flip back to minimization scale
+      # flip back to minimization scale
 
-    return best_x, best_y, X_train, -Y_train  # flip Y back to original scale
+    return best_x.numpy(), best_y.numpy()[0], X_train, -Y_train  # flip Y back to original scale
 
 
 

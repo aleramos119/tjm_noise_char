@@ -21,7 +21,7 @@ import sys
 
 class InterpolatedFunction:
 
-    def __init__(self, f, d, std =5, path = ""):
+    def __init__(self, f, d, std =5, path = "", avg_tol = 1e-6, n_conv=20):
         
         self.f=f
         self.d = d
@@ -37,6 +37,27 @@ class InterpolatedFunction:
 
         self.history_file_name = self.work_dir / "loss_x_history.txt"
         self.history_avg_file_name = self.work_dir / "loss_x_history_avg.txt"
+
+
+        self.n_avg=100
+
+
+        self.x_history = []
+
+        self.x_avg_history = []
+
+        self.diff_avg_history = []
+
+
+        self.converged = False
+
+        self.avg_tol = avg_tol
+
+        self.n_conv = n_conv
+
+
+        
+
 
 
 
@@ -60,9 +81,60 @@ class InterpolatedFunction:
                     + "\n"
                 ) 
 
-    def __call__(self, x):
+    def compute_avg(self) -> None:
+        """Computes the average of the parameter history and appends it to the average history.
 
+        If the length of `x_history` is less than or equal to `n_avg`, computes the mean over the entire `x_history`.
+        Otherwise, computes the mean over the entries in `x_history` starting from index `n_avg`.
+        The computed average is appended to `x_avg_history`.
+
+
+        """
+        if len(self.x_history) <= self.n_avg:
+            x_avg = np.mean(self.x_history, axis=0)
+        else:
+            x_avg = np.mean(self.x_history[self.n_avg :], axis=0)
+
+        self.x_avg_history.append(x_avg.copy())
+
+    def compute_diff_avg(self) -> None:
+        """Computes the maximum absolute difference between the last two entries in `x_avg_history`.
+
+        This method is intended to track the change in the average values stored in `x_avg_history`
+        over successive iterations.
+        """
+        if len(self.x_avg_history) > 1:
+            diff: float = np.max(np.abs(self.x_avg_history[-1] - self.x_avg_history[-2]))
+            self.diff_avg_history.append(diff)
+
+    def check_convergence(self):
+
+        if len(self.diff_avg_history) > self.n_conv and all(
+            diff < self.avg_tol for diff in f.diff_avg_history[-self.n_conv:]
+        ):
+            
+            self.converged = True
+
+    
+    def post_process(self, x: np.ndarray, f: float) -> None:
+   
         self.n_eval += 1
+        self.x_history.append(x)
+
+
+        self.compute_avg()
+        self.compute_diff_avg()
+
+
+        self.write_to_file(self.history_file_name, f, self.x_history[-1])
+        self.write_to_file(self.history_avg_file_name, f, self.x_avg_history[-1])
+
+
+        self.check_convergence()
+
+
+
+    def __call__(self, x):
 
         noise = abs(np.random.normal(0, self.std))
 
@@ -73,12 +145,13 @@ class InterpolatedFunction:
         else:
             f=np.sum(self.f(x)) + noise
 
-        self.write_to_file(self.history_file_name, f, x)
+        
+        self.post_process(x, f)
         
         return f
     
 
-def plot_gamma_optimization(folder: str, gammas) -> None:
+def plot_gamma_optimization(folder: str, file , gammas, error, best_y) -> None:
     """Plot the optimization history of gamma parameters from a given folder.
 
     Parameters
@@ -86,7 +159,7 @@ def plot_gamma_optimization(folder: str, gammas) -> None:
     folder : str
         The folder containing the optimization data files.
     """
-    x_avg_file = folder + "loss_x_history.txt"
+    x_avg_file = folder + file+".txt"
 
     data = np.genfromtxt(x_avg_file, skip_header=1, ndmin=2)
 
@@ -96,11 +169,21 @@ def plot_gamma_optimization(folder: str, gammas) -> None:
         plt.plot(data[:, 0], data[:, 2 + i], label=f"$\\gamma_{{{i+1}}}$")
         plt.axhline(gammas[i], color=plt.gca().lines[-1].get_color(), linestyle='--', linewidth=2)
 
+
+    plt.text(
+    0.95, 0.95, f"rel error: {error/gammas[0]:.3e}\nmin loss: {best_y:.3e}",
+    transform=plt.gca().transAxes,
+    fontsize=10,
+    verticalalignment='top',
+    horizontalalignment='right',
+    bbox=dict(boxstyle='round,pad=0.3', facecolor='white', alpha=0.7)
+)
+
     plt.xlabel("Iterations")
     plt.ylabel(r"$\gamma$")
     plt.legend()
     plt.title("Gamma Parameter Optimization History")
-    plt.savefig(folder + "gamma.pdf")
+    plt.savefig(folder + "gamma_"+file+".pdf")
     plt.close()
 
     max_diff=max(abs(np.mean(data[10:,2:2+d],axis=0)-gammas))
@@ -118,13 +201,14 @@ def plot_gamma_optimization(folder: str, gammas) -> None:
 if __name__ == '__main__':
 
 
-    d_list = [i+1 for i in range(1,2)]
+    d_list = [i+1 for i in range(1,25)]
 
-    std_list = [0, 0.02]
+    std_list = [0, 0.02, 0.04]
 
-    # method_list = ["bo_ucb", "bo_ei", "bo_pi"]
 
-    method_list = ["bo_ucb"]
+    # method_list = ["bo_ucb", "bo_ei", "bo_pi", "cma", "diff_evol"]
+
+    # method_list = ["diff_evol"]
 
 
     # method_list = ["diff_evol"]
@@ -145,11 +229,20 @@ if __name__ == '__main__':
     )
 
 
+    x_dense=np.linspace(gamma_list[0],gamma_list[-1],100000)
+    y_dense=f1d(x_dense)
+
+    x_min = x_dense[np.argmin(y_dense)]
+    y_min = np.min(y_dense)
+
+
     # for method in method_list:
 
     method=sys.argv[1]
 
     x_lim=0.1
+
+
 
     for d in d_list:
         for std in std_list:
@@ -157,7 +250,13 @@ if __name__ == '__main__':
             print(f"Method: {method}, d: {d}, std: {std}")
 
 
-            gammas = [0.01]*d
+            gammas = np.array([x_min]*d)
+
+            x_low=np.array([0]*d)
+
+            x_up=np.array([x_lim]*d)
+
+
 
             work_dir=f"test/optimization_comparisson/opt_{method}/std_{std}/d_{d}/"
 
@@ -171,24 +270,30 @@ if __name__ == '__main__':
                 if file.is_file():
                     file.unlink()  # delete the file
 
+
+
+            np.savetxt(work_dir + "/x_min.txt", gammas, header="##", fmt="%.6f")
+
+
+
+
+            f=InterpolatedFunction(f1d, d, std=std, path = work_dir, avg_tol = 1e-5, n_conv=20)
+
+
             
-
-
-            f=InterpolatedFunction(f1d, d, std=std, path = work_dir)
 
             x0=np.random.uniform(0, x_lim, d)
 
             if method == "nelder_mead":
-                nelder_mead_opt(f,x0, max_iter=500, step=0.3)
+                best_x, best_y=nelder_mead_opt(f,x0, x_low, x_up, max_iter=300, step=0.01)
 
             if method == "cma":
-                cma_opt(f, x0, 0.2, popsize=4)
+                best_x, best_y=cma_opt(f, x0, x_low, x_up, 0.01, popsize=4, max_iter=300)
             
 
 
             if method == "bo_ucb" or method == "bo_ei" or method == "bo_pi":
 
-                bounds = torch.tensor([[0.0]*d, [0.1]*d], dtype=torch.double)
 
                 acq=method.rsplit("_", 1)[-1].upper()
 
@@ -196,35 +301,44 @@ if __name__ == '__main__':
                     std = 10**(-2.8)
 
 
-                best_x, best_y, X, Y = bayesian_opt(
+                best_x, best_y, X_train, Y_train = bayesian_opt(
                         f=f,
-                        bounds=bounds,
-                        n_init=5,
-                        n_iter=200,
+                        x_low=x_low,
+                        x_up=x_up,
+                        n_init=3*d,
+                        n_iter=300,
                         std=std,
-                        beta=2.0,
+                        beta=100.0,
                         acq_name=acq,  # <-- Try "EI", "PI", or "UCB"
                 )
 
             if method == "diff_evol":
 
-                bounds = [(0,0.1)]*d
-
-                differential_evolution_opt(
+                best_x, best_y, history=differential_evolution_opt(
                     f,
-                    bounds,
+                    x_low,
+                    x_up,
                     pop_size=5*d,
-                    F=0.15,
-                    Cr=0.8,
-                    max_iter=500,
-                    tol=1e-6,
+                    F=0.7,
+                    Cr=0.7,
+                    max_iter=300,
+                    tol=1e-5,
                     workers=1,
-                    noise_averaging=2,
+                    noise_averaging=1,
                     seed=None,
                     verbose=True,
                 )
 
-            plot_gamma_optimization(work_dir, gammas)
+            error = np.max(np.abs(best_x - gammas))
+
+            np.savetxt(work_dir + "/error.txt", [error], header="##", fmt="%.6f")
+            np.savetxt(work_dir + "/rel_error.txt", [error/gammas[0]], header="##", fmt="%.6f")
+
+
+
+            plot_gamma_optimization(work_dir, "loss_x_history", gammas, error, best_y)
+            plot_gamma_optimization(work_dir, "loss_x_history_avg", gammas, error, best_y)
+
 
 
 
@@ -268,4 +382,35 @@ if __name__ == '__main__':
 # bounds = [(0,1)]*d
 # # %%
 # np.array(bounds).shape
+# %%
+# # %%
+# %matplotlib qt
+
+# loss_list=np.genfromtxt(data_dir+"loss_list.txt")
+# gamma_list=np.genfromtxt(data_dir+"gamma_list.txt")
+
+# f1d= interp1d(
+#     gamma_list,
+#     loss_list,
+#     kind='quadratic',   # options: 'linear', 'cubic', 'quadratic', 'nearest'  # allow values outside x range
+#     )
+
+# x=np.linspace(gamma_list[0],gamma_list[-1],100000)
+# y=f1d(x)
+
+# x_min = x[np.argmin(y)]
+# y_min = np.min(y)
+
+
+# print(x_min)
+
+# plt.plot(gamma_list, loss_list, 'x')
+
+# plt.plot(x_dense,y_dense)
+
+# # %%
+# best_x
+
+# # %%
+# best_y
 # # %%
