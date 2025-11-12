@@ -118,9 +118,9 @@ def plot_gamma_optimization(folder: str, gammas) -> None:
 if __name__ == '__main__':
 
 
-    d_list = [i+1 for i in range(1,4)]
+    d_list = [i+1 for i in range(1,2)]
 
-    std_list = [0, 0.2]
+    std_list = [0, 0.02]
 
     # method_list = ["bo_ucb", "bo_ei", "bo_pi"]
 
@@ -131,7 +131,7 @@ if __name__ == '__main__':
 
 
 
-    data_dir="test/gamma_scan_T_4_gamma_ref_0.01/"
+    data_dir="test/loss_scan/gamma_ref_0.01/N_4000/T_6/obs_Z/noise_X/"
 
     loss_list=np.genfromtxt(data_dir+"loss_list.txt")
     gamma_list=np.genfromtxt(data_dir+"gamma_list.txt")
@@ -149,6 +149,8 @@ if __name__ == '__main__':
 
     method=sys.argv[1]
 
+    x_lim=0.1
+
     for d in d_list:
         for std in std_list:
 
@@ -157,7 +159,7 @@ if __name__ == '__main__':
 
             gammas = [0.01]*d
 
-            work_dir=f"test/optimization_comparisson_2/opt_{method}/std_{std}/d_{d}/"
+            work_dir=f"test/optimization_comparisson/opt_{method}/std_{std}/d_{d}/"
 
             work_dir_path = Path(work_dir)
 
@@ -174,7 +176,7 @@ if __name__ == '__main__':
 
             f=InterpolatedFunction(f1d, d, std=std, path = work_dir)
 
-            x0=np.random.rand(d)  
+            x0=np.random.uniform(0, x_lim, d)
 
             if method == "nelder_mead":
                 nelder_mead_opt(f,x0, max_iter=500, step=0.3)
@@ -186,7 +188,7 @@ if __name__ == '__main__':
 
             if method == "bo_ucb" or method == "bo_ei" or method == "bo_pi":
 
-                bounds = torch.tensor([[0.0]*d, [1.0]*d], dtype=torch.double)
+                bounds = torch.tensor([[0.0]*d, [0.1]*d], dtype=torch.double)
 
                 acq=method.rsplit("_", 1)[-1].upper()
 
@@ -206,7 +208,7 @@ if __name__ == '__main__':
 
             if method == "diff_evol":
 
-                bounds = [(0,1)]*d
+                bounds = [(0,0.1)]*d
 
                 differential_evolution_opt(
                     f,
