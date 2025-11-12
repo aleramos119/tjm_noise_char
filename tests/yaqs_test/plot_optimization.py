@@ -524,35 +524,60 @@ def loss(obs_traj, ref_traj, sigma, exponent=2):
     result = np.sum(diff_err**exponent)
     return result
 
+def loss_err(obs_traj, ref_traj, sigma, exponent=2):
+
+    diff = obs_traj-ref_traj
+
+    error = np.random.normal(loc=0.0, scale=sigma)
+
+    diff_err = diff
 
 
-data_dir = "test/gamma_scan_T_4_gamma_ref_0.01/"
+    result = np.sum(diff_err**exponent) + np.abs(error)
+    return result
+
+obs="Z"
+
+noise="Z"
 
 
-gamma_list=np.genfromtxt(data_dir + "gamma_list.txt")
+N_list=[4000]
+
+op_list=["X"]
+
+
+for N in N_list:
+    for noise in op_list:
+
+        T=6
+
+        data_dir = f"test/loss_scan/gamma_ref_0.01/N_{N}/T_{T}/obs_{obs}/noise_{noise}/"
+
+
+        gamma_list=np.genfromtxt(data_dir + "gamma_list.txt")
 
 
 
-ref_traj = np.genfromtxt(data_dir + "ref_traj.txt")
+        ref_traj = np.genfromtxt(data_dir + "ref_traj.txt")
 
-exponent=2
+        exponent=2
 
-sigma = 0.03
+        sigma = 0.02
 
-sigma_values=[0.01, 0.02, 0.03, 0.04, 0.05]
-
-
-
-for sigma in sigma_values:
-    loss_list = []
-
-    for i in range(len(gamma_list)):
-
-        obs_traj = np.genfromtxt(data_dir + f"obs_array_{i}.txt")
-
-        loss_list.append(loss(obs_traj, ref_traj, sigma, exponent=exponent))
+        # sigma_values=[0.01, 0.02, 0.03, 0.04, 0.05]
 
 
-    plt.plot(gamma_list,loss_list, 'x-', label=f"sigma_{sigma}, exponent_{exponent}")
+
+        # for sigma in sigma_values:
+        loss_list = []
+
+        for i in range(len(gamma_list)):
+
+            obs_traj = np.genfromtxt(data_dir + f"obs_array_{i}.txt")
+
+            loss_list.append(loss_err(obs_traj, ref_traj, sigma, exponent=exponent))
+
+
+        plt.plot(gamma_list,loss_list, 'x-', label=f"sigma_{sigma}, N_{N}/T_{T}/obs_{obs}/noise_{noise} ")
 plt.legend()
 # %%
