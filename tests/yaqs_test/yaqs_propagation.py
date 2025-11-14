@@ -32,7 +32,7 @@ import sys
 
 if __name__ == '__main__':
 
-    T=5
+    T=6
 
     obs="Z"
 
