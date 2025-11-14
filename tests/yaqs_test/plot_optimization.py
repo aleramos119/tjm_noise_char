@@ -612,3 +612,62 @@ for method in method_list:
 plt.title(f"std_{std}")
 plt.grid(True)
 plt.legend()
+
+
+
+#%%
+import re
+from pathlib import Path
+
+def get_total_duration_hours(log_dir):
+    """
+    Search for '*.log' files in the given directory,
+    extract the last 'Total duration:' line,
+    and return the total duration in seconds.
+    """
+
+    log_dir = Path(log_dir)
+    pattern = re.compile(
+        r"Total duration:\s*(\d+)\s*days?,\s*(\d+)\s*hours?,\s*(\d+)\s*minutes?,\s*(\d+)\s*seconds?"
+    )
+
+    last_match = None
+
+    # Search through all *.log files
+    for logfile in sorted(log_dir.glob("*.log")):
+        with logfile.open() as f:
+            for line in f:
+                match = pattern.search(line)
+                if match:
+                    last_match = match
+
+    if last_match:
+        days, hours, minutes, seconds = map(int, last_match.groups())
+        total_seconds = days*86400 + hours*3600 + minutes*60 + seconds
+        return total_seconds/3600
+
+    return None
+
+
+
+L=100
+N=500
+
+cpu_list=[20,40,80,160]
+
+time_list=[]
+
+
+for cpu in cpu_list:
+
+    folder=f"results/yaqs_time_test/L_{L}/N_{N}/ncpus_{cpu}"
+
+    time_list.append(get_total_duration_hours(folder))
+
+
+plt.plot(cpu_list, time_list, 'o-', label=f"L_{L}/N_{N}")
+
+plt.legend()
+
+
+# %%
