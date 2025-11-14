@@ -581,3 +581,34 @@ for N in N_list:
         plt.plot(gamma_list,loss_list, 'x-', label=f"sigma_{sigma}, N_{N}/T_{T}/obs_{obs}/noise_{noise} ")
 plt.legend()
 # %%
+
+
+
+%matplotlib qt
+method_list = ["bo_ucb", "bo_ei", "bo_pi", "cma", "diff_evol", "nelder_mead"]
+
+d_list = [i+1 for i in range(1,25)]
+
+std=0.04
+
+for method in method_list:
+
+    error_list=[]
+
+    for d in d_list:
+
+        file=f"test/optimization_comparisson/opt_{method}/std_{std}/d_{d}/rel_error.txt"
+
+        iterations = np.genfromtxt(f"test/optimization_comparisson/opt_{method}/std_{std}/d_{d}/loss_x_history.txt")[-1,0]
+
+        error = np.genfromtxt(file)
+
+        error_list.append(error*iterations)
+
+    
+    plt.plot(d_list,error_list,'x-',label=method)
+
+
+plt.title(f"std_{std}")
+plt.grid(True)
+plt.legend()
