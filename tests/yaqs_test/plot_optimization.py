@@ -329,33 +329,40 @@ def plot_gamma_optimization(folder: str) -> None:
     folder : str
         The folder containing the optimization data files.
     """
-    x_avg_file = folder + "loss_x_history.txt"
-    gammas_file = folder + "gammas.txt"
+    file_list = ["/loss_x_history", "/loss_x_history_avg"]
 
-    data = np.genfromtxt(x_avg_file, skip_header=1, ndmin=2)
-    gammas = np.array(np.genfromtxt(gammas_file, skip_header=1, ndmin=1))
+    if os.path.isfile(folder + file_list[0] + ".txt"):
 
-    d = len(gammas)
+        for file in file_list:
 
-    for i in range(d):
-        plt.plot(data[:, 0], data[:, 2 + i], label=f"$\\gamma_{{{i+1}}}$")
-        plt.axhline(gammas[i], color=plt.gca().lines[-1].get_color(), linestyle='--', linewidth=2)
+            x_avg_file = folder + file + ".txt"
+                        
+            gammas_file = folder + "/gammas.txt"
 
-    plt.xlabel("Iterations")
-    plt.ylabel(r"$\gamma$")
-    plt.legend()
-    plt.title("Gamma Parameter Optimization History")
-    plt.savefig(folder + "gamma.pdf")
-    plt.close()
+            data = np.genfromtxt(x_avg_file, skip_header=1, ndmin=2)
+            gammas = np.array(np.genfromtxt(gammas_file, skip_header=1, ndmin=1))
 
-    max_diff=max(abs(np.mean(data[10:,2:2+d],axis=0)-gammas))
+            d = len(gammas)
 
-    plt.plot(data[:,0], data[:,1], label="Loss")
-    plt.title("Loss Optimization History")
+            for i in range(d):
+                plt.plot(data[:, 0], data[:, 2 + i], label=f"$\\gamma_{{{i+1}}}$")
+                plt.axhline(gammas[i], color=plt.gca().lines[-1].get_color(), linestyle='--', linewidth=2)
 
-    plt.legend()
-    plt.savefig(folder + "loss.pdf")
-    plt.close()
+            plt.xlabel("Iterations")
+            plt.ylabel(r"$\gamma$")
+            plt.legend()
+            plt.title("Gamma Parameter Optimization History")
+            plt.savefig(folder + file + ".pdf")
+            plt.close()
+
+        max_diff=max(abs(np.mean(data[10:,2:2+d],axis=0)-gammas))
+
+        plt.plot(data[:,0], data[:,1], label="Loss")
+        plt.title("Loss Optimization History")
+
+        plt.legend()
+        plt.savefig(folder + "/loss.pdf")
+        plt.close()
 
 
 
@@ -669,5 +676,12 @@ plt.plot(cpu_list, time_list, 'o-', label=f"L_{L}/N_{N}")
 
 plt.legend()
 
+
+# %%
+
+for current_dir, subdirs, files in os.walk("results/characterizer_gradient_free"):
+        # If the directory has no subdirectories, treat it as a leaf node
+        if not subdirs:
+            plot_gamma_optimization(current_dir)
 
 # %%
