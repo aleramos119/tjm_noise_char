@@ -11,7 +11,52 @@ from matplotlib.widgets import Slider
 from mqt.yaqs.noise_char.optimization import trapezoidal
 
 
+def plot_gamma_optimization(folder: str) -> None:
+    """Plot the optimization history of gamma parameters from a given folder.
 
+    Parameters
+    ----------
+    folder : str
+        The folder containing the optimization data files.
+    """
+    file_list = ["/loss_x_history", "/loss_x_history_avg"]
+
+    if os.path.isfile(folder + file_list[0] + ".txt"):
+
+        for file in file_list:
+
+            x_avg_file = folder + file + ".txt"
+                        
+            gammas_file = folder + "/gammas.txt"
+
+            data = np.genfromtxt(x_avg_file, skip_header=1, ndmin=2)
+            gammas = np.array(np.genfromtxt(gammas_file, skip_header=1, ndmin=1))
+
+            d = len(gammas)
+
+            for i in range(d):
+                plt.plot(data[:, 0], data[:, 2 + i], label=f"$\\gamma_{{{i+1}}}$")
+                plt.axhline(gammas[i], color=plt.gca().lines[-1].get_color(), linestyle='--', linewidth=2)
+
+            plt.xlabel("Iterations")
+            plt.ylabel(r"$\gamma$")
+            plt.legend()
+            plt.title("Gamma Parameter Optimization History")
+            plt.savefig(folder + file + ".pdf")
+            plt.close()
+
+        max_diff=max(abs(np.mean(data[10:,2:2+d],axis=0)-gammas))
+
+        plt.plot(data[:,0], np.log10(data[:,1]), label="log10(Loss)")
+        plt.title("Loss Optimization History")
+
+        plt.legend()
+        plt.savefig(folder + "/loss.pdf")
+        plt.close()
+
+
+
+    return max_diff
 
 
 #%%
@@ -321,52 +366,7 @@ plt.plot(ntraj_list, error_list,'o-', label=f"L={L}")
 
 #%%
 
-def plot_gamma_optimization(folder: str) -> None:
-    """Plot the optimization history of gamma parameters from a given folder.
 
-    Parameters
-    ----------
-    folder : str
-        The folder containing the optimization data files.
-    """
-    file_list = ["/loss_x_history", "/loss_x_history_avg"]
-
-    if os.path.isfile(folder + file_list[0] + ".txt"):
-
-        for file in file_list:
-
-            x_avg_file = folder + file + ".txt"
-                        
-            gammas_file = folder + "/gammas.txt"
-
-            data = np.genfromtxt(x_avg_file, skip_header=1, ndmin=2)
-            gammas = np.array(np.genfromtxt(gammas_file, skip_header=1, ndmin=1))
-
-            d = len(gammas)
-
-            for i in range(d):
-                plt.plot(data[:, 0], data[:, 2 + i], label=f"$\\gamma_{{{i+1}}}$")
-                plt.axhline(gammas[i], color=plt.gca().lines[-1].get_color(), linestyle='--', linewidth=2)
-
-            plt.xlabel("Iterations")
-            plt.ylabel(r"$\gamma$")
-            plt.legend()
-            plt.title("Gamma Parameter Optimization History")
-            plt.savefig(folder + file + ".pdf")
-            plt.close()
-
-        max_diff=max(abs(np.mean(data[10:,2:2+d],axis=0)-gammas))
-
-        plt.plot(data[:,0], data[:,1], label="Loss")
-        plt.title("Loss Optimization History")
-
-        plt.legend()
-        plt.savefig(folder + "/loss.pdf")
-        plt.close()
-
-
-
-    return max_diff
 #%%
 
 obs_list = [ "pauli_z","XYZ"]
@@ -683,5 +683,27 @@ for current_dir, subdirs, files in os.walk("results/characterizer_gradient_free"
         # If the directory has no subdirectories, treat it as a leaf node
         if not subdirs:
             plot_gamma_optimization(current_dir)
+
+# %%
+
+
+i_list= np.array(range(0,1000))
+
+i0=100
+
+n_1=i0 + i_list
+
+n_3=i0 + 2*i_list
+
+
+n_2=i0 + 200*np.log10(i_list)
+plt.plot(i_list,n_1,label="lineal")
+plt.plot(i_list,n_2,label="log")
+plt.plot(i_list,n_3,label="2*lineal")
+
+plt.legend()
+plt.grid(True)
+
+
 
 # %%
