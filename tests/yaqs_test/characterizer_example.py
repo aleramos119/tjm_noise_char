@@ -26,6 +26,16 @@ import sys
 
 #%%
 
+def lineal_function_100_2(i):
+    return 100 + 2*i
+
+def lineal_function_400_2(i):
+    return 400 + 2*i
+
+def lineal_function_800_2(i):
+    return 800 + 2*i
+
+
 
 #%%
 
@@ -40,7 +50,11 @@ if __name__ == '__main__':
 
     params = sys.argv[4]
 
-    work_dir=sys.argv[5]
+    n_traj_func_name = sys.argv[5]
+
+    x_lim = float(sys.argv[6])
+
+    work_dir=sys.argv[7]
 
     work_dir_path = Path(work_dir)
 
@@ -131,8 +145,6 @@ if __name__ == '__main__':
 
 
     #%% Optimizing the model
-    x_lim=0.1
-
     x_low=np.array([0]*d)
     x_up=np.array([x_lim]*d)
 
@@ -158,8 +170,20 @@ if __name__ == '__main__':
         init_state=init_state
     )
 
+
+    if n_traj_func_name == "lineal_function_100_2":
+        n_traj_func = lineal_function_100_2
+
+    if n_traj_func_name == "lineal_function_400_2":
+        n_traj_func = lineal_function_400_2
+
+    if n_traj_func_name == "lineal_function_800_2":
+        n_traj_func = lineal_function_800_2
+
+
+
     loss=LossClass(
-            ref_traj=ref_traj, propagator=opt_propagator, working_dir=work_dir, print_to_file=True
+            ref_traj=ref_traj, propagator=opt_propagator, num_traj = n_traj_func, working_dir=work_dir, print_to_file=True
         )
 
 
