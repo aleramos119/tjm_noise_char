@@ -21,6 +21,10 @@ def plot_gamma_optimization(folder: str) -> None:
     """
     file_list = ["/loss_x_history", "/loss_x_history_avg"]
 
+    max_diff = None
+
+    print("Folder:", folder)
+
     if os.path.isfile(folder + file_list[0] + ".txt"):
 
         for file in file_list:
@@ -706,4 +710,9 @@ plt.grid(True)
 
 
 
+# %%
+gamma_list = np.genfromtxt("test/loss_scan/gamma_ref_0.01/N_1000/T_6/obs_Z/noise_X/gamma_list.txt")
+loss_list = np.genfromtxt("test/loss_scan/gamma_ref_0.01/N_1000/T_6/obs_Z/noise_X/loss_list.txt")
+
+plt.plot(gamma_list, loss_list, 'o-')
 # %%

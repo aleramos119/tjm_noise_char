@@ -93,7 +93,7 @@ if __name__ == '__main__':
 
     order=1
 
-    sim_params = AnalogSimParams(observables=obs_list, elapsed_time=T, dt=dt, num_traj=4000, max_bond_dim=max_bond_dim, threshold=threshold, order=order, sample_timesteps=True)
+    sim_params = AnalogSimParams(observables=obs_list, elapsed_time=T, dt=dt, num_traj=100, max_bond_dim=max_bond_dim, threshold=threshold, order=order, sample_timesteps=True)
 
 
 
@@ -203,6 +203,10 @@ if __name__ == '__main__':
     if method == "bayesian":
         
         characterizer.bayesian_optimize(x_low=x_low, x_up = x_up, n_init=3*d)
+
+    if method == "adam":
+
+        characterizer.adam_optimize(x_low=x_low, x_up = x_up)
 
 
     print("Optimization complete.")
