@@ -36,6 +36,8 @@ def lineal_function_800_2(i):
     return 800 + 2*i
 
 
+def lineal_function_1000_2(i):
+    return 1000 + 2*i
 
 #%%
 
@@ -179,6 +181,9 @@ if __name__ == '__main__':
 
     if n_traj_func_name == "lineal_function_800_2":
         n_traj_func = lineal_function_800_2
+    
+    if n_traj_func_name == "lineal_function_1000_2":
+        n_traj_func = lineal_function_1000_2
 
 
 
