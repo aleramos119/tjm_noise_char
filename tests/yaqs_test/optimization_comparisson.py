@@ -13,6 +13,7 @@ import torch
 
 from auxiliar.bayesian_optimization import bayesian_opt
 from auxiliar.differential_evolution import differential_evolution_opt
+from auxiliar.mcmc import mcmc_opt
 
 import sys
 #%%
@@ -188,7 +189,7 @@ def plot_gamma_optimization(folder: str, file , gammas, error, best_y) -> None:
 
     max_diff=max(abs(np.mean(data[10:,2:2+d],axis=0)-gammas))
 
-    plt.plot(data[:,0], data[:,1], label="Loss")
+    plt.plot(data[:,0], np.log10(data[:,1]), label="log10(Loss)")
     plt.title("Loss Optimization History")
 
     plt.legend()
@@ -206,12 +207,13 @@ if __name__ == '__main__':
     std_list = [0, 0.02, 0.04]
 
 
-    # method_list = ["bo_ucb", "bo_ei", "bo_pi", "cma", "diff_evol"]
+    # method_list = ["bo_ucb", "bo_ei", "bo_pi", "cma", "diff_evol", "mcmc"]
 
     # method_list = ["diff_evol"]
 
 
     # method_list = ["diff_evol"]
+
 
 
 
@@ -239,6 +241,8 @@ if __name__ == '__main__':
     # for method in method_list:
 
     method=sys.argv[1]
+
+    method="mcmc"
 
     x_lim=0.1
 
@@ -328,6 +332,12 @@ if __name__ == '__main__':
                     seed=None,
                     verbose=True,
                 )
+
+            if method == "mcmc":
+
+                best_x, best_y = mcmc_opt(f, x0, x_low=x_low, x_up=x_up, max_iter=500,
+                step_size=0.05, step_rate=0.99, min_step_size=0, temperature=1, anneal_rate=0.99,
+                patience=200)
 
             error = np.max(np.abs(best_x - gammas))
 
