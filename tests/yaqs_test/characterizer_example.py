@@ -39,6 +39,8 @@ def lineal_function_800_2(i):
 def lineal_function_1000_2(i):
     return 1000 + 2*i
 
+def lineal_function_4000(i):
+    return 4000
 #%%
 
 
@@ -212,7 +214,10 @@ if __name__ == '__main__':
     if method == "adam":
 
         characterizer.adam_optimize(x_low=x_low, x_up = x_up)
+    
+    if method == "gradient_descent":
 
+        characterizer.gradient_descent_optimize(max_iterations=1, h=1e-3)  
 
     print("Optimization complete.")
 
