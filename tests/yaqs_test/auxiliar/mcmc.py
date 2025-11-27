@@ -1,7 +1,7 @@
 import numpy as np
 
 def mcmc_opt(f, x0, x_low=None, x_up=None, max_iter=500,
-         step_size=0.1, step_rate=0.99, min_step_size=1e-3, temperature=1.0, anneal_rate=0.99,
+         step_size=0.05, step_rate=0.99, min_step_size=0, temperature=1.0, anneal_rate=0.99,
          patience=100):
     """
     MCMC-based optimization with early stopping if no improvement occurs for 'patience' iterations.
