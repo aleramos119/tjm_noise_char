@@ -187,6 +187,9 @@ if __name__ == '__main__':
     if n_traj_func_name == "lineal_function_1000_2":
         n_traj_func = lineal_function_1000_2
 
+    if n_traj_func_name == "lineal_function_4000":
+        n_traj_func = lineal_function_4000
+
 
 
     loss=LossClass(
@@ -217,7 +220,11 @@ if __name__ == '__main__':
     
     if method == "gradient_descent":
 
-        characterizer.gradient_descent_optimize(max_iterations=1, h=1e-3)  
+        characterizer.gradient_descent_optimize(x_low=x_low, x_up = x_up)  
+
+    if method == "mcmc":
+
+        characterizer.mcmc_optimize(x_low=x_low, x_up = x_up)
 
     print("Optimization complete.")
 
