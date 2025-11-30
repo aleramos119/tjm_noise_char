@@ -41,6 +41,9 @@ def lineal_function_1000_2(i):
 
 def lineal_function_4000(i):
     return 4000
+
+def lineal_function_1000(i):
+    return 1000
 #%%
 
 
@@ -189,6 +192,9 @@ if __name__ == '__main__':
 
     if n_traj_func_name == "lineal_function_4000":
         n_traj_func = lineal_function_4000
+        
+    if n_traj_func_name == "lineal_function_1000":
+        n_traj_func = lineal_function_1000
 
 
 
