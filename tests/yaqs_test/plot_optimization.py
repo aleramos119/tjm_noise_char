@@ -683,7 +683,7 @@ plt.legend()
 
 # %%
 
-for current_dir, subdirs, files in os.walk("results/characterizer_gradient_free"):
+for current_dir, subdirs, files in os.walk("results/characterizer_gradient_free/reduced"):
         # If the directory has no subdirectories, treat it as a leaf node
         if not subdirs:
             plot_gamma_optimization(current_dir)

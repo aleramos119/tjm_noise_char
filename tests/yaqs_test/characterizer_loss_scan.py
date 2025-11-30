@@ -51,7 +51,7 @@ if __name__ == '__main__':
 
 
     ## Defining Hamiltonian and observable list
-    L=2
+    L=int(sys.argv[6])
 
     J=1
     g=1
