@@ -170,12 +170,12 @@ if __name__ == '__main__':
     )
 
     loss=LossClass(
-            ref_traj=ref_traj, traj_gradients=opt_propagator, working_dir=work_dir, print_to_file=True
+            ref_traj=ref_traj, propagator=opt_propagator, working_dir=work_dir, print_to_file=True
         )
 
 
     characterizer = Characterizer(
-        traj_gradients=opt_propagator,
+        propagator=opt_propagator,
         init_guess=guess_noise_model,
         loss=loss,
     )
@@ -255,10 +255,10 @@ if __name__ == '__main__':
 
     for i,gamma in enumerate(gamma_list):
 
-        loss_value, grad, sim_time=loss(np.array([gamma]))
+        loss_value=loss(np.array([gamma]))
 
         loss_list.append(loss_value)
-        grad_list.append(grad[0])
+        # grad_list.append(grad[0])
 
         obs_array_list.append(loss.obs_array)
 
@@ -273,7 +273,7 @@ if __name__ == '__main__':
 
     np.savetxt(work_dir + "/loss_list.txt", loss_list, header="##", fmt="%.6f")
 
-    np.savetxt(work_dir + "/grad_list.txt", grad_list, header="##", fmt="%.6f")
+    # np.savetxt(work_dir + "/grad_list.txt", grad_list, header="##", fmt="%.6f")
 
 
 
