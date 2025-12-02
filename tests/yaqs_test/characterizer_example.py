@@ -39,6 +39,11 @@ def lineal_function_800_2(i):
 def lineal_function_1000_2(i):
     return 1000 + 2*i
 
+def lineal_function_4000(i):
+    return 4000
+
+def lineal_function_1000(i):
+    return 1000
 #%%
 
 
@@ -95,7 +100,7 @@ if __name__ == '__main__':
 
     order=1
 
-    sim_params = AnalogSimParams(observables=obs_list, elapsed_time=T, dt=dt, num_traj=100, max_bond_dim=max_bond_dim, threshold=threshold, order=order, sample_timesteps=True)
+    sim_params = AnalogSimParams(observables=obs_list, elapsed_time=T, dt=dt, num_traj=4000, max_bond_dim=max_bond_dim, threshold=threshold, order=order, sample_timesteps=True)
 
 
 
@@ -185,6 +190,12 @@ if __name__ == '__main__':
     if n_traj_func_name == "lineal_function_1000_2":
         n_traj_func = lineal_function_1000_2
 
+    if n_traj_func_name == "lineal_function_4000":
+        n_traj_func = lineal_function_4000
+        
+    if n_traj_func_name == "lineal_function_1000":
+        n_traj_func = lineal_function_1000
+
 
 
     loss=LossClass(
@@ -212,7 +223,14 @@ if __name__ == '__main__':
     if method == "adam":
 
         characterizer.adam_optimize(x_low=x_low, x_up = x_up)
+    
+    if method == "gradient_descent":
 
+        characterizer.gradient_descent_optimize(x_low=x_low, x_up = x_up)  
+
+    if method == "mcmc":
+
+        characterizer.mcmc_optimize(x_low=x_low, x_up = x_up)
 
     print("Optimization complete.")
 
