@@ -51,17 +51,15 @@ if __name__ == '__main__':
 
     L=int(sys.argv[1])
 
-    N=int(sys.argv[2])
+    const = float(sys.argv[2])
 
     method = sys.argv[3]
 
     params = sys.argv[4]
 
-    n_traj_func_name = sys.argv[5]
+    x_lim = float(sys.argv[5])
 
-    x_lim = float(sys.argv[6])
-
-    work_dir=sys.argv[7]
+    work_dir=sys.argv[6]
 
     work_dir_path = Path(work_dir)
 
@@ -158,7 +156,6 @@ if __name__ == '__main__':
 
     gamma_guess=x_low + np.random.rand(*x_low.shape) * (x_up - x_low)
 
-    sim_params.num_traj=int(N)
 
     if params=="d_3":
         guess_noise_model =  CompactNoiseModel( [{"name": "pauli_x", "sites": [i for i in range(L)], "strength": gamma_guess[0]} ] 
@@ -178,24 +175,15 @@ if __name__ == '__main__':
     )
 
 
-    if n_traj_func_name == "lineal_function_100_2":
-        n_traj_func = lineal_function_100_2
 
-    if n_traj_func_name == "lineal_function_400_2":
-        n_traj_func = lineal_function_400_2
+    n_t = len(sim_params.times)
 
-    if n_traj_func_name == "lineal_function_800_2":
-        n_traj_func = lineal_function_800_2
+    n_obs = len(obs_list)
+
+    N=int(np.ceil(const/(n_t*n_obs)))
     
-    if n_traj_func_name == "lineal_function_1000_2":
-        n_traj_func = lineal_function_1000_2
-
-    if n_traj_func_name == "lineal_function_4000":
-        n_traj_func = lineal_function_4000
-        
-    if n_traj_func_name == "lineal_function_1000":
-        n_traj_func = lineal_function_1000
-
+    def n_traj_func(i):
+        return N
 
 
     loss=LossClass(

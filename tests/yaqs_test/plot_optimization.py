@@ -683,7 +683,7 @@ plt.legend()
 
 # %%
 
-for current_dir, subdirs, files in os.walk("results/characterizer_gradient_free/reduced"):
+for current_dir, subdirs, files in os.walk("results/characterizer_gradient_free/parameter_test"):
         # If the directory has no subdirectories, treat it as a leaf node
         if not subdirs:
             plot_gamma_optimization(current_dir)
@@ -711,8 +711,17 @@ plt.grid(True)
 
 
 # %%
-gamma_list = np.genfromtxt("test/loss_scan/gamma_ref_0.01/N_1000/T_6/obs_Z/noise_X/gamma_list.txt")
-loss_list = np.genfromtxt("test/loss_scan/gamma_ref_0.01/N_1000/T_6/obs_Z/noise_X/loss_list.txt")
+L=160
+N_list=[100, 200, 500, 1000, 2000, 4000]
 
-plt.plot(gamma_list, loss_list, 'o-')
+for N in N_list:
+    directory=f"test/loss_scan/gamma_ref_0.01/L_{L}/N_{N}/T_6/obs_Z/noise_X/"
+    gamma_list = np.genfromtxt(directory + f"gamma_list.txt")
+    loss_list = np.genfromtxt(directory + f"loss_list.txt")
+
+    plt.plot(gamma_list, loss_list, 'o-')
+    plt.xlim(0, 0.1)
+    plt.ylim(-0.2, 5)
+    plt.savefig(directory + "loss_vs_gamma.pdf", dpi=300, bbox_inches='tight')
+    plt.close()
 # %%
