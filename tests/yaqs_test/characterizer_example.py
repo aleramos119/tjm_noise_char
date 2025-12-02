@@ -24,6 +24,9 @@ from mqt.yaqs.core.libraries.gate_library import X, Y, Z, Create, Destroy
 
 import sys
 
+import json
+
+
 #%%
 
 def lineal_function_100_2(i):
@@ -53,13 +56,11 @@ if __name__ == '__main__':
 
     const = float(sys.argv[2])
 
-    method = sys.argv[3]
+    params = sys.argv[3]
 
-    params = sys.argv[4]
+    x_lim = float(sys.argv[4])
 
-    x_lim = float(sys.argv[5])
-
-    work_dir=sys.argv[6]
+    work_dir=sys.argv[5]
 
     work_dir_path = Path(work_dir)
 
@@ -198,27 +199,35 @@ if __name__ == '__main__':
     )
 
 
+    conf_file = work_dir_path / "opt_config.json"
+    with open(conf_file) as f:
+        config = json.load(f)
+
+    method = config["method"]
+
+    config.pop("method")
+
     print("Optimizing ... ")
 
     if method == "cma":
 
-        characterizer.cma_optimize(x_low=x_low, x_up = x_up)
+        characterizer.cma_optimize(x_low=x_low, x_up = x_up, **config)
 
     if method == "bayesian":
         
-        characterizer.bayesian_optimize(x_low=x_low, x_up = x_up, n_init=3*d)
+        characterizer.bayesian_optimize(x_low=x_low, x_up = x_up, n_init=3*d, **config)
 
     if method == "adam":
 
-        characterizer.adam_optimize(x_low=x_low, x_up = x_up)
+        characterizer.adam_optimize(x_low=x_low, x_up = x_up, **config)
     
     if method == "gradient_descent":
 
-        characterizer.gradient_descent_optimize(x_low=x_low, x_up = x_up)  
+        characterizer.gradient_descent_optimize(x_low=x_low, x_up = x_up, **config)  
 
     if method == "mcmc":
 
-        characterizer.mcmc_optimize(x_low=x_low, x_up = x_up)
+        characterizer.mcmc_optimize(x_low=x_low, x_up = x_up, **config)
 
     print("Optimization complete.")
 

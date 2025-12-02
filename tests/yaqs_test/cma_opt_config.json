@@ -1,0 +1,6 @@
+{
+    "method": "cma",
+    "sigma0": 0.02,
+    "popsize":4,
+    "max_iter": 1000
+}

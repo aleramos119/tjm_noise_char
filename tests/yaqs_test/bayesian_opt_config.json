@@ -1,0 +1,9 @@
+{
+    "method": "bayesian",
+    "n_init": 5,
+    "acq_name": "UCB",
+    "std": 0.01,
+    "beta": 2,
+    "device": "cpu",
+    "max_iter": 1000
+}
