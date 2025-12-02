@@ -182,6 +182,18 @@ if __name__ == '__main__':
     n_obs = len(obs_list)
 
     N=int(np.ceil(const/(n_t*n_obs)))
+
+    conf_file = work_dir_path / "opt_config.json"
+    with open(conf_file) as f:
+        config = json.load(f)
+
+    method = config["method"]
+
+    config.pop("method")
+
+    if "ntraj" in config:
+        N = int(config.pop("ntraj"))
+
     
     def n_traj_func(i):
         return N
@@ -198,14 +210,6 @@ if __name__ == '__main__':
         loss=loss,
     )
 
-
-    conf_file = work_dir_path / "opt_config.json"
-    with open(conf_file) as f:
-        config = json.load(f)
-
-    method = config["method"]
-
-    config.pop("method")
 
     print("Optimizing ... ")
 
