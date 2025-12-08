@@ -2,6 +2,7 @@
 #%%
 import matplotlib.pyplot as plt
 import numpy as np
+from scipy.stats import gaussian_kde
 
 #%%
 N_list=[500,1000,2000,4000,8000]
@@ -92,4 +93,79 @@ plt.tight_layout()
 
 
 
+# %%
+
+
+L=3
+
+n_obs=3*L
+n_t=61
+
+
+ntraj=3370
+
+
+full_data=np.zeros((n_t,n_obs,ntraj))
+for i in range(1,ntraj+1):
+    traj=f"results/propagation/yaqs/L_{L}/run_{i}/ref_traj.txt"
+    data=np.genfromtxt(traj)[:,1:]
+    
+    full_data[:,:,i-1]=data
+
+time=np.genfromtxt(traj)[:,0]
+
+# %%
+obs_idx = 0     # 0 <= obs_idx < full_data.shape[1]
+
+sample_list=[1, 10, 100, 1000, 2000, 3000]
+
+time_list=[0, 15, 30, 60]
+
+for n_samples in sample_list:
+    for time_idx in time_list:
+
+        print(f"n_samples={n_samples}, time_idx={time_idx}")
+
+        full_data_avg = np.zeros_like(full_data)
+        rng = np.random.default_rng(42)  # change or remove seed for different draws
+
+        for j in range(ntraj):
+            idx = rng.choice(ntraj, size=n_samples, replace=True)
+            # average over the sampled trajectories (axis=2)
+            full_data_avg[:, :, j] = np.mean(full_data[:, :, idx], axis=2)
+
+        # now full_data_avg has shape (n_t, n_obs, ntraj) with the averaged data
+
+
+        # select indices (0-based). change these to the desired time and observable indices
+
+
+        # extract data over trajectories for the chosen time and observable
+        samples = full_data_avg[time_idx, obs_idx, :].ravel()
+
+        # plot histogram (normalized to a probability density)
+        plt.figure(figsize=(8, 6))
+        n_bins = 30
+        counts, bins, patches = plt.hist(samples, bins=n_bins, density=True, alpha=0.6, color='C0', label='Histogram')
+
+        # try to add a KDE if scipy is available
+        try:
+            kde = gaussian_kde(samples)
+            x = np.linspace(bins[0], bins[-1], 400)
+            plt.plot(x, kde(x), color='C1', lw=2, label='KDE')
+        except Exception:
+            pass
+
+        plt.xlabel("Observable value")
+        plt.ylabel("Probability density")
+        plt.title(f"Distribution at time {time[time_idx]}, t_max={time[-1]}, obs {obs_idx}, N_traj={n_samples}")
+        plt.legend()
+        plt.grid(True)
+        plt.tight_layout()
+
+        # save figure
+        output_file = f"results/propagation/yaqs/plots/L_{L}/distribution_t_{time[time_idx]}_obs_{obs_idx}_ntraj_{n_samples}.png"
+        print(f"Saving to {output_file}")
+        plt.savefig(output_file, dpi=300, bbox_inches='tight')
+        plt.close()
 # %%

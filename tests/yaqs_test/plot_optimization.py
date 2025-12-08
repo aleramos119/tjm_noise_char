@@ -683,7 +683,7 @@ plt.legend()
 
 # %%
 
-for current_dir, subdirs, files in os.walk("results/characterizer_gradient_free/parameter_test"):
+for current_dir, subdirs, files in os.walk("results/characterizer_gradient_free/method_mcmc"):
         # If the directory has no subdirectories, treat it as a leaf node
         if not subdirs:
             plot_gamma_optimization(current_dir)
@@ -724,4 +724,47 @@ for N in N_list:
     plt.ylim(-0.2, 5)
     plt.savefig(directory + "loss_vs_gamma.pdf", dpi=300, bbox_inches='tight')
     plt.close()
+# %%
+
+
+
+import itertools
+from pathlib import Path
+import matplotlib.pyplot as plt
+from pdf2image import convert_from_path
+
+# Parameter lists
+list1 = [0.01, 0.04, 0.08, 0.16]
+list2 = [4,8,16]
+ntraj=1000
+
+# Path where your PDFs are located
+
+# Create 3x3 figure
+fig, axes = plt.subplots(4, 3, figsize=(12, 12))
+
+# Iterate through the 9 combinations
+for (p1, p2), ax in zip(itertools.product(list1, list2), axes.flatten()):
+
+    folder=Path(f"test/cma_parameter_test/method_cma/ntraj_{ntraj}/sigma0_{p1}/popsize_{p2}") 
+
+    pdf_path = folder / "loss_x_history.pdf"
+
+    try:
+        # Convert first (and only) page of the PDF to an image
+        img = convert_from_path(str(pdf_path), first_page=1, last_page=1)[0]
+
+        # Show on the axis
+        ax.imshow(img)
+        ax.axis("off")
+        ax.set_title(f"p1={p1}, p2={p2}")
+
+    except Exception as e:
+        ax.text(0.5, 0.5, f"Missing\n{pdf_path.name}", ha="center", va="center")
+        ax.axis("off")
+
+plt.tight_layout()
+plt.show()
+plt.savefig(f"test/cma_parameter_test/method_cma/ntraj_{ntraj}/cma_parameter_scan_ntraj_{ntraj}.pdf", dpi=300, bbox_inches='tight')
+plt.close()
 # %%

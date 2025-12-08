@@ -89,8 +89,8 @@ if __name__ == '__main__':
         noise_operator="pauli_z"
 
 
-    # obs_list = [Observable(X(), site) for site in range(L)]  + [Observable(Y(), site) for site in range(L)] + [Observable(Z(), site) for site in range(L)]
-    obs_list = [Observable(obs, site) for site in range(L)]
+    obs_list = [Observable(X(), site) for site in range(L)]  + [Observable(Y(), site) for site in range(L)] + [Observable(Z(), site) for site in range(L)]
+    # obs_list = [Observable(obs, site) for site in range(L)]
 
 
     #%%
@@ -117,7 +117,11 @@ if __name__ == '__main__':
     ## Defining reference noise model and reference trajectory
     gamma_reference = 0.01
     # ref_noise_model =  CompactNoiseModel([{"name": "lowering", "sites": [i for i in range(L)], "strength": gamma_rel}] + [{"name": "pauli_z", "sites": [i for i in range(L)], "strength": gamma_deph}])
-    ref_noise_model =  CompactNoiseModel( [{"name": noise_operator, "sites": [i for i in range(L)], "strength": gamma_reference} ])
+    # ref_noise_model =  CompactNoiseModel( [{"name": noise_operator, "sites": [i for i in range(L)], "strength": gamma_reference} ])
+    ref_noise_model =  CompactNoiseModel([{"name": "pauli_x", "sites": [i for i in range(L)], "strength": gamma_reference} ] + 
+                                         [{"name": "pauli_y", "sites": [i for i in range(L)], "strength": gamma_reference} ] +
+                                         [{"name": "pauli_z", "sites": [i for i in range(L)], "strength": gamma_reference} ])
+
 
     # ref_noise_model =  CompactNoiseModel([{"name": noise_operator, "sites": [i], "strength": gamma_rel} for i in range(L)] )
 
