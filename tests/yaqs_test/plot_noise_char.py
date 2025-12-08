@@ -94,7 +94,7 @@ plt.tight_layout()
 
 
 # %%
-
+import os
 
 L=3
 
@@ -102,37 +102,56 @@ n_obs=3*L
 n_t=61
 
 
-ntraj=3370
+ntraj = 0  # index for successfully loaded trajectories
+
+for i in range(1, 10000 + 1):
+    traj = f"results/propagation/yaqs/L_{L}/run_{i}/ref_traj.txt"
+    if not os.path.isfile(traj):
+        print(f"Skipping missing file: {traj}")
+        continue
+    ntraj += 1
 
 
 full_data=np.zeros((n_t,n_obs,ntraj))
-for i in range(1,ntraj+1):
-    traj=f"results/propagation/yaqs/L_{L}/run_{i}/ref_traj.txt"
-    data=np.genfromtxt(traj)[:,1:]
+j=0
+for i in range(1, 10000 + 1):
+    traj = f"results/propagation/yaqs/L_{L}/run_{i}/ref_traj.txt"
     
-    full_data[:,:,i-1]=data
-
-time=np.genfromtxt(traj)[:,0]
+    if not os.path.isfile(traj):
+        print(f"Skipping missing file: {traj}")
+        continue
+    
+    data = np.genfromtxt(traj)[:, 1:]
+    full_data[:, :, j] = data
+    time=np.genfromtxt(traj)[:,0]
+    j += 1
+#%%
+ntraj
 
 # %%
 obs_idx = 0     # 0 <= obs_idx < full_data.shape[1]
 
-sample_list=[1, 10, 100, 1000, 2000, 3000]
+# sample_list=[1, 10, 100, 1000, 2000, 3000]
+
+sample_list=[1, 10, 100]
 
 time_list=[0, 15, 30, 60]
 
 for n_samples in sample_list:
+    full_data_avg = np.zeros_like(full_data)
+    rng = np.random.default_rng(42)  # change or remove seed for different draws
+
+    for j in range(ntraj):
+        idx = rng.choice(ntraj, size=n_samples, replace=True)
+        # average over the sampled trajectories (axis=2)
+        full_data_avg[:, :, j] = np.mean(full_data[:, :, idx], axis=2)
+
+
     for time_idx in time_list:
 
         print(f"n_samples={n_samples}, time_idx={time_idx}")
 
-        full_data_avg = np.zeros_like(full_data)
-        rng = np.random.default_rng(42)  # change or remove seed for different draws
-
-        for j in range(ntraj):
-            idx = rng.choice(ntraj, size=n_samples, replace=True)
-            # average over the sampled trajectories (axis=2)
-            full_data_avg[:, :, j] = np.mean(full_data[:, :, idx], axis=2)
+        
 
         # now full_data_avg has shape (n_t, n_obs, ntraj) with the averaged data
 
@@ -168,4 +187,38 @@ for n_samples in sample_list:
         print(f"Saving to {output_file}")
         plt.savefig(output_file, dpi=300, bbox_inches='tight')
         plt.close()
+# %%
+n_samples=10
+
+obs_idx = 1
+
+
+
+
+rng = np.random.default_rng(42)  # change or remove seed for different draws
+
+n_samp_avg = 10000
+full_data_avg = np.zeros((n_t, n_obs, n_samp_avg))
+for j in range(n_samp_avg):
+    idx = rng.choice(ntraj, size=n_samples, replace=True)
+    # average over the sampled trajectories (axis=2)
+    full_data_avg[:, :, j] = np.mean(full_data[:, :, idx], axis=2)
+
+
+C = np.corrcoef(full_data_avg[:,obs_idx,:])
+
+plt.imshow(C)                  # show matrix (default colormap)
+plt.colorbar()                 # add color scale
+plt.title("Correlation Matrix")
+plt.xlabel("Variables")
+plt.ylabel("Variables")
+plt.show()
+
+# %%
+time_i= 4
+time_j= 8
+
+plt.plot(full_data_avg[time_i,obs_idx,:], full_data_avg[time_j,obs_idx,:], 'o', alpha=0.5)
+plt.xlim(-1, 1)
+plt.ylim(-1, 1)
 # %%
