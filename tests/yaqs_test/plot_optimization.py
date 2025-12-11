@@ -683,7 +683,7 @@ plt.legend()
 
 # %%
 
-for current_dir, subdirs, files in os.walk("results/characterizer_gradient_free/method_mcmc"):
+for current_dir, subdirs, files in os.walk("test/bayesian_parameter_test"):
         # If the directory has no subdirectories, treat it as a leaf node
         if not subdirs:
             plot_gamma_optimization(current_dir)
@@ -734,19 +734,31 @@ import matplotlib.pyplot as plt
 from pdf2image import convert_from_path
 
 # Parameter lists
-list1 = [0.01, 0.04, 0.08, 0.16]
-list2 = [4,8,16]
+# method="cma"
+# list1 = [0.01, 0.04, 0.08, 0.16]
+# par1_name="sigma0"
+# list2 = [4,8,16]
+# par2_name="popsize"
+# ntraj=1000
+
+
+method="bayesian"
+list1 = [0.001, 0.005,0.01, 0.05, 0.1]
+par1_name="std"
+list2 = [0.5,1,4,8]
+par2_name="beta"
 ntraj=1000
+
 
 # Path where your PDFs are located
 
 # Create 3x3 figure
-fig, axes = plt.subplots(4, 3, figsize=(12, 12))
+fig, axes = plt.subplots(len(list1), len(list2), figsize=(12, 12))
 
 # Iterate through the 9 combinations
 for (p1, p2), ax in zip(itertools.product(list1, list2), axes.flatten()):
 
-    folder=Path(f"test/cma_parameter_test/method_cma/ntraj_{ntraj}/sigma0_{p1}/popsize_{p2}") 
+    folder=Path(f"test/{method}_parameter_test/method_{method}/ntraj_{ntraj}/{par1_name}_{p1}/{par2_name}_{p2}") 
 
     pdf_path = folder / "loss_x_history.pdf"
 
@@ -764,7 +776,14 @@ for (p1, p2), ax in zip(itertools.product(list1, list2), axes.flatten()):
         ax.axis("off")
 
 plt.tight_layout()
+plt.savefig(f"test/{method}_parameter_test/method_{method}/ntraj_{ntraj}/{method}_parameter_scan_ntraj_{ntraj}.png", dpi=300, bbox_inches='tight')
 plt.show()
-plt.savefig(f"test/cma_parameter_test/method_cma/ntraj_{ntraj}/cma_parameter_scan_ntraj_{ntraj}.pdf", dpi=300, bbox_inches='tight')
 plt.close()
+# %%
+L=10
+n_t=60
+n_obs=3*L
+const=4e6
+N=int(np.ceil(const/(n_t*n_obs)))
+print(N)
 # %%
