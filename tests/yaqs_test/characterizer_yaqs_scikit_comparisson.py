@@ -373,8 +373,8 @@ if __name__ == '__main__':
     np.savetxt(work_dir + "gammas.txt", ref_noise_model.strength_list, header="##", fmt="%.6f")
 
 
-    from mqt.yaqs.noise_char.propagation import PropagatorWithGradients
-    yaqs_propagator = PropagatorWithGradients(
+    from mqt.yaqs.noise_char.propagation import Propagator
+    yaqs_propagator = Propagator(
         sim_params=sim_params,
         hamiltonian=H_0,
         compact_noise_model=ref_noise_model,
@@ -394,9 +394,9 @@ if __name__ == '__main__':
 
 
     #%%
-    from auxiliar.scikit_tt_propagator_with_gradients import PropagatorWithGradients
+    from auxiliar.scikit_tt_propagator import Propagator
     
-    scikit_propagator = PropagatorWithGradients(
+    scikit_propagator = Propagator(
         sim_params=sim_params,
         hamiltonian=H_0,
         compact_noise_model=ref_noise_model,

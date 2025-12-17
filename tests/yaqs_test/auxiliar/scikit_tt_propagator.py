@@ -396,6 +396,31 @@ class Propagator:
 
 
         return hamiltonian
+    def write_traj(self, output_file: Path) -> None:
+        """Saves the optimized trajectory of expectation values to a text file.
+
+        This method reshapes the `exp_vals_traj` array, concatenates the time array `self.t` as the first row,
+        and writes the resulting data to a file named `opt_traj_{self.n_eval}.txt` in the working directory.
+        The file includes a header with time and observable labels.
+        The output file format:
+            - Each column corresponds to a time point or an observable at a specific site.
+            - The first column is time (`t`).
+            - Subsequent columns are labeled as `x0`, `y0`, `z0`, ..., up to the number of observed
+            sites and system size.
+        Attributes used:
+            exp_vals_traj (np.ndarray): Array of expectation values with shape (n_obs_site, sites, n_t).
+            t (np.ndarray): Array of time points.
+            work_dir (str): Directory where the output file will be saved.
+            n_eval (int): Evaluation index used in the output filename.
+        File saved:
+            {work_dir}/opt_traj_{n_eval}.txt.
+        """
+        n_obs, _n_t = np.shape(self.obs_array)
+        exp_vals_traj_with_t = np.concatenate([np.array([self.times]), self.obs_array], axis=0)
+
+        header = "t  " + "  ".join(["obs_" + str(i) for i in range(n_obs)])
+
+        np.savetxt(output_file, exp_vals_traj_with_t.T, header=header, fmt="%.6f")
 
     def set_observable_list(self, obs_list: list[Observable]) -> None:
         """Set the list of observables to be used for propagation.

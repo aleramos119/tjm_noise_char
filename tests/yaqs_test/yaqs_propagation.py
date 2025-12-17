@@ -144,8 +144,6 @@ if __name__ == '__main__':
 
     propagator.run(ref_noise_model)
 
-    ref_traj = propagator.obs_traj
-
     propagator.write_traj(work_dir_path/"ref_traj.txt")
 
     print("Reference trajectory computed.")
