@@ -97,7 +97,7 @@ plt.tight_layout()
 import os
 import numpy as np
 
-L=3
+L=50
 n_obs_L=3
 n_obs=n_obs_L*L
 n_t=61
@@ -249,12 +249,12 @@ plt.savefig(out_file, dpi=300, bbox_inches="tight")
 plt.close()
 
 # %%
-n_samples=10
+n_samples=100
 
 
 rng = np.random.default_rng(42)  # change or remove seed for different draws
 
-n_samp_avg = 10000
+n_samp_avg = 1000
 split_data_avg = np.zeros((n_t, n_obs_L, L, n_samp_avg))
 for j in range(n_samp_avg):
     idx = rng.choice(ntraj, size=n_samples, replace=True)
@@ -274,15 +274,15 @@ L_index = 0
 time_idx = 60
 
 
-# flattened_data = delta_data.reshape(n_t* n_obs, n_samp_avg)
-transposed_data = delta_data.transpose(0,1,2,3)
-final_data = transposed_data.reshape(n_t * n_obs_L * L, n_samp_avg)
+##split_data = full_data.reshape(n_t, n_obs_L, L, ntraj)
+transposed_data = delta_data.transpose(1,2,0,3)[1:]
+final_data = transposed_data.reshape(n_t * (n_obs_L-1) * L, n_samp_avg)
 
 C = np.abs(np.cov(final_data))
 
 
 
-plt.imshow(C)                  # show matrix (default colormap)
+plt.imshow(C, vmin=0, vmax=2e-5)                  # show matrix (default colormap)
 plt.colorbar()                 # add color scale
 plt.title("Covariance Matrix")
 plt.xlabel("Variables")

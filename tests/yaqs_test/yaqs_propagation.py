@@ -1,8 +1,8 @@
 #%%
 import numpy as np
 
-from mqt.yaqs.noise_char.propagation import Propagator, PropagatorWithGradients
-# from auxiliar.scikit_tt_propagator_with_gradients import PropagatorWithGradients
+# from mqt.yaqs.noise_char.propagation import Propagator, PropagatorWithGradients
+from auxiliar.scikit_tt_propagator import Propagator
 
 from mqt.yaqs.noise_char.optimization import LossClass
 

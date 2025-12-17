@@ -73,69 +73,69 @@ def process_k(k, n_new_obs, scikit_new_obs_list, scikit_hamiltonian, scikit_jump
 
 
 
-import numpy as np
-from scikit_tt.tensor_train import TT
-import scikit_tt.tensor_train as tt
+# import numpy as np
+# from scikit_tt.tensor_train import TT
+# import scikit_tt.tensor_train as tt
 
-# parameters
+# # parameters
 
-T = 5
-dt = 0.1
-L = 10
-J = 1
-g = 0.5
-gamma_rel = 0.1
-gamma_deph = 0.1
-rank = 5
+# T = 5
+# dt = 0.1
+# L = 10
+# J = 1
+# g = 0.5
+# gamma_rel = 0.1
+# gamma_deph = 0.1
+# rank = 5
 
-# operators and observables
+# # operators and observables
 
-X = np.array([[0, 1], [1, 0]])
-Y = np.array([[0, -1j], [1j, 0]])
-Z = np.array([[1, 0], [0, -1]])
-I = np.eye(2)
-L_1 = np.array([[0, 1], [0, 0]])
-L_2 = np.array([[1, 0], [0, -1]])
+# X = np.array([[0, 1], [1, 0]])
+# Y = np.array([[0, -1j], [1j, 0]])
+# Z = np.array([[1, 0], [0, -1]])
+# I = np.eye(2)
+# L_1 = np.array([[0, 1], [0, 0]])
+# L_2 = np.array([[1, 0], [0, -1]])
 
-# Hamiltonian
+# # Hamiltonian
 
-cores = [None] * L
-cores[0] = tt.build_core([[-g * X, - J * Z, I]])
-for i in range(1, L - 1):
-    cores[i] = tt.build_core([[I, 0, 0], [Z, 0, 0], [-g * X, - J * Z, I]])
-cores[-1] = tt.build_core([I, Z, -g*X])
-hamiltonian = TT(cores)
+# cores = [None] * L
+# cores[0] = tt.build_core([[-g * X, - J * Z, I]])
+# for i in range(1, L - 1):
+#     cores[i] = tt.build_core([[I, 0, 0], [Z, 0, 0], [-g * X, - J * Z, I]])
+# cores[-1] = tt.build_core([I, Z, -g*X])
+# hamiltonian = TT(cores)
 
-# ------------------------------------------------
-# - CONSTRUCT MPO FOR DENSITY MATRIX FORMULATION -
-# ------------------------------------------------
+# # ------------------------------------------------
+# # - CONSTRUCT MPO FOR DENSITY MATRIX FORMULATION -
+# # ------------------------------------------------
 
-# Hamiltonian part (commutator)
+# # Hamiltonian part (commutator)
 
-cores_1 = [None] * L
-cores_2 = [None] * L
-for i in range(L):
-    r_l = hamiltonian.ranks[i]
-    r_r = hamiltonian.ranks[i+1]
-    cores_1[i] = np.einsum('ijkl,mn->ijmknl', hamiltonian.cores[i], I).reshape([r_l, 4, 4,r_r])
-    cores_2[i] = np.einsum('mn,ijkl->imjnkl', I, hamiltonian.cores[i].transpose([0,2,1,3])).reshape([r_l, 4, 4,r_r])
-hamiltonian_part = -1j*(TT(cores_1) - TT(cores_2))
+# cores_1 = [None] * L
+# cores_2 = [None] * L
+# for i in range(L):
+#     r_l = hamiltonian.ranks[i]
+#     r_r = hamiltonian.ranks[i+1]
+#     cores_1[i] = np.einsum('ijkl,mn->ijmknl', hamiltonian.cores[i], I).reshape([r_l, 4, 4,r_r])
+#     cores_2[i] = np.einsum('mn,ijkl->imjnkl', I, hamiltonian.cores[i].transpose([0,2,1,3])).reshape([r_l, 4, 4,r_r])
+# hamiltonian_part = -1j*(TT(cores_1) - TT(cores_2))
 
-# non-Hamiltonian part
+# # non-Hamiltonian part
 
-cores = [None] * L
-S = gamma_rel * np.kron(L_1,np.conj(L_1)) + gamma_deph * np.kron(L_2,np.conj(L_2))
-S = S - 0.5 * (gamma_rel * np.kron(np.conj(L_1).T@L_1,np.eye(2)) + gamma_deph * np.kron(np.eye(2),(np.conj(L_2).T@L_2).T))
-I = np.eye(4)
-cores[0] = tt.build_core([[S, I]])
-for i in range(1, L-1): 
-    cores[i] = tt.build_core([[I, 0], [S, I]])
-cores[-1] = tt.build_core([I, S])
-non_hamiltonian_part = TT(cores)
+# cores = [None] * L
+# S = gamma_rel * np.kron(L_1,np.conj(L_1)) + gamma_deph * np.kron(L_2,np.conj(L_2))
+# S = S - 0.5 * (gamma_rel * np.kron(np.conj(L_1).T@L_1,np.eye(2)) + gamma_deph * np.kron(np.eye(2),(np.conj(L_2).T@L_2).T))
+# I = np.eye(4)
+# cores[0] = tt.build_core([[S, I]])
+# for i in range(1, L-1): 
+#     cores[i] = tt.build_core([[I, 0], [S, I]])
+# cores[-1] = tt.build_core([I, S])
+# non_hamiltonian_part = TT(cores)
 
-mpo_dmf = hamiltonian_part + non_hamiltonian_part
+# mpo_dmf = hamiltonian_part + non_hamiltonian_part
 
-print(mpo_dmf)
+# print(mpo_dmf)
 
 
 
@@ -513,12 +513,6 @@ class Propagator:
 
             with multiprocessing.Pool(processes=available_cpus()-1) as pool:
                 results = pool.starmap(process_k, arg_list)
-
-
-        else:
-            
-
-
 
 
         exp_vals = np.sum(results, axis=0)/self.sim_params.num_traj
