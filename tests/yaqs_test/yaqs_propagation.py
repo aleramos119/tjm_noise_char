@@ -1,8 +1,8 @@
 #%%
 import numpy as np
 
-from mqt.yaqs.noise_char.propagation import Propagator, PropagatorWithGradients
-# from auxiliar.scikit_tt_propagator_with_gradients import PropagatorWithGradients
+# from mqt.yaqs.noise_char.propagation import Propagator, PropagatorWithGradients
+from auxiliar.scikit_tt_propagator import Propagator
 
 from mqt.yaqs.noise_char.optimization import LossClass
 
@@ -143,8 +143,6 @@ if __name__ == '__main__':
     print("Computing reference trajectory ... ")
 
     propagator.run(ref_noise_model)
-
-    ref_traj = propagator.obs_traj
 
     propagator.write_traj(work_dir_path/"ref_traj.txt")
 

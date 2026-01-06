@@ -97,7 +97,7 @@ plt.tight_layout()
 import os
 import numpy as np
 
-L=3
+L=50
 n_obs_L=3
 n_obs=n_obs_L*L
 n_t=61
@@ -271,7 +271,7 @@ n_samples=200
 
 rng = np.random.default_rng(42)  # change or remove seed for different draws
 
-n_samp_avg = 10000
+n_samp_avg = 1000
 split_data_avg = np.zeros((n_t, n_obs_L, L, n_samp_avg))
 for j in range(n_samp_avg):
     idx = rng.choice(ntraj, size=n_samples, replace=True)
@@ -299,7 +299,7 @@ C = np.abs(np.cov(final_data))
 
 
 
-plt.imshow(C)                  # show matrix (default colormap)
+plt.imshow(C, vmin=0, vmax=2e-5)                  # show matrix (default colormap)
 plt.colorbar()                 # add color scale
 plt.title("Covariance Matrix")
 plt.xlabel("Variables")

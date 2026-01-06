@@ -743,11 +743,11 @@ from pdf2image import convert_from_path
 
 
 method="bayesian"
-list1 = [0.001, 0.005,0.01, 0.05, 0.1]
+list1 = [0.0001, 0.001, 0.005]
 par1_name="std"
-list2 = [0.5,1,4,8]
+list2 = [0.1,0.5,1,4,8]
 par2_name="beta"
-ntraj=1000
+ntraj=2000
 
 
 # Path where your PDFs are located
@@ -761,6 +761,8 @@ for (p1, p2), ax in zip(itertools.product(list1, list2), axes.flatten()):
     folder=Path(f"test/{method}_parameter_test/method_{method}/ntraj_{ntraj}/{par1_name}_{p1}/{par2_name}_{p2}") 
 
     pdf_path = folder / "loss_x_history.pdf"
+
+    print(pdf_path)
 
     try:
         # Convert first (and only) page of the PDF to an image
