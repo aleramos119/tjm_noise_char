@@ -8,7 +8,7 @@ import pandas as pd
 import glob
 from matplotlib.widgets import Slider
 
-from mqt.yaqs.noise_char.optimization import trapezoidal
+# from mqt.yaqs.noise_char.optimization import trapezoidal
 
 
 def plot_gamma_optimization(folder: str) -> None:
@@ -683,7 +683,7 @@ plt.legend()
 
 # %%
 
-for current_dir, subdirs, files in os.walk("test/bayesian_parameter_test"):
+for current_dir, subdirs, files in os.walk("results/characterizer_gradient_free"):
         # If the directory has no subdirectories, treat it as a leaf node
         if not subdirs:
             plot_gamma_optimization(current_dir)

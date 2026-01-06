@@ -103,38 +103,55 @@ n_obs=n_obs_L*L
 n_t=61
 
 
-traj_indexes = []   
-
-for i in range(1, 10000 + 1):
-    traj = f"results/propagation/yaqs/L_{L}/run_{i}/ref_traj.txt"
-    if not os.path.isfile(traj):
-        print(f"Skipping missing file: {traj}")
-        continue
-
-    traj_indexes.append(i)
+method="yaqs"
 
 
-ntraj=len(traj_indexes)
-full_data=np.zeros((n_t,n_obs,ntraj))
-j=0
-for i in traj_indexes:
-    traj = f"results/propagation/yaqs/L_{L}/run_{i}/ref_traj.txt"
-    
-    if not os.path.isfile(traj):
-        print(f"Skipping missing file: {traj}")
-        continue
-    
-    data = np.genfromtxt(traj)[:, 1:]
-    full_data[:, :, j] = data
-    time=np.genfromtxt(traj)[:,0]
-    j += 1
+def load_traj(method, L):    
 
-print(f"Loaded {ntraj} trajectories.")
+    traj_indexes = []   
+
+    for i in range(1, 10000 + 1):
+        traj = f"results/propagation/{method}/L_{L}/run_{i}/ref_traj.txt"
+        if not os.path.isfile(traj):
+            print(f"Skipping missing file: {traj}")
+            continue
+
+        traj_indexes.append(i)
+
+    ntraj=len(traj_indexes)
+    full_data=np.zeros((n_t,n_obs,ntraj))
+    j=0
+    for i in traj_indexes:
+        traj = f"results/propagation/{method}/L_{L}/run_{i}/ref_traj.txt"
+        
+        if not os.path.isfile(traj):
+            print(f"Skipping missing file: {traj}")
+            continue
+        
+        data = np.genfromtxt(traj)[:, 1:]
+        full_data[:, :, j] = data
+        time=np.genfromtxt(traj)[:,0]
+        j += 1
+
+    print(f"Loaded {ntraj} trajectories.")
 
 
-split_data = full_data.reshape(n_t, n_obs_L, L, ntraj)
-ref_traj = np.mean(full_data, axis=2)
+    split_data = full_data.reshape(n_t, n_obs_L, L, ntraj)
+    ref_traj = np.mean(full_data, axis=2)
 
+    return split_data, ref_traj
+
+split_data, ref_traj = load_traj("yaqs", L)
+split_data_scikit, ref_traj_scikit = load_traj("scikit_tt",L)
+
+
+#%%
+obs_idx=3
+plt.plot(ref_traj[:,obs_idx], 'o-', label=f"yaqs L={L} obs_{obs_idx}" )
+plt.plot(ref_traj_scikit[:,obs_idx], 'x-', label=f"scikit_tt L={L} obs_{obs_idx}")
+plt.legend()
+plt.savefig(f"results/propagation/ref_traj_L_{L}_obs_{obs_idx}.png", dpi=300, bbox_inches='tight')
+plt.show()
 #%%
 split_data.shape
 # %%
@@ -249,7 +266,7 @@ plt.savefig(out_file, dpi=300, bbox_inches="tight")
 plt.close()
 
 # %%
-n_samples=10
+n_samples=200
 
 
 rng = np.random.default_rng(42)  # change or remove seed for different draws
@@ -275,7 +292,7 @@ time_idx = 60
 
 
 # flattened_data = delta_data.reshape(n_t* n_obs, n_samp_avg)
-transposed_data = delta_data.transpose(0,1,2,3)
+transposed_data = delta_data.transpose(2,1,0,3)
 final_data = transposed_data.reshape(n_t * n_obs_L * L, n_samp_avg)
 
 C = np.abs(np.cov(final_data))
