@@ -1,10 +1,10 @@
 #%%
 import numpy as np
 
-from mqt.yaqs.noise_char.propagation import PropagatorWithGradients
+from mqt.yaqs.noise_char.propagation import Propagator
 # from auxiliar.scikit_tt_propagator_with_gradients import PropagatorWithGradients
 
-from mqt.yaqs.noise_char.optimization import LossClass
+from mqt.yaqs.noise_char.loss import LossClass
 
 
 from mqt.yaqs.noise_char.characterizer import Characterizer
@@ -84,8 +84,8 @@ if __name__ == '__main__':
         noise_operator="pauli_z"
 
 
-    # obs_list = [Observable(X(), site) for site in range(L)]  + [Observable(Y(), site) for site in range(L)] + [Observable(Z(), site) for site in range(L)]
-    obs_list = [Observable(obs, site) for site in range(L)]
+    obs_list = [Observable(X(), site) for site in range(L)]  + [Observable(Y(), site) for site in range(L)] + [Observable(Z(), site) for site in range(L)]
+    # obs_list = [Observable(obs, site) for site in range(L)]
 
 
     #%%
@@ -114,7 +114,9 @@ if __name__ == '__main__':
     ## Defining reference noise model and reference trajectory
     gamma_reference = 0.01
     # ref_noise_model =  CompactNoiseModel([{"name": "lowering", "sites": [i for i in range(L)], "strength": gamma_rel}] + [{"name": "pauli_z", "sites": [i for i in range(L)], "strength": gamma_deph}])
-    ref_noise_model =  CompactNoiseModel( [{"name": noise_operator, "sites": [i for i in range(L)], "strength": gamma_reference} ])
+    ref_noise_model =  CompactNoiseModel( [{"name": "pauli_x", "sites": [i for i in range(L)], "strength": gamma_reference} ] 
+                                            + [{"name": "pauli_y", "sites": [i for i in range(L)], "strength": gamma_reference} ] 
+                                            + [{"name": "pauli_z", "sites": [i for i in range(L)], "strength": gamma_reference} ])
 
     # ref_noise_model =  CompactNoiseModel([{"name": noise_operator, "sites": [i], "strength": gamma_rel} for i in range(L)] )
 
@@ -123,7 +125,7 @@ if __name__ == '__main__':
     np.savetxt(work_dir + "/gammas.txt", ref_noise_model.strength_list, header="##", fmt="%.6f")
 
 
-    propagator = PropagatorWithGradients(
+    propagator = Propagator(
         sim_params=sim_params,
         hamiltonian=H_0,
         compact_noise_model=ref_noise_model,
@@ -158,11 +160,13 @@ if __name__ == '__main__':
     sim_params.num_traj=int(N)
 
     # guess_noise_model =  CompactNoiseModel([{"name": "lowering", "sites": [i for i in range(L)], "strength": gamma_rel_guess} ] + [{"name": "pauli_z", "sites": [i for i in range(L)], "strength": gamma_deph_guess} ])
-    guess_noise_model =  CompactNoiseModel( [{"name": noise_operator, "sites": [i for i in range(L)], "strength": gamma_guess} ])
+    guess_noise_model =  CompactNoiseModel( [{"name": "pauli_x", "sites": [i for i in range(L)], "strength": gamma_guess} ] 
+                                            + [{"name": "pauli_y", "sites": [i for i in range(L)], "strength": gamma_guess} ] 
+                                            + [{"name": "pauli_z", "sites": [i for i in range(L)], "strength": gamma_guess} ])
     # guess_noise_model =  CompactNoiseModel([{"name": noise_operator, "sites": [i], "strength": gamma_rel_guess} for i in range(L)] )
 
 
-    opt_propagator = PropagatorWithGradients(
+    opt_propagator = Propagator(
         sim_params=sim_params,
         hamiltonian=H_0,
         compact_noise_model=guess_noise_model,
@@ -255,7 +259,7 @@ if __name__ == '__main__':
 
     for i,gamma in enumerate(gamma_list):
 
-        loss_value=loss(np.array([gamma]))
+        loss_value=loss(np.array([gamma, gamma, gamma]))
 
         loss_list.append(loss_value)
         # grad_list.append(grad[0])

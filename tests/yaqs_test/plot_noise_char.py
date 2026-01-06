@@ -96,8 +96,9 @@ plt.tight_layout()
 # %%
 import os
 import numpy as np
+import matplotlib.pyplot as plt
 
-L=50
+L=3
 n_obs_L=3
 n_obs=n_obs_L*L
 n_t=61
@@ -146,7 +147,7 @@ split_data_scikit, ref_traj_scikit = load_traj("scikit_tt",L)
 
 
 #%%
-obs_idx=3
+obs_idx=0
 plt.plot(ref_traj[:,obs_idx], 'o-', label=f"yaqs L={L} obs_{obs_idx}" )
 plt.plot(ref_traj_scikit[:,obs_idx], 'x-', label=f"scikit_tt L={L} obs_{obs_idx}")
 plt.legend()

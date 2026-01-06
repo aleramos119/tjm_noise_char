@@ -58,37 +58,59 @@ def find_convergence_index(data, threshold):
 
 #%%
 method_list = ["cma","mcmc"]
-L_list = [10,20,40,80,160]
+L_list_initial = [10,20,40,80,160]
 params = "d_3"
 xlim = 0.1
-const="4e6"
 
+const_list = ["4e6", "8e6"]
 std_conv=0.001
  
 
-for method in method_list:
-    error_list = []
-    for L in L_list:
-        directory = f"results/characterizer_gradient_free/method_{method}_reduced/params_{params}/const_{const}/L_{L}/xlim_{xlim}/"
-        file = directory + "loss_x_history.txt"
-        data = np.genfromtxt(file)[:,2:]
-        gammas=np.genfromtxt(directory + "gammas.txt")
-        d=data.shape[1]//2
-        data = data[:,:d]
+for const in const_list:
+    for method in method_list:
+        error_list = []
+        L_list = []
+        for L in L_list_initial:
+            directory = f"results/characterizer_gradient_free/method_{method}_reduced/params_{params}/const_{const}/L_{L}/xlim_{xlim}/"
+            file = directory + "loss_x_history.txt"
 
-        conv_indx=find_convergence_index(data,std_conv)
+            if not os.path.exists(file):
+                print(f"File {file} does not exist")
+                continue
 
-        print(f"L={L}, method={method}, conv_indx={conv_indx}")
+            L_list.append(L)
+            data = np.genfromtxt(file)[:,2:]
+            gammas=np.genfromtxt(directory + "gammas.txt")
+            d=data.shape[1]//2
+            data = data[:,:d]
 
-        mean_gammas = np.mean(data[conv_indx:], axis=0)
+            conv_indx=find_convergence_index(data,std_conv)
 
-        error = np.max([ abs(mean_gammas[i] - gammas[i])/gammas[i]  for i in range(d) ])
 
-        error_list.append(error)
+            mean_gammas = np.mean(data[conv_indx:], axis=0)
 
-    plt.plot(L_list, error_list, marker='o', label=f"{method}_{params}_const_{const}")
+            all_differences = [ abs(mean_gammas[i] - gammas[i])  for i in range(d) ]
+
+            all_errors = [ abs(mean_gammas[i] - gammas[i])/gammas[i]  for i in range(d) ]
+
+            
+
+            error = np.max(all_errors)
+
+            print(f"L={L}, method={method}, const={const}, conv_indx={conv_indx}, error={error}, mean_gammas={mean_gammas}, gammas={gammas}")
+
+
+            error_list.append(error)
+
+        plt.plot(L_list, error_list, marker='o', label=f"{method}_{params}_const_{const}")
+
+plt.title(f"Relative error vs L for different const values")
+plt.xlabel("L")
+plt.ylabel("Relative error")
 plt.legend()
 
+plt.savefig(f"results/characterizer_gradient_free/error_vs_L_const.pdf", dpi=300, bbox_inches='tight')
+plt.close()
 
 
 
