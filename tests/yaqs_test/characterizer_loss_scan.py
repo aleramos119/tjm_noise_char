@@ -101,7 +101,7 @@ if __name__ == '__main__':
 
     order=1
 
-    sim_params = AnalogSimParams(observables=obs_list, elapsed_time=T, dt=dt, num_traj=4000, max_bond_dim=max_bond_dim, threshold=threshold, order=order, sample_timesteps=True)
+    sim_params = AnalogSimParams(observables=obs_list, elapsed_time=T, dt=dt, num_traj=100, max_bond_dim=max_bond_dim, threshold=threshold, order=order, sample_timesteps=True)
 
 
 
@@ -159,6 +159,8 @@ if __name__ == '__main__':
     gamma_guess=0.06
     sim_params.num_traj=int(N)
 
+    print(f"Number of trajectories: {sim_params.num_traj}")
+
     # guess_noise_model =  CompactNoiseModel([{"name": "lowering", "sites": [i for i in range(L)], "strength": gamma_rel_guess} ] + [{"name": "pauli_z", "sites": [i for i in range(L)], "strength": gamma_deph_guess} ])
     guess_noise_model =  CompactNoiseModel( [{"name": "pauli_x", "sites": [i for i in range(L)], "strength": gamma_guess} ] 
                                             + [{"name": "pauli_y", "sites": [i for i in range(L)], "strength": gamma_guess} ] 
@@ -173,9 +175,14 @@ if __name__ == '__main__':
         init_state=init_state
     )
 
+    def n_traj_func(i):
+        return N
+
     loss=LossClass(
-            ref_traj=ref_traj, propagator=opt_propagator, working_dir=work_dir, print_to_file=True
+            ref_traj=ref_traj, propagator=opt_propagator, working_dir=work_dir, print_to_file=True, num_traj=n_traj_func
         )
+
+    print(f"loss ntraj: {loss.propagator.sim_params.num_traj}")
 
 
     characterizer = Characterizer(
@@ -258,6 +265,10 @@ if __name__ == '__main__':
 
 
     for i,gamma in enumerate(gamma_list):
+
+        print(f"Number of trajectories: {sim_params.num_traj}")
+        print(f"loss ntraj: {loss.propagator.sim_params.num_traj}")
+
 
         loss_value=loss(np.array([gamma, gamma, gamma]))
 
