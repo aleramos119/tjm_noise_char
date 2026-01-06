@@ -1,7 +1,7 @@
 #%%
 import numpy as np
 
-from mqt.yaqs.noise_char.propagation import Propagator
+# from mqt.yaqs.noise_char.propagation import Propagator
 # from auxiliar.scikit_tt_propagator_with_gradients import PropagatorWithGradients
 
 from mqt.yaqs.noise_char.loss import LossClass
@@ -61,6 +61,15 @@ if __name__ == '__main__':
     x_lim = float(sys.argv[4])
 
     work_dir=sys.argv[5]
+
+    module = sys.argv[6]
+
+    if module == "scikit":
+        from auxiliar.scikit_tt_propagator import Propagator
+    if module == "yaqs":
+        from mqt.yaqs.noise_char.propagation import Propagator
+
+
 
     work_dir_path = Path(work_dir)
 

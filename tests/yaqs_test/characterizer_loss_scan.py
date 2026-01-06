@@ -101,7 +101,7 @@ if __name__ == '__main__':
 
     order=1
 
-    sim_params = AnalogSimParams(observables=obs_list, elapsed_time=T, dt=dt, num_traj=100, max_bond_dim=max_bond_dim, threshold=threshold, order=order, sample_timesteps=True)
+    sim_params = AnalogSimParams(observables=obs_list, elapsed_time=T, dt=dt, num_traj=4000, max_bond_dim=max_bond_dim, threshold=threshold, order=order, sample_timesteps=True)
 
 
 
