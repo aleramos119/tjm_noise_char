@@ -11,7 +11,7 @@ from mqt.yaqs.core.data_structures.networks import MPO, MPS
 from mqt.yaqs.core.data_structures.noise_model import CompactNoiseModel, NoiseModel
 from mqt.yaqs.core.data_structures.simulation_parameters import AnalogSimParams, Observable
 
-from mqt.yaqs.noise_char.optimization import trapezoidal
+# from mqt.yaqs.noise_char.optimization import trapezoidal
 import copy
 
 
@@ -557,203 +557,203 @@ class Propagator:
 
 
 
-class PropagatorWithGradients(Propagator):
-    r"""High-level propagator that runs an MPS-based Lindblad simulation.
+# class PropagatorWithGradients(Propagator):
+#     r"""High-level propagator that runs an MPS-based Lindblad simulation.
 
-    The class wraps simulator inputs, performs
-    consistency checks between noise models and the Hamiltonian, augments the
-    observable set with Lindblad-derived A_kn operators (sensitivities of
-    expectation values w.r.t. jump rates), runs the underlying simulator, and
-    post-processes simulator outputs into convenient arrays for analysis.
+#     The class wraps simulator inputs, performs
+#     consistency checks between noise models and the Hamiltonian, augments the
+#     observable set with Lindblad-derived A_kn operators (sensitivities of
+#     expectation values w.r.t. jump rates), runs the underlying simulator, and
+#     post-processes simulator outputs into convenient arrays for analysis.
 
-    Attributes:
-    obs_list : list[Observable]
-        (Set after set_observable_list) Deep copy of user-provided observables.
-    n_obs : int
-        (Set after set_observable_list) Number of observables.
-    times : array-like
-        Time grid used by the most recent run (copied from sim_params.times).
-    obs_traj : list[Observable]
-        Observables returned by the simulator corresponding to the original
-        user-requested observables (populated by run).
-    obs_array : numpy.ndarray
-        Array of observable trajectories with shape (n_obs, n_timesteps).
-    d_on_d_gk : numpy.ndarray
-        Object-array of Observable entries (shape [n_jump, n_obs]) corresponding
-        to A_kn-like operators (or zero placeholders) computed by the simulator
-        and integrated in time.
-    d_on_d_gk_array : numpy.ndarray
-        Numeric array of integrated A_kn trajectories (shape [n_jump, n_obs]).
-    Other internal fields may be set during execution (e.g., temporary lists and
-    simulator-specific containers).
-    Public methods
-    set_observable_list(obs_list: list[Observable]) -> None
-        Store and validate a deep copy of obs_list. Validates that every site index
-        referenced by the observables is within the range [0, sites-1]. Sets
-        n_obs and flips set_observables to True. Raises ValueError for empty lists
-        or out-of-range site indices.
-    run(noise_model: CompactNoiseModel) -> None
-        Execute the propagation. Requires that set_observables has been called.
-        Validates that the provided compact noise_model matches the one used to
-        construct this propagator (same process names and site assignments).
-        Constructs A_kn-like observables for each matching jump/operator pair,
-        appends them to the observable list, builds a new AnalogSimParams instance
-        for the simulator, and invokes the underlying simulator with the expanded
-        noise model. Post-processes results by trapezoidally integrating A_kn
-        trajectories, arranging them into object and numeric arrays (d_on_d_gk and
-        d_on_d_gk_array) and extracting obs_traj and obs_array for the original
-        observables.
-        - During initialization: if any site index in compact_noise_model.expanded_noise_model
-          exceeds the number of sites in the Hamiltonian.
-        - set_observable_list: if obs_list is empty or contains observables that
-          reference out-of-range site indices.
-        - run: if observables have not been set (set_observables is False) or if the
-          provided noise_model does not match the initialized compact_noise_model
-          in process names or site indices.
-    - All constructor inputs are deep-copied to avoid accidental external mutation.
-    - The class expects external types (AnalogSimParams, MPO, MPS, CompactNoiseModel,
-      Observable) to expose particular attributes (for example, `times`, `length`,
-      `expanded_noise_model`, `compact_processes`, `gate`, `sites`, and `results`).
-    - The A_kn operators constructed in run follow the Lindblad derivative form:
-      L_k^\dagger O L_k - 0.5 {L_k^\dagger L_k, O}, computed only for observables
-      that act on the same site(s) as the corresponding jump operator.
-    - The user-facing numeric arrays (obs_array and d_on_d_gk_array) are convenient
-      summaries for optimization or analysis tasks (e.g., gradient-based fitting of
-      jump rates).
-    """
-    def run(self, noise_model: CompactNoiseModel) -> None:
-        """Run the propagation routine with augmented Lindblad-derived operators.
+#     Attributes:
+#     obs_list : list[Observable]
+#         (Set after set_observable_list) Deep copy of user-provided observables.
+#     n_obs : int
+#         (Set after set_observable_list) Number of observables.
+#     times : array-like
+#         Time grid used by the most recent run (copied from sim_params.times).
+#     obs_traj : list[Observable]
+#         Observables returned by the simulator corresponding to the original
+#         user-requested observables (populated by run).
+#     obs_array : numpy.ndarray
+#         Array of observable trajectories with shape (n_obs, n_timesteps).
+#     d_on_d_gk : numpy.ndarray
+#         Object-array of Observable entries (shape [n_jump, n_obs]) corresponding
+#         to A_kn-like operators (or zero placeholders) computed by the simulator
+#         and integrated in time.
+#     d_on_d_gk_array : numpy.ndarray
+#         Numeric array of integrated A_kn trajectories (shape [n_jump, n_obs]).
+#     Other internal fields may be set during execution (e.g., temporary lists and
+#     simulator-specific containers).
+#     Public methods
+#     set_observable_list(obs_list: list[Observable]) -> None
+#         Store and validate a deep copy of obs_list. Validates that every site index
+#         referenced by the observables is within the range [0, sites-1]. Sets
+#         n_obs and flips set_observables to True. Raises ValueError for empty lists
+#         or out-of-range site indices.
+#     run(noise_model: CompactNoiseModel) -> None
+#         Execute the propagation. Requires that set_observables has been called.
+#         Validates that the provided compact noise_model matches the one used to
+#         construct this propagator (same process names and site assignments).
+#         Constructs A_kn-like observables for each matching jump/operator pair,
+#         appends them to the observable list, builds a new AnalogSimParams instance
+#         for the simulator, and invokes the underlying simulator with the expanded
+#         noise model. Post-processes results by trapezoidally integrating A_kn
+#         trajectories, arranging them into object and numeric arrays (d_on_d_gk and
+#         d_on_d_gk_array) and extracting obs_traj and obs_array for the original
+#         observables.
+#         - During initialization: if any site index in compact_noise_model.expanded_noise_model
+#           exceeds the number of sites in the Hamiltonian.
+#         - set_observable_list: if obs_list is empty or contains observables that
+#           reference out-of-range site indices.
+#         - run: if observables have not been set (set_observables is False) or if the
+#           provided noise_model does not match the initialized compact_noise_model
+#           in process names or site indices.
+#     - All constructor inputs are deep-copied to avoid accidental external mutation.
+#     - The class expects external types (AnalogSimParams, MPO, MPS, CompactNoiseModel,
+#       Observable) to expose particular attributes (for example, `times`, `length`,
+#       `expanded_noise_model`, `compact_processes`, `gate`, `sites`, and `results`).
+#     - The A_kn operators constructed in run follow the Lindblad derivative form:
+#       L_k^\dagger O L_k - 0.5 {L_k^\dagger L_k, O}, computed only for observables
+#       that act on the same site(s) as the corresponding jump operator.
+#     - The user-facing numeric arrays (obs_array and d_on_d_gk_array) are convenient
+#       summaries for optimization or analysis tasks (e.g., gradient-based fitting of
+#       jump rates).
+#     """
+#     def run(self, noise_model: CompactNoiseModel) -> None:
+#         """Run the propagation routine with augmented Lindblad-derived operators.
 
-        Parameters
-        ----------
-        noise_model : CompactNoiseModel
-            The compact representation of the noise model to use for propagation.
-            The method verifies that the list of compact processes and their sites
-            in `noise_model` match the model used to initialize this propagator
-            (self.compact_noise_model). The expanded form of this model is passed
-            to the underlying simulator.
+#         Parameters
+#         ----------
+#         noise_model : CompactNoiseModel
+#             The compact representation of the noise model to use for propagation.
+#             The method verifies that the list of compact processes and their sites
+#             in `noise_model` match the model used to initialize this propagator
+#             (self.compact_noise_model). The expanded form of this model is passed
+#             to the underlying simulator.
 
-        Side effects / State changes
-        ----------------------------
-        On successful completion, several attributes of self are set or updated:
-        - self.obs_traj : list[Observable]
-            The list of original observables (with their computed time trajectories)
-            extracted from the simulator results.
-        - self.d_on_d_gk : numpy.ndarray of shape (n_jump, n_obs) with Observable entries
-            A matrix of the A_kn-like operators (or zero placeholders) corresponding
-            to each jump operator / observable pair; entries are Observable objects
-            whose .results have been integrated (trapezoidally) over time.
-        - self.d_on_d_gk_array : numpy.ndarray
-            2D array of numeric trajectories corresponding to d_on_d_gk (shape
-            [n_jump, n_obs, n_timesteps]).
-        - self.obs_array : numpy.ndarray
-            2D array of numeric trajectories for the original observables
-            (shape [n_obs, n_timesteps]).
-        - self.times : array-like
-            Time grid used by the simulation (copied from self.sim_params.times).
+#         Side effects / State changes
+#         ----------------------------
+#         On successful completion, several attributes of self are set or updated:
+#         - self.obs_traj : list[Observable]
+#             The list of original observables (with their computed time trajectories)
+#             extracted from the simulator results.
+#         - self.d_on_d_gk : numpy.ndarray of shape (n_jump, n_obs) with Observable entries
+#             A matrix of the A_kn-like operators (or zero placeholders) corresponding
+#             to each jump operator / observable pair; entries are Observable objects
+#             whose .results have been integrated (trapezoidally) over time.
+#         - self.d_on_d_gk_array : numpy.ndarray
+#             2D array of numeric trajectories corresponding to d_on_d_gk (shape
+#             [n_jump, n_obs, n_timesteps]).
+#         - self.obs_array : numpy.ndarray
+#             2D array of numeric trajectories for the original observables
+#             (shape [n_obs, n_timesteps]).
+#         - self.times : array-like
+#             Time grid used by the simulation (copied from self.sim_params.times).
 
-        Raises:
-            ValueError: If the observable list has not been initialized (self.set_observables is False).
-            ValueError: If any process name or site in the provided noise_model does not match
-              the corresponding entry in self.compact_noise_model.
+#         Raises:
+#             ValueError: If the observable list has not been initialized (self.set_observables is False).
+#             ValueError: If any process name or site in the provided noise_model does not match
+#               the corresponding entry in self.compact_noise_model.
 
-        Notes:
-        -----
-        - The purpose of the added A_kn observables is to provide sensitivity-like
-          quantities (derivatives of observable expectations with respect to
-          jump rates) that are computed by the same underlying simulator and then
-          post-processed into arrays suitable for analysis or parameter updates.
-        """
-        if not self.set_observables:
-            msg = "Observable list not set. Please use the set_observable_list method to set the observables."
-            raise ValueError(msg)
+#         Notes:
+#         -----
+#         - The purpose of the added A_kn observables is to provide sensitivity-like
+#           quantities (derivatives of observable expectations with respect to
+#           jump rates) that are computed by the same underlying simulator and then
+#           post-processed into arrays suitable for analysis or parameter updates.
+#         """
+#         if not self.set_observables:
+#             msg = "Observable list not set. Please use the set_observable_list method to set the observables."
+#             raise ValueError(msg)
 
-        for i, proc in enumerate(noise_model.compact_processes):
-            for j, site in enumerate(proc["sites"]):
-                if (
-                    proc["name"] != self.compact_noise_model.compact_processes[i]["name"]
-                    or site != self.compact_noise_model.compact_processes[i]["sites"][j]
-                ):
-                    msg = "Noise model processes or sites do not match the initialized noise model."
-                    raise ValueError(msg)
+#         for i, proc in enumerate(noise_model.compact_processes):
+#             for j, site in enumerate(proc["sites"]):
+#                 if (
+#                     proc["name"] != self.compact_noise_model.compact_processes[i]["name"]
+#                     or site != self.compact_noise_model.compact_processes[i]["sites"][j]
+#                 ):
+#                     msg = "Noise model processes or sites do not match the initialized noise model."
+#                     raise ValueError(msg)
 
-        a_kn_site_list: list[Observable] = []
+#         a_kn_site_list: list[Observable] = []
 
-        for lk in self.noise_list:
-            a_kn_site_list.extend(
-                Observable(
-                    lk.gate.dag() * on.gate * lk.gate
-                    - 0.5 * on.gate * lk.gate.dag() * lk.gate
-                    - 0.5 * lk.gate.dag() * lk.gate * on.gate,
-                    lk.sites,
-                )
-                for on in self.obs_list
-                if lk.sites == on.sites
-            )
+#         for lk in self.noise_list:
+#             a_kn_site_list.extend(
+#                 Observable(
+#                     lk.gate.dag() * on.gate * lk.gate
+#                     - 0.5 * on.gate * lk.gate.dag() * lk.gate
+#                     - 0.5 * lk.gate.dag() * lk.gate * on.gate,
+#                     lk.sites,
+#                 )
+#                 for on in self.obs_list
+#                 if lk.sites == on.sites
+#             )
 
-        new_obs_list = self.obs_list + a_kn_site_list
-
-
-        ##### Scikitt-tt part #####
-
-        scikit_new_obs_list = self.scikit_tt_obs_list(new_obs_list)
-
-        n_new_obs = len(new_obs_list)
-
-        scikit_hamiltonian = self.scikit_tt_hamiltonian(self.hamiltonian)
-        scikit_jump_operator_list, scikit_jump_parameter_list = self.scikit_tt_noise_list(noise_model.expanded_noise_model)
+#         new_obs_list = self.obs_list + a_kn_site_list
 
 
-        scikit_tt_solver: dict = {"solver": 'tdvp'+str(self.sim_params.order), "method": 'krylov', "dimension": 5}
+#         ##### Scikitt-tt part #####
 
-        scikit_initial_state = self.scikit_tt_init_state(self.init_state)
+#         scikit_new_obs_list = self.scikit_tt_obs_list(new_obs_list)
+
+#         n_new_obs = len(new_obs_list)
+
+#         scikit_hamiltonian = self.scikit_tt_hamiltonian(self.hamiltonian)
+#         scikit_jump_operator_list, scikit_jump_parameter_list = self.scikit_tt_noise_list(noise_model.expanded_noise_model)
 
 
-        self.scikit_new_obs_list = scikit_new_obs_list
-        self.scikit_hamiltonian = scikit_hamiltonian
-        self.scikit_jump_operator_list = scikit_jump_operator_list
-        self.scikit_jump_parameter_list = scikit_jump_parameter_list
-        self.scikit_tt_solver = scikit_tt_solver
-        self.scikit_initial_state = scikit_initial_state
+#         scikit_tt_solver: dict = {"solver": 'tdvp'+str(self.sim_params.order), "method": 'krylov', "dimension": 5}
+
+#         scikit_initial_state = self.scikit_tt_init_state(self.init_state)
+
+
+#         self.scikit_new_obs_list = scikit_new_obs_list
+#         self.scikit_hamiltonian = scikit_hamiltonian
+#         self.scikit_jump_operator_list = scikit_jump_operator_list
+#         self.scikit_jump_parameter_list = scikit_jump_parameter_list
+#         self.scikit_tt_solver = scikit_tt_solver
+#         self.scikit_initial_state = scikit_initial_state
         
 
-        arg_list = [ (k, n_new_obs, scikit_new_obs_list, scikit_hamiltonian, scikit_jump_operator_list, scikit_jump_parameter_list, self.n_t, self.sim_params.dt, scikit_tt_solver, scikit_initial_state) for k in range(self.sim_params.num_traj) ]
+#         arg_list = [ (k, n_new_obs, scikit_new_obs_list, scikit_hamiltonian, scikit_jump_operator_list, scikit_jump_parameter_list, self.n_t, self.sim_params.dt, scikit_tt_solver, scikit_initial_state) for k in range(self.sim_params.num_traj) ]
 
-        with multiprocessing.Pool(processes=available_cpus()-1) as pool:
-            results = pool.starmap(process_k, arg_list)
-
-
-        exp_vals = np.sum(results, axis=0)/self.sim_params.num_traj
+#         with multiprocessing.Pool(processes=available_cpus()-1) as pool:
+#             results = pool.starmap(process_k, arg_list)
 
 
-
-        ##### Scikitt-tt part #####
+#         exp_vals = np.sum(results, axis=0)/self.sim_params.num_traj
 
 
 
+#         ##### Scikitt-tt part #####
 
-        # Separate original and new expectation values from result_lindblad.
-        self.obs_array = np.real(exp_vals[:self.n_obs])
 
-        d_on_d_gk_list = np.real(exp_vals[self.n_obs:]) # these correspond to the A_kn operators
 
-        self.d_on_d_gk_array = np.zeros((self.n_jump, self.n_obs, self.n_t), dtype=float)
 
-        count = 0
-        for i, lk in enumerate(self.noise_list):
-            for j, on in enumerate(self.obs_list):
-                if lk.sites == on.sites:
-                    self.d_on_d_gk_array[i, j] = trapezoidal(d_on_d_gk_list[count], self.sim_params.times)
-                    count += 1
-                else:
-                    self.d_on_d_gk_array[i, j] = np.zeros(self.n_t, dtype=float)
+#         # Separate original and new expectation values from result_lindblad.
+#         self.obs_array = np.real(exp_vals[:self.n_obs])
 
-        self.times = self.sim_params.times
+#         d_on_d_gk_list = np.real(exp_vals[self.n_obs:]) # these correspond to the A_kn operators
 
-        self.obs_traj = copy.deepcopy(self.obs_list)
+#         self.d_on_d_gk_array = np.zeros((self.n_jump, self.n_obs, self.n_t), dtype=float)
+
+#         count = 0
+#         for i, lk in enumerate(self.noise_list):
+#             for j, on in enumerate(self.obs_list):
+#                 if lk.sites == on.sites:
+#                     self.d_on_d_gk_array[i, j] = trapezoidal(d_on_d_gk_list[count], self.sim_params.times)
+#                     count += 1
+#                 else:
+#                     self.d_on_d_gk_array[i, j] = np.zeros(self.n_t, dtype=float)
+
+#         self.times = self.sim_params.times
+
+#         self.obs_traj = copy.deepcopy(self.obs_list)
         
-        for i in range(self.n_obs):
-            self.obs_traj[i].results = self.obs_array[i]
+#         for i in range(self.n_obs):
+#             self.obs_traj[i].results = self.obs_array[i]
 
 
 
