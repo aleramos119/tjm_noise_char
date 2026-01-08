@@ -548,6 +548,12 @@ class Propagator:
         self.times = self.sim_params.times
 
 
+        self.obs_traj = copy.deepcopy(self.obs_list)
+        
+        for i in range(self.n_obs):
+            self.obs_traj[i].results = self.obs_array[i].copy()
+
+
 
 
 
