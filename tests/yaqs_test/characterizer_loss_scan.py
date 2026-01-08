@@ -32,17 +32,32 @@ import sys
 
 if __name__ == '__main__':
 
+    # T=6
+
+    # obs="Z"
+
+    # noise="X"
+
+    # work_dir=f"./test"
+
+    # N=10
+
+    # L=2
+
+
     T=float(sys.argv[1])
 
     obs=sys.argv[2]
 
     noise=sys.argv[3]
 
+    work_dir=sys.argv[4]
 
     N=int(sys.argv[5])
 
+    L=int(sys.argv[6])
 
-    work_dir=sys.argv[4]
+
 
     work_dir_path = Path(work_dir)
 
@@ -51,7 +66,7 @@ if __name__ == '__main__':
 
 
     ## Defining Hamiltonian and observable list
-    L=int(sys.argv[6])
+
 
     J=1
     g=1
@@ -104,10 +119,6 @@ if __name__ == '__main__':
     sim_params = AnalogSimParams(observables=obs_list, elapsed_time=T, dt=dt, num_traj=4000, max_bond_dim=max_bond_dim, threshold=threshold, order=order, sample_timesteps=True)
 
 
-
-
-
-    #%%
 
 
     #%%
@@ -245,7 +256,7 @@ if __name__ == '__main__':
 
 
 
-    # %%
+# %%
 
     gamma_list = np.array([0.001*1.3**i for i in range(27)]
 )
@@ -270,7 +281,7 @@ if __name__ == '__main__':
         print(f"loss ntraj: {loss.propagator.sim_params.num_traj}")
 
 
-        loss_value=loss(np.array([gamma, gamma, gamma]))
+        loss_value=loss(np.array([gamma, gamma, gamma]))[0] ## 0 is the loss value, the rest is the gradient and simulation time
 
         loss_list.append(loss_value)
         # grad_list.append(grad[0])
@@ -292,8 +303,9 @@ if __name__ == '__main__':
 
 
 
+#%%
 
-
+# gamma_list
 
 
 # %%
