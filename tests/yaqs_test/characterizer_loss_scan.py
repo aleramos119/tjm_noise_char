@@ -269,7 +269,9 @@ if __name__ == '__main__':
 
     d_on_list=[]
 
-    np.savetxt(work_dir + "/gamma_list.txt", gamma_list, header="##", fmt="%.6f")
+    # Instead of saving the whole gamma_list at once at the top,
+    # we will append (using extend) gamma and loss inside the loop below.
+    # So, do not write anything here; we'll move saving logic below.
 
 
     np.savetxt(work_dir + f"/ref_traj.txt", loss.ref_traj_array, header="##", fmt="%.6f")
@@ -295,17 +297,11 @@ if __name__ == '__main__':
 
 
 
+        with open(work_dir + "/gamma_list.txt", "a") as f_gamma:
+            f_gamma.write(f"{gamma:.6f}\n")
+        with open(work_dir + "/loss_list.txt", "a") as f_loss:
+            f_loss.write(f"{loss_value:.6f}\n")
 
-
-    np.savetxt(work_dir + "/loss_list.txt", loss_list, header="##", fmt="%.6f")
-
-    # np.savetxt(work_dir + "/grad_list.txt", grad_list, header="##", fmt="%.6f")
-
-
-
-#%%
-
-# gamma_list
 
 
 # %%
