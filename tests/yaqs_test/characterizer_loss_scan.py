@@ -32,30 +32,30 @@ import sys
 
 if __name__ == '__main__':
 
-    T=6
+    # T=6
 
-    obs="Z"
+    # obs="Z"
 
-    noise="X"
+    # noise="X"
 
-    work_dir=f"./test"
+    # work_dir=f"./test"
 
-    N=10
+    # N=10
 
-    L=2
+    # L=2
 
 
-    # T=float(sys.argv[1])
+    T=float(sys.argv[1])
 
-    # obs=sys.argv[2]
+    obs=sys.argv[2]
 
-    # noise=sys.argv[3]
+    noise=sys.argv[3]
 
-    # work_dir=sys.argv[4]
+    work_dir=sys.argv[4]
 
-    # N=int(sys.argv[5])
+    N=int(sys.argv[5])
 
-    # L=int(sys.argv[6])
+    L=int(sys.argv[6])
 
 
 
@@ -116,7 +116,7 @@ if __name__ == '__main__':
 
     order=1
 
-    sim_params = AnalogSimParams(observables=obs_list, elapsed_time=T, dt=dt, num_traj=100, max_bond_dim=max_bond_dim, threshold=threshold, order=order, sample_timesteps=True)
+    sim_params = AnalogSimParams(observables=obs_list, elapsed_time=T, dt=dt, num_traj=4000, max_bond_dim=max_bond_dim, threshold=threshold, order=order, sample_timesteps=True)
 
 
 
