@@ -64,14 +64,15 @@ xlim = 0.1
 
 const_list = ["4e6", "8e6"]
 std_conv=0.001
- 
+
+module="scikit"
 
 for const in const_list:
     for method in method_list:
         error_list = []
         L_list = []
         for L in L_list_initial:
-            directory = f"results/characterizer_gradient_free/method_{method}_reduced/params_{params}/const_{const}/L_{L}/xlim_{xlim}/"
+            directory = f"results/characterizer_gradient_free/module_{module}_reduced/method_{method}/params_{params}/const_{const}/L_{L}/xlim_{xlim}/"
             file = directory + "loss_x_history.txt"
 
             if not os.path.exists(file):
@@ -109,7 +110,7 @@ plt.xlabel("L")
 plt.ylabel("Relative error")
 plt.legend()
 
-plt.savefig(f"results/characterizer_gradient_free/error_vs_L_const.pdf", dpi=300, bbox_inches='tight')
+plt.savefig(f"results/characterizer_gradient_free/error_vs_L_{module}_{params}.pdf", dpi=300, bbox_inches='tight')
 plt.close()
 
 

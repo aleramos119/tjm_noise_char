@@ -713,7 +713,7 @@ plt.grid(True)
 # %%
 import matplotlib.pyplot as plt
 import numpy as np
-L=40
+L=160
 N_list=[50, 100, 200, 500, 1000]
 
 for N in N_list:
