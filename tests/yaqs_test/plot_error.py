@@ -57,15 +57,23 @@ def find_convergence_index(data, threshold):
 
 
 #%%
+module="scikit"
+params = "d_3L"
+
 method_list = ["cma","mcmc"]
-L_list_initial = [10,20,40,80,160]
-params = "d_3"
+
+if params == "d_3":
+    L_list_initial = [10,20,40,80,160]
+
+if params == "d_3L":
+    L_list_initial = [2,4,8,16]
+
+
 xlim = 0.1
 
-const_list = ["4e6", "8e6"]
+const_list = ["4e6"]
 std_conv=0.001
 
-module="scikit"
 
 for const in const_list:
     for method in method_list:
