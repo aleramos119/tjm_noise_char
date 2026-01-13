@@ -160,7 +160,7 @@ if __name__ == '__main__':
 
 
     #%% Optimizing the model
-    x_low=np.array([0]*d)
+    x_low=np.array([0.001]*d)
     x_up=np.array([x_lim]*d)
 
 
