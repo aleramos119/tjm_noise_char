@@ -58,7 +58,7 @@ def find_convergence_index(data, threshold):
 
 #%%
 module="scikit"
-params = "d_3L"
+params = "d_3"
 
 method_list = ["cma","mcmc"]
 
@@ -83,6 +83,10 @@ for const in const_list:
             directory = f"results/characterizer_gradient_free/module_{module}_reduced/method_{method}/params_{params}/const_{const}/L_{L}/xlim_{xlim}/"
             file = directory + "loss_x_history.txt"
 
+
+            print(f"Doing module={module}, method={method}, params={params}, const={const}, L={L}")
+
+
             if not os.path.exists(file):
                 print(f"File {file} does not exist")
                 continue
@@ -106,7 +110,7 @@ for const in const_list:
 
             error = np.max(all_errors)
 
-            print(f"L={L}, method={method}, const={const}, conv_indx={conv_indx}, error={error}, mean_gammas={mean_gammas}, gammas={gammas}")
+            # print(f"L={L}, method={method}, const={const}, conv_indx={conv_indx}, error={error}, mean_gammas={mean_gammas}, gammas={gammas}")
 
 
             error_list.append(error)

@@ -258,7 +258,7 @@ if __name__ == '__main__':
 
 # %%
 
-    gamma_list = np.array([0.001*1.3**i for i in range(13)]
+    gamma_list = np.array([0.001*1.3**i for i in range(20)]
 )
 
     loss_list=[]

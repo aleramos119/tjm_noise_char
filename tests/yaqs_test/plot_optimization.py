@@ -716,16 +716,20 @@ import numpy as np
 L=160
 N_list=[50, 100, 200, 500, 1000]
 
-for N in N_list:
+dl = 30
+
+for i, N in enumerate(N_list):
     directory=f"test/loss_scan/gamma_ref_0.01_d_3/L_{L}/N_{N}/T_6/obs_Z/noise_X/"
     gamma_list = np.genfromtxt(directory + f"gamma_list.txt")
     loss_list = np.genfromtxt(directory + f"loss_list.txt")
 
-    plt.plot(gamma_list, loss_list, 'o-')
-    plt.xlim(0, 0.1)
-    plt.ylim(-0.2, 50)
-    plt.savefig(directory + "loss_vs_gamma.pdf", dpi=300, bbox_inches='tight')
-    plt.close()
+    plt.plot(gamma_list, loss_list + i*dl, 'o-', label=f"N={N}, dl={i*dl}")
+    plt.xlim(0, 0.025)
+    plt.ylim(-0.2, 300)
+
+plt.legend()
+plt.savefig(f"test/loss_scan/gamma_ref_0.01_d_3/L_{L}/" + "loss_vs_gamma.pdf", dpi=300, bbox_inches='tight')
+
 # %%
 
 
