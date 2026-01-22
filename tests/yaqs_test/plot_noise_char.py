@@ -399,14 +399,16 @@ for i, L in enumerate(L_list):
     plt.plot(sample_list, rel_err[i, :], 'o-', label=f"L={L}")
 plt.xlabel("Number of trajectories")
 plt.ylabel("Relative error (Loss)")
-plt.savefig(f"results/propagation/yaqs/plots/rel_err_vs_ntraj.png", dpi=300, bbox_inches='tight')
 plt.legend()
+
+plt.savefig(f"results/propagation/yaqs/plots/rel_err_vs_ntraj.png", dpi=300, bbox_inches='tight')
 # %%
 
 for i, ntraj in enumerate(sample_list):
     plt.plot(L_list, rel_err[:,i], 'o-', label=f"ntraj={ntraj}")
 plt.xlabel("L")
 plt.ylabel("Relative error (Loss)")
-plt.savefig(f"results/propagation/yaqs/plots/rel_err_vs_L.png", dpi=300, bbox_inches='tight')
 plt.legend()
+
+plt.savefig(f"results/propagation/yaqs/plots/rel_err_vs_L.png", dpi=300, bbox_inches='tight')
 # %%
