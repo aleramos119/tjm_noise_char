@@ -93,28 +93,26 @@ plt.tight_layout()
 
 
 
-# %%
+##############################################################
+##   Load trajectories
+##############################################################
 import os
 import numpy as np
 import matplotlib.pyplot as plt
 
-L=3
-n_obs_L=3
-n_obs=n_obs_L*L
-n_t=61
+def load_traj(method, L):  
 
+    n_obs_L=3
+    n_obs=n_obs_L*L
+    n_t=61
 
-method="yaqs"
-
-
-def load_traj(method, L):    
 
     traj_indexes = []   
 
     for i in range(1, 10000 + 1):
         traj = f"results/propagation/{method}/L_{L}/run_{i}/ref_traj.txt"
         if not os.path.isfile(traj):
-            print(f"Skipping missing file: {traj}")
+            # print(f"Skipping missing file: {traj}")
             continue
 
         traj_indexes.append(i)
@@ -126,7 +124,7 @@ def load_traj(method, L):
         traj = f"results/propagation/{method}/L_{L}/run_{i}/ref_traj.txt"
         
         if not os.path.isfile(traj):
-            print(f"Skipping missing file: {traj}")
+            # print(f"Skipping missing file: {traj}")
             continue
         
         data = np.genfromtxt(traj)[:, 1:]
@@ -138,15 +136,37 @@ def load_traj(method, L):
 
 
     split_data = full_data.reshape(n_t, n_obs_L, L, ntraj)
-    ref_traj = np.mean(full_data, axis=2)
+    ref_traj = np.mean(split_data, axis=3)
 
-    return split_data, ref_traj
+    return split_data, ref_traj, time
 
-split_data, ref_traj = load_traj("yaqs", L)
-split_data_scikit, ref_traj_scikit = load_traj("scikit_tt",L)
+# %%
+
+########## Loads reference trajectories
+
+
+L=3
+n_obs_L=3
+n_obs=n_obs_L*L
+n_t=61
+
+
+method="yaqs"
+
+
+split_data, ref_traj, time = load_traj("yaqs", L)
+split_data_scikit, ref_traj_scikit, time_scikit = load_traj("scikit_tt",L)
+
+n_t, n_obs_L, L, ntraj = split_data.shape
 
 
 #%%
+
+
+
+#%%
+
+#### Plots reference trajectories
 obs_idx=0
 plt.plot(ref_traj[:,obs_idx], 'o-', label=f"yaqs L={L} obs_{obs_idx}" )
 plt.plot(ref_traj_scikit[:,obs_idx], 'x-', label=f"scikit_tt L={L} obs_{obs_idx}")
@@ -154,9 +174,12 @@ plt.legend()
 plt.savefig(f"results/propagation/ref_traj_L_{L}_obs_{obs_idx}.png", dpi=300, bbox_inches='tight')
 plt.show()
 #%%
-split_data.shape
+
+
 # %%
 obs_idx = 0     # 0 <= obs_idx < full_data.shape[1]
+
+L_index=0
 
 sample_list=[1, 10, 20, 80]
 
@@ -169,11 +192,11 @@ for n_samples in sample_list:
     rng = np.random.default_rng(42)  # change or remove seed for different draws
 
     n_samp_avg = 10000
-    full_data_avg = np.zeros((n_t, n_obs, n_samp_avg))
+    full_data_avg = np.zeros((n_t, n_obs_L, L, n_samp_avg))
     for j in range(n_samp_avg):
         idx = rng.choice(ntraj, size=n_samples, replace=True)
         # average over the sampled trajectories (axis=2)
-        full_data_avg[:, :, j] = np.mean(full_data[:, :, idx], axis=2)
+        full_data_avg[:, :, :, j] = np.mean(split_data[:, :, :, idx], axis=2)
 
 
     for time_idx in time_list:
@@ -189,7 +212,7 @@ for n_samples in sample_list:
 
 
         # extract data over trajectories for the chosen time and observable
-        samples = full_data_avg[time_idx, obs_idx, :].ravel()
+        samples = full_data_avg[time_idx, obs_idx, L_index, :].ravel()
 
         # plot histogram (normalized to a probability density)
         plt.figure(figsize=(8, 6))
@@ -208,13 +231,13 @@ for n_samples in sample_list:
         plt.ylim(0,35)
         plt.xlabel("Observable value")
         plt.ylabel("Probability density")
-        plt.title(f"Distribution at time {time[time_idx]}, t_max={time[-1]}, obs {obs_idx}, N_traj={n_samples}")
+        plt.title(f"Distribution at time {time[time_idx]}, t_max={time[-1]}, obs {obs_idx}, L_index={L_index}, N_traj={n_samples}")
         plt.legend()
         plt.grid(True)
         plt.tight_layout()
 
         # save figure
-        output_file = f"results/propagation/yaqs/plots/L_{L}/distribution_t_{time[time_idx]}_obs_{obs_idx}_ntraj_{n_samples}.png"
+        output_file = f"results/propagation/yaqs/plots/L_{L}/distribution_t_{time[time_idx]}_obs_{obs_idx}_L_index_{L_index}_ntraj_{n_samples}.png"
         print(f"Saving to {output_file}")
         plt.savefig(output_file, dpi=300, bbox_inches='tight')
         plt.close()
@@ -318,4 +341,72 @@ obs_idx_j= 1
 plt.plot(full_data_avg[time_i,obs_idx,:], full_data_avg[time_j,obs_idx,:], 'o', alpha=0.5)
 # plt.xlim(0.3, 0.8)
 # plt.ylim(0.3, 0.8)
+
+
+
+
+# %%
+##############################################################
+##   Loss Distribution
+##############################################################
+
+
+L_list=[3, 20, 50, 100]
+
+sample_list=[100, 250, 500, 1000]
+
+
+method="yaqs"
+
+n_samp_avg=5000
+
+rel_err=np.zeros((len(L_list), len(sample_list)))
+
+rng = np.random.default_rng(42)  # change or remove seed for different draws
+
+
+for i, L in enumerate(L_list):
+
+    split_data, ref_traj, time = load_traj(method, L)
+
+    n_t, n_obs_L, L, ntraj_max = split_data.shape
+
+    # Add new axis to ref_traj to enable broadcasting: (n_t, n_obs_L, L) -> (n_t, n_obs_L, L, 1)
+    ref_traj_expanded = ref_traj[..., np.newaxis]  # or ref_traj[:, :, :, np.newaxis]
+    loss_data = np.sum((split_data - ref_traj_expanded)**2, axis=(0,1,2))
+
+
+
+    for j, n_samples in enumerate(sample_list):
+
+
+        idx = rng.choice(ntraj_max, size=(n_samp_avg, n_samples), replace=True)
+
+        loss_data_samples = np.mean(loss_data[idx], axis=1)
+
+
+        rel_err[i, j] = np.std(loss_data_samples)/np.mean(loss_data_samples)
+
+
+
+
+
+
+# %%
+
+
+for i, L in enumerate(L_list):
+    plt.plot(sample_list, rel_err[i, :], 'o-', label=f"L={L}")
+plt.xlabel("Number of trajectories")
+plt.ylabel("Relative error (Loss)")
+plt.savefig(f"results/propagation/yaqs/plots/rel_err_vs_ntraj.png", dpi=300, bbox_inches='tight')
+plt.legend()
+# %%
+
+for i, ntraj in enumerate(sample_list):
+    plt.plot(L_list, rel_err[:,i], 'o-', label=f"ntraj={ntraj}")
+plt.xlabel("L")
+plt.ylabel("Relative error (Loss)")
+plt.savefig(f"results/propagation/yaqs/plots/rel_err_vs_L.png", dpi=300, bbox_inches='tight')
+plt.legend()
 # %%
