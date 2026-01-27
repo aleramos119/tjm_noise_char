@@ -64,6 +64,8 @@ if __name__ == '__main__':
 
     module = sys.argv[6]
 
+    loss_scale = bool(sys.argv[7])
+
     if module == "scikit":
         from auxiliar.scikit_tt_propagator import Propagator
     if module == "yaqs":
@@ -209,7 +211,7 @@ if __name__ == '__main__':
 
 
     loss=LossClass(
-            ref_traj=ref_traj, propagator=opt_propagator, num_traj = n_traj_func, working_dir=work_dir, print_to_file=True
+            ref_traj=ref_traj, propagator=opt_propagator, num_traj = n_traj_func, working_dir=work_dir, print_to_file=True, loss_scale=loss_scale
         )
 
 
