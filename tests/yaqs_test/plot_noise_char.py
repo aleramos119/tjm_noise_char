@@ -290,7 +290,21 @@ plt.savefig(out_file, dpi=300, bbox_inches="tight")
 plt.close()
 
 # %%
-n_samples=200
+n_samples=500
+
+
+L=50
+n_obs_L=3
+n_obs=n_obs_L*L
+n_t=61
+
+
+method="yaqs"
+
+
+split_data, ref_traj, time = load_traj("yaqs", L)
+
+n_t, n_obs_L, L, ntraj = split_data.shape
 
 
 rng = np.random.default_rng(42)  # change or remove seed for different draws
@@ -316,19 +330,28 @@ time_idx = 60
 
 
 # flattened_data = delta_data.reshape(n_t* n_obs, n_samp_avg)
-transposed_data = delta_data.transpose(2,1,0,3)
-final_data = transposed_data.reshape(n_t * n_obs_L * L, n_samp_avg)
+transposed_data = delta_data.transpose(2,1,0,3)[:,0,29,:]
+final_data = transposed_data.reshape(L, n_samp_avg)
 
 C = np.abs(np.cov(final_data))
 
 
 
-plt.imshow(C, vmin=0, vmax=2e-5)                  # show matrix (default colormap)
-plt.colorbar()                 # add color scale
-plt.title("Covariance Matrix")
-plt.xlabel("Variables")
-plt.ylabel("Variables")
-# plt.savefig(f"results/propagation/yaqs/plots/L_{L}/correlation_matrix_obs_{obs_idx}_ntraj_{n_samples}.png", dpi=300, bbox_inches='tight')
+im = plt.imshow(C, vmin=0, vmax=1e-4, origin="lower")  # set origin lower so i and i' increase to right and up
+cbar = plt.colorbar(im, format="%.1e")
+cbar.ax.tick_params(labelsize=16)  # Set colorbar tick font size
+
+# Remove the exponent only at the top of the colorbar
+cbar.ax.yaxis.get_offset_text().set_visible(False)
+cbar.ax.tick_params(labelsize=16)
+plt.title(r"$|Cov(Y_{i}, Y_{i'})|$", fontsize=18)
+plt.xlabel(r"$i$", fontsize=18)
+plt.ylabel(r"$i'$", fontsize=18)
+plt.savefig(f"results/propagation/yaqs/plots/L_{L}/correlation_matrix_ntraj_{n_samples}.pdf", dpi=300, bbox_inches='tight')
+
+plt.xticks(fontsize=16)
+plt.yticks(fontsize=16)
+
 plt.show()
 
 # %%
@@ -404,11 +427,15 @@ plt.legend()
 plt.savefig(f"results/propagation/yaqs/plots/rel_err_vs_ntraj.png", dpi=300, bbox_inches='tight')
 # %%
 
+plt.figure(figsize=(8, 6))
 for i, ntraj in enumerate(sample_list):
-    plt.plot(L_list, rel_err[:,i], 'o-', label=f"ntraj={ntraj}")
-plt.xlabel("L")
-plt.ylabel("Relative error (Loss)")
-plt.legend()
+    plt.plot(L_list, rel_err[:,i], 'o-', label=r"$N_{traj}$="+f"{ntraj}")
 
-plt.savefig(f"results/propagation/yaqs/plots/rel_err_vs_L.png", dpi=300, bbox_inches='tight')
+plt.xlabel(r"$N_L$", fontsize=18)
+plt.ylabel(r"$\varepsilon_{rel} ( \mathcal{J} )$", fontsize=18)
+plt.legend(fontsize=14)
+plt.xticks(fontsize=16)
+plt.yticks(fontsize=16)
+
+plt.savefig(f"results/propagation/yaqs/plots/rel_err_vs_L.pdf", dpi=300, bbox_inches='tight')
 # %%

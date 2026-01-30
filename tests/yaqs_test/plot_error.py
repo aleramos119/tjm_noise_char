@@ -57,7 +57,7 @@ def find_convergence_index(data, threshold):
 
 
 #%%
-module="scikit"
+module="yaqs"
 params = "d_3"
 
 method_list = ["cma","mcmc"]
