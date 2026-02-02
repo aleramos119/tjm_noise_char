@@ -151,8 +151,6 @@ n_obs=n_obs_L*L
 n_t=61
 
 
-method="yaqs"
-
 
 split_data, ref_traj, time = load_traj("yaqs", L)
 split_data_scikit, ref_traj_scikit, time_scikit = load_traj("scikit_tt",L)
@@ -316,6 +314,8 @@ for j in range(n_samp_avg):
     # average over the sampled trajectories (axis=2)
     split_data_avg[:, :, :, j] = np.mean(split_data[:, :, :, idx], axis=3)
 
+
+
 delta_data = split_data_avg**2
 
 
@@ -353,6 +353,11 @@ plt.xticks(fontsize=16)
 plt.yticks(fontsize=16)
 
 plt.show()
+
+#%%
+import gc
+gc.collect()
+
 
 # %%
 time_i= 27
