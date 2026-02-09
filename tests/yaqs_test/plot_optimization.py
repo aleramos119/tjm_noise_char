@@ -38,25 +38,68 @@ def plot_gamma_optimization(folder: str) -> None:
 
             d = len(gammas)
 
+            # --- Publication-quality plotting for gamma optimization history ---
+            import matplotlib as mpl
+
+            # Set scientific plotting defaults
+            mpl.rcParams.update({
+                'figure.figsize': (5, 4),
+                'axes.linewidth': 1.5,
+                'axes.labelsize': 16,
+                'axes.titlesize': 17,
+                'xtick.labelsize': 13,
+                'ytick.labelsize': 13,
+                'legend.fontsize': 13,
+                'lines.linewidth': 2,
+                'lines.markersize': 7,
+                'font.family': 'serif',
+                'pdf.fonttype': 42,
+                'ps.fonttype': 42,
+            })
+
+            # Gamma trace plot
+            fig, ax = plt.subplots(figsize=(5, 4))
+            color_cycle = plt.rcParams['axes.prop_cycle'].by_key()['color']
             for i in range(d):
-                plt.plot(data[:, 0], data[:, 2 + i], label=f"$\\gamma_{{{i+1}}}$")
-                plt.axhline(gammas[i], color=plt.gca().lines[-1].get_color(), linestyle='--', linewidth=2)
+                ax.plot(
+                    data[:, 0], data[:, 2 + i], 
+                    label=rf"$\gamma_{{{i+1}}}$",
+                    color=color_cycle[i % len(color_cycle)],
+                )
+            ax.axhline(
+                gammas[0], 
+                color="black",
+                linestyle='--', linewidth=2,
+                alpha=0.7
+            )
+            ax.set_xlabel("Iterations", labelpad=4)
+            ax.set_ylabel(r"$\gamma$", labelpad=4)
+            ax.legend(frameon=False, loc='best', handlelength=2)
+            # Show top and right border (make sure they're visible)
+            ax.spines['top'].set_visible(True)
+            ax.spines['right'].set_visible(True)
+            # Remove grid
+            # Do not set title; leave for caption
+            plt.tight_layout()
+            plt.savefig(folder + file + ".pdf", dpi=600, bbox_inches="tight", transparent=True)
+            plt.close(fig)
 
-            plt.xlabel("Iterations")
-            plt.ylabel(r"$\gamma$")
-            plt.legend()
-            plt.title("Gamma Parameter Optimization History")
-            plt.savefig(folder + file + ".pdf")
-            plt.close()
+            max_diff = max(abs(np.mean(data[10:, 2:2 + d], axis=0) - gammas))
 
-        max_diff=max(abs(np.mean(data[10:,2:2+d],axis=0)-gammas))
-
-        plt.plot(data[:,0], np.log10(data[:,1]), label="log10(Loss)")
-        plt.title("Loss Optimization History")
-
-        plt.legend()
-        plt.savefig(folder + "/loss.pdf")
-        plt.close()
+            # Publication-quality plotting for loss optimization history
+            fig2, ax2 = plt.subplots(figsize=(5, 4))
+            ax2.plot(
+                data[:, 0], np.log10(np.sqrt(data[:, 1])), color="tab:blue"
+            )
+            ax2.set_xlabel("Iterations", labelpad=4)
+            ax2.set_ylabel(r"$\log_{10}\left(\sqrt{J}\right)$", labelpad=4)
+            ax2.legend(frameon=False, loc="best")
+            ax2.spines['top'].set_visible(True)
+            ax2.spines['right'].set_visible(True)
+            # Remove grid
+            plt.tight_layout()
+            plt.savefig(folder + "/loss.pdf", dpi=600, bbox_inches="tight", transparent=True)
+            plt.close(fig2)
 
 
 
@@ -683,7 +726,7 @@ plt.legend()
 
 # %%
 
-for current_dir, subdirs, files in os.walk("results/characterizer_gradient_free"):
+for current_dir, subdirs, files in os.walk("results/characterizer_gradient_free/loss_scale_True_reduced"):
         # If the directory has no subdirectories, treat it as a leaf node
         if not subdirs:
             plot_gamma_optimization(current_dir)
@@ -790,4 +833,244 @@ n_obs=3*L
 const=4e6
 N=int(np.ceil(const/(n_t*n_obs)))
 print(N)
+# %%
+
+from matplotlib.gridspec import GridSpec
+
+def plot_optimization_grid(L1: int, L2: int, module: str, method: str, params: str, 
+                           const: str, xlim: float, output_file: str = None, 
+                           traj_col: int = 1) -> None:
+    """
+    Create a 3x2 grid plot showing loss, gamma optimization history, and trajectory comparison
+    for two different L values. All y-axes within a row are set to the same range.
+    Removes x-labels from the first row.
+    """
+    import matplotlib as mpl
+
+    # Set scientific plotting defaults
+    mpl.rcParams.update({
+        'figure.figsize': (10, 12),
+        'axes.linewidth': 1.5,
+        'axes.labelsize': 16,
+        'axes.titlesize': 17,
+        'xtick.labelsize': 13,
+        'ytick.labelsize': 13,
+        'legend.fontsize': 13,
+        'lines.linewidth': 2,
+        'lines.markersize': 7,
+        'font.family': 'serif',
+        'pdf.fonttype': 42,
+        'ps.fonttype': 42,
+    })
+
+    fig, axes = plt.subplots(
+    3, 2,
+    figsize=(10, 12),
+    sharey='row'
+)  # Ensure shared Y axes per row
+
+
+
+
+    L_list = [L1, L2]
+
+    # Data collectors for ylim computation
+    row1_y = []
+    row2_y = []
+    row3_y = []
+
+    # To keep track of which columns have data (for later y axis normalization)
+    row1_axes, row2_axes, row3_axes = [], [], []
+
+    all_data = {}
+
+    # PRELOAD all data to determine axis scales first
+    for col_idx, L in enumerate(L_list):
+        folder = f"results/characterizer_gradient_free/loss_scale_True_reduced/module_{module}/method_{method}/params_{params}/const_{const}/L_{L}/xlim_{xlim}/"
+
+        loss_x_file = os.path.join(folder, "loss_x_history.txt")
+        gammas_file = os.path.join(folder, "gammas.txt")
+        ref_traj_file = os.path.join(folder, "ref_traj.txt")
+        opt_traj_files = sorted(glob.glob(os.path.join(folder, "opt_traj_*.txt")))
+        opt_traj_file = opt_traj_files[0] if opt_traj_files else None
+
+        if not os.path.exists(loss_x_file):
+            print(f"Warning: {loss_x_file} does not exist, skipping L={L}")
+            continue
+
+        data = np.genfromtxt(loss_x_file, skip_header=1, ndmin=2)
+        gammas = np.array(np.genfromtxt(gammas_file, skip_header=1, ndmin=1)) if os.path.exists(gammas_file) else None
+        d = len(gammas) if gammas is not None else 0
+
+        # Store so we don't reload
+        all_data[L] = {
+            'data': data,
+            'gammas': gammas,
+            'd': d,
+            'ref_traj_file': ref_traj_file,
+            'opt_traj_file': opt_traj_file
+        }
+
+        # Row 1
+        row1_y.extend(np.log10(np.sqrt(data[:, 1])))
+        row1_axes.append(col_idx)
+
+        # Row 2
+        if d > 0:
+            for i in range(d):
+                row2_y.extend(list(data[:, 2 + i]))
+            row2_axes.append(col_idx)
+
+        # Row 3
+        if os.path.exists(ref_traj_file) and opt_traj_file and os.path.exists(opt_traj_file):
+            ref_traj = np.genfromtxt(ref_traj_file, skip_header=1)
+            opt_traj = np.genfromtxt(opt_traj_file, skip_header=1)
+            if ref_traj.shape[1] > traj_col and opt_traj.shape[1] > traj_col:
+                row3_y.extend(ref_traj[:, traj_col])
+                row3_y.extend(opt_traj[:, traj_col])
+                row3_axes.append(col_idx)
+
+    # Compute global y-limits for each row (if any data exists)
+    if row1_y:
+        y1min, y1max = np.min(row1_y), np.max(row1_y)
+        margin1 = 0.05 * (y1max - y1min) if y1max > y1min else 0.1
+        y1lim = (y1min - margin1, y1max + margin1)
+    else:
+        y1lim = None
+    if row2_y:
+        y2min, y2max = np.min(row2_y), np.max(row2_y)
+        margin2 = 0.05 * (y2max - y2min) if y2max > y2min else 0.1
+        y2lim = (y2min - margin2, y2max + margin2)
+    else:
+        y2lim = None
+    if row3_y:
+        y3min, y3max = np.min(row3_y), np.max(row3_y)
+        margin3 = 0.05 * (y3max - y3min) if y3max > y3min else 0.1
+        y3lim = (y3min - margin3, y3max + margin3)
+    else:
+        y3lim = None
+
+    for col_idx, L in enumerate(L_list):
+        if L not in all_data:
+            continue
+        this = all_data[L]
+        data = this['data']
+        gammas = this['gammas']
+        d = this['d']
+        ref_traj_file = this['ref_traj_file']
+        opt_traj_file = this['opt_traj_file']
+
+        # Row 1: Loss plot
+        ax = axes[0, col_idx]
+        loss_vals = np.log10(np.sqrt(data[:, 1]))
+        ax.plot(data[:, 0], loss_vals, color="tab:blue")
+        # Remove x axis label for the first row
+        ax.set_xlabel("")
+        ax.tick_params(labelbottom=False)
+        if col_idx == 0:
+            ax.set_ylabel(r"$\log_{10}\left(\sqrt{J}\right)$", labelpad=4)
+            ax.tick_params(left=True, labelleft=True)
+        ax.spines['top'].set_visible(True)
+        ax.spines['right'].set_visible(True)
+        if col_idx == 1:
+            pass
+            # ax.set_yticklabels([])
+            # ax.set_yticks([])
+            # ax.set_ylabel("")
+            # ax.set_xticklabels([])
+            # ax.set_xticks([])
+        # Set global y-limits for row 1
+        if y1lim:
+            ax.set_ylim(y1lim)
+
+        # Row 2: Gamma optimization history
+        ax = axes[1, col_idx]
+        color_cycle = plt.rcParams['axes.prop_cycle'].by_key()['color']
+        if d > 0:
+            for i in range(d):
+                ax.plot(
+                    data[:, 0], data[:, 2 + i], 
+                    label=rf"$\gamma_{{{i+1}}}$",
+                    color=color_cycle[i % len(color_cycle)],
+                )
+            if gammas is not None and len(gammas) > 0:
+                ax.axhline(
+                    gammas[0], 
+                    color="black",
+                    linestyle='--', linewidth=2,
+                    alpha=0.7
+                )
+        ax.set_xlabel("Iterations", labelpad=4)
+        ax.set_ylabel(r"$\gamma$", labelpad=4)
+        ax.tick_params(left=True, labelleft=True)
+        ax.legend(frameon=False, loc='best', handlelength=2, fontsize=11)
+        ax.spines['top'].set_visible(True)
+        ax.spines['right'].set_visible(True)
+        if col_idx == 1:
+            pass
+            # ax.set_yticklabels([])
+            # ax.set_yticks([])
+            # ax.set_ylabel("")
+            # ax.set_xticklabels([])
+            # ax.set_xticks([])
+            # ax.set_xlabel("")
+        # Set global y-limits for row 2
+        if y2lim:
+            ax.set_ylim(y2lim)
+
+        # Row 3: Trajectory comparison
+        ax = axes[2, col_idx]
+        if os.path.exists(ref_traj_file) and opt_traj_file and os.path.exists(opt_traj_file):
+            ref_traj = np.genfromtxt(ref_traj_file, skip_header=1)
+            opt_traj = np.genfromtxt(opt_traj_file, skip_header=1)
+
+            # Ensure we have enough columns
+            if ref_traj.shape[1] > traj_col and opt_traj.shape[1] > traj_col:
+                ax.plot(ref_traj[:, 0], ref_traj[:, traj_col], 
+                        label="Reference", color="tab:blue")
+                ax.plot(opt_traj[:, 0], opt_traj[:, traj_col], 
+                        label="Optimized", 
+                        linestyle='--', color="tab:orange")
+  
+                ax.legend(frameon=False, loc='best', handlelength=2)
+        else:
+            ax.text(0.5, 0.5, "Trajectory files\nnot found", 
+                   ha="center", va="center", transform=ax.transAxes)
+
+        ax.set_xlabel("Time", labelpad=4)
+        if col_idx == 0:
+            ax.tick_params(left=True, labelleft=True)
+        ax.spines['top'].set_visible(True)
+        ax.spines['right'].set_visible(True)
+        if col_idx == 1:
+            pass
+            # ax.set_yticklabels([])
+            # ax.set_yticks([])
+            # ax.set_ylabel("")
+            # ax.set_xticklabels([])
+            # ax.set_xticks([])
+            # ax.set_xlabel("")
+        # Set global y-limits for row 3
+        if y3lim:
+            ax.set_ylim(y3lim)
+
+    # Add column labels
+    for col_idx, L in enumerate(L_list):
+        axes[0, col_idx].text(0.5, 1.05, f"$L={L}$", 
+                             transform=axes[0, col_idx].transAxes,
+                             ha='center', va='bottom', fontsize=17)
+
+    plt.tight_layout()
+
+    if output_file is None:
+        folder1 = f"results/characterizer_gradient_free/loss_scale_True_reduced/module_{module}/method_{method}/params_{params}/const_{const}/"
+        output_file = os.path.join(folder1, f"optimization_grid_L{L1}_L{L2}.pdf")
+
+    plt.savefig(output_file, dpi=600, bbox_inches='tight', transparent=True)
+    plt.close(fig)
+
+
+# %%
+# Example usage:
+plot_optimization_grid(L1=10, L2=160, module="yaqs", method="cma", params="d_3", const="4e6", xlim=0.1)
 # %%
