@@ -851,11 +851,11 @@ def plot_optimization_grid(L1: int, L2: int, module: str, method: str, params: s
     mpl.rcParams.update({
         'figure.figsize': (10, 12),
         'axes.linewidth': 1.5,
-        'axes.labelsize': 16,
+        'axes.labelsize': 18,
         'axes.titlesize': 17,
-        'xtick.labelsize': 13,
-        'ytick.labelsize': 13,
-        'legend.fontsize': 13,
+        'xtick.labelsize': 16,
+        'ytick.labelsize': 16,
+        'legend.fontsize': 16,
         'lines.linewidth': 2,
         'lines.markersize': 7,
         'font.family': 'serif',
@@ -1003,7 +1003,7 @@ def plot_optimization_grid(L1: int, L2: int, module: str, method: str, params: s
         if col_idx == 0:
             ax.set_ylabel(r"$\gamma$", labelpad=4)
             # ax.tick_params(left=True, labelleft=True)
-        ax.legend(frameon=False, loc='best', handlelength=2, fontsize=11)
+        ax.legend(frameon=False, loc='best', handlelength=2)
         ax.spines['top'].set_visible(True)
         ax.spines['right'].set_visible(True)
         # if col_idx == 1:
@@ -1059,7 +1059,7 @@ def plot_optimization_grid(L1: int, L2: int, module: str, method: str, params: s
     for col_idx, L in enumerate(L_list):
         axes[0, col_idx].text(0.5, 1.05, f"$({chr(97+col_idx)}) \\quad N_L={L}$", 
                              transform=axes[0, col_idx].transAxes,
-                             ha='center', va='bottom', fontsize=17)
+                             ha='center', va='bottom', fontsize=18)
 
     plt.tight_layout()
 
