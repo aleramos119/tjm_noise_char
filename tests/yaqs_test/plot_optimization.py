@@ -969,16 +969,15 @@ def plot_optimization_grid(L1: int, L2: int, module: str, method: str, params: s
         ax.tick_params(labelbottom=False)
         if col_idx == 0:
             ax.set_ylabel(r"$\log_{10}\left(\sqrt{J}\right)$", labelpad=4)
-            ax.tick_params(left=True, labelleft=True)
+            # ax.tick_params(left=True, labelleft=True)
         ax.spines['top'].set_visible(True)
         ax.spines['right'].set_visible(True)
-        if col_idx == 1:
-            pass
-            # ax.set_yticklabels([])
-            # ax.set_yticks([])
-            # ax.set_ylabel("")
-            # ax.set_xticklabels([])
-            # ax.set_xticks([])
+        # if col_idx == 1:
+        #     ax.set_yticklabels([])
+        #     ax.set_yticks([])
+        #     ax.set_ylabel("")
+        #     ax.tick_params(left=False, labelleft=False)
+
         # Set global y-limits for row 1
         if y1lim:
             ax.set_ylim(y1lim)
@@ -1001,19 +1000,20 @@ def plot_optimization_grid(L1: int, L2: int, module: str, method: str, params: s
                     alpha=0.7
                 )
         ax.set_xlabel("Iterations", labelpad=4)
-        ax.set_ylabel(r"$\gamma$", labelpad=4)
-        ax.tick_params(left=True, labelleft=True)
+        if col_idx == 0:
+            ax.set_ylabel(r"$\gamma$", labelpad=4)
+            # ax.tick_params(left=True, labelleft=True)
         ax.legend(frameon=False, loc='best', handlelength=2, fontsize=11)
         ax.spines['top'].set_visible(True)
         ax.spines['right'].set_visible(True)
-        if col_idx == 1:
-            pass
-            # ax.set_yticklabels([])
-            # ax.set_yticks([])
-            # ax.set_ylabel("")
-            # ax.set_xticklabels([])
-            # ax.set_xticks([])
-            # ax.set_xlabel("")
+        # if col_idx == 1:
+        #     ax.set_yticklabels([])
+        #     ax.set_yticks([])
+        #     ax.set_ylabel("")
+        #     ax.tick_params(left=False, labelleft=False)
+        # elif col_idx == 0:
+        #     # Explicitly keep ticks visible for first column
+        #     ax.tick_params(left=True, labelleft=True)
         # Set global y-limits for row 2
         if y2lim:
             ax.set_ylim(y2lim)
@@ -1027,9 +1027,9 @@ def plot_optimization_grid(L1: int, L2: int, module: str, method: str, params: s
             # Ensure we have enough columns
             if ref_traj.shape[1] > traj_col and opt_traj.shape[1] > traj_col:
                 ax.plot(ref_traj[:, 0], ref_traj[:, traj_col], 
-                        label="Reference", color="tab:blue")
+                        label=r"$\langle O_{11} \rangle^{(ref)}$", color="tab:blue")
                 ax.plot(opt_traj[:, 0], opt_traj[:, traj_col], 
-                        label="Optimized", 
+                        label=r"$\langle O_{11} \rangle^{(opt)}$", 
                         linestyle='--', color="tab:orange")
   
                 ax.legend(frameon=False, loc='best', handlelength=2)
@@ -1037,26 +1037,27 @@ def plot_optimization_grid(L1: int, L2: int, module: str, method: str, params: s
             ax.text(0.5, 0.5, "Trajectory files\nnot found", 
                    ha="center", va="center", transform=ax.transAxes)
 
-        ax.set_xlabel("Time", labelpad=4)
+        ax.set_xlabel("t", labelpad=4)
         if col_idx == 0:
+            ax.set_ylabel(r"$\langle O_{11} \rangle$", labelpad=4)
             ax.tick_params(left=True, labelleft=True)
         ax.spines['top'].set_visible(True)
         ax.spines['right'].set_visible(True)
-        if col_idx == 1:
-            pass
-            # ax.set_yticklabels([])
-            # ax.set_yticks([])
-            # ax.set_ylabel("")
-            # ax.set_xticklabels([])
-            # ax.set_xticks([])
-            # ax.set_xlabel("")
+        # if col_idx == 1:
+        #     ax.set_yticklabels([])
+        #     ax.set_yticks([])
+        #     ax.set_ylabel("")
+        #     ax.tick_params(left=False, labelleft=False)
+        # elif col_idx == 0:
+        #     # Explicitly keep ticks visible for first column
+        #     ax.tick_params(left=True, labelleft=True)
         # Set global y-limits for row 3
         if y3lim:
             ax.set_ylim(y3lim)
 
     # Add column labels
     for col_idx, L in enumerate(L_list):
-        axes[0, col_idx].text(0.5, 1.05, f"$L={L}$", 
+        axes[0, col_idx].text(0.5, 1.05, f"$({chr(97+col_idx)}) \\quad N_L={L}$", 
                              transform=axes[0, col_idx].transAxes,
                              ha='center', va='bottom', fontsize=17)
 
