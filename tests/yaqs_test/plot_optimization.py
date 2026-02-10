@@ -839,7 +839,7 @@ from matplotlib.gridspec import GridSpec
 
 def plot_optimization_grid(L1: int, L2: int, module: str, method: str, params: str, 
                            const: str, xlim: float, output_file: str = None, 
-                           traj_col: int = 1) -> None:
+                           traj_col: int = 1, legend: bool = True) -> None:
     """
     Create a 3x2 grid plot showing loss, gamma optimization history, and trajectory comparison
     for two different L values. All y-axes within a row are set to the same range.
@@ -1003,7 +1003,8 @@ def plot_optimization_grid(L1: int, L2: int, module: str, method: str, params: s
         if col_idx == 0:
             ax.set_ylabel(r"$\gamma$", labelpad=4)
             # ax.tick_params(left=True, labelleft=True)
-        ax.legend(frameon=False, loc='best', handlelength=2)
+        if legend:
+            ax.legend(frameon=False, loc='best', handlelength=2)
         ax.spines['top'].set_visible(True)
         ax.spines['right'].set_visible(True)
         # if col_idx == 1:
@@ -1032,6 +1033,7 @@ def plot_optimization_grid(L1: int, L2: int, module: str, method: str, params: s
                         label=r"$\langle O_{11} \rangle^{(opt)}$", 
                         linestyle='--', color="tab:orange")
   
+
                 ax.legend(frameon=False, loc='best', handlelength=2)
         else:
             ax.text(0.5, 0.5, "Trajectory files\nnot found", 
@@ -1065,7 +1067,7 @@ def plot_optimization_grid(L1: int, L2: int, module: str, method: str, params: s
 
     if output_file is None:
         folder1 = f"results/characterizer_gradient_free/loss_scale_True_reduced/module_{module}/method_{method}/params_{params}/const_{const}/"
-        output_file = os.path.join(folder1, f"optimization_grid_L{L1}_L{L2}.pdf")
+        output_file = os.path.join(folder1, f"optimization_grid_{params}_L{L1}_L{L2}.pdf")
 
     plt.savefig(output_file, dpi=600, bbox_inches='tight', transparent=True)
     plt.close(fig)
@@ -1073,5 +1075,5 @@ def plot_optimization_grid(L1: int, L2: int, module: str, method: str, params: s
 
 # %%
 # Example usage:
-plot_optimization_grid(L1=10, L2=160, module="yaqs", method="cma", params="d_3", const="4e6", xlim=0.1)
+plot_optimization_grid(L1=2, L2=16, module="yaqs", method="cma", params="d_3L", const="4e6", xlim=0.1, legend=False)
 # %%
