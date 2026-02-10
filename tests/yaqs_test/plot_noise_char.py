@@ -321,6 +321,7 @@ delta_data = split_data_avg**2
 
 #%%
 import matplotlib.pyplot as plt
+import matplotlib as mpl
 
 %matplotlib qt
 
@@ -335,24 +336,41 @@ final_data = transposed_data.reshape(L, n_samp_avg)
 
 C = np.abs(np.cov(final_data))
 
+# --- Publication-quality plotting for covariance matrix ---
+# Set scientific plotting defaults
+mpl.rcParams.update({
+    'figure.figsize': (5, 4),
+    'axes.linewidth': 1.5,
+    'axes.labelsize': 16,
+    'axes.titlesize': 17,
+    'xtick.labelsize': 13,
+    'ytick.labelsize': 13,
+    'legend.fontsize': 13,
+    'lines.linewidth': 2,
+    'lines.markersize': 7,
+    'font.family': 'serif',
+    'pdf.fonttype': 42,
+    'ps.fonttype': 42,
+})
 
-
-im = plt.imshow(C, vmin=0, vmax=1e-4, origin="lower")  # set origin lower so i and i' increase to right and up
-cbar = plt.colorbar(im, format="%.1e")
-cbar.ax.tick_params(labelsize=16)  # Set colorbar tick font size
+fig, ax = plt.subplots(figsize=(5, 4))
+im = ax.imshow(C, vmin=0, vmax=1e-4, origin="lower")  # set origin lower so i and i' increase to right and up
+cbar = plt.colorbar(im, format="%.1e", ax=ax)
+cbar.ax.tick_params(labelsize=13)  # Set colorbar tick font size
 
 # Remove the exponent only at the top of the colorbar
 cbar.ax.yaxis.get_offset_text().set_visible(False)
-cbar.ax.tick_params(labelsize=16)
-plt.title(r"$|Cov(Y_{i}, Y_{i'})|$", fontsize=18)
-plt.xlabel(r"$i$", fontsize=18)
-plt.ylabel(r"$i'$", fontsize=18)
-plt.savefig(f"results/propagation/yaqs/plots/L_{L}/correlation_matrix_ntraj_{n_samples}.pdf", dpi=300, bbox_inches='tight')
 
-plt.xticks(fontsize=16)
-plt.yticks(fontsize=16)
-
-plt.show()
+ax.set_title(r"$|Cov(Y_{i}, Y_{i'})|$", fontsize=17)
+ax.set_xlabel(r"$i$", labelpad=4)
+ax.set_ylabel(r"$i'$", labelpad=4)
+# Show top and right border (make sure they're visible)
+ax.spines['top'].set_visible(True)
+ax.spines['right'].set_visible(True)
+# Do not set title; leave for caption
+plt.tight_layout()
+plt.savefig(f"results/propagation/yaqs/plots/L_{L}/correlation_matrix_ntraj_{n_samples}.pdf", dpi=600, bbox_inches="tight", transparent=True)
+plt.close(fig)
 
 #%%
 import gc
@@ -432,15 +450,43 @@ plt.legend()
 plt.savefig(f"results/propagation/yaqs/plots/rel_err_vs_ntraj.png", dpi=300, bbox_inches='tight')
 # %%
 
-plt.figure(figsize=(8, 6))
+# --- Publication-quality plotting for relative error vs L ---
+import matplotlib as mpl
+
+# Set scientific plotting defaults
+mpl.rcParams.update({
+    'figure.figsize': (5, 4),
+    'axes.linewidth': 1.5,
+    'axes.labelsize': 16,
+    'axes.titlesize': 17,
+    'xtick.labelsize': 13,
+    'ytick.labelsize': 13,
+    'legend.fontsize': 13,
+    'lines.linewidth': 2,
+    'lines.markersize': 7,
+    'font.family': 'serif',
+    'pdf.fonttype': 42,
+    'ps.fonttype': 42,
+})
+
+fig, ax = plt.subplots(figsize=(5, 4))
+color_cycle = plt.rcParams['axes.prop_cycle'].by_key()['color']
 for i, ntraj in enumerate(sample_list):
-    plt.plot(L_list, rel_err[:,i], 'o-', label=r"$N_{traj}$="+f"{ntraj}")
+    ax.plot(
+        L_list, rel_err[:,i], 
+        'o-', 
+        label=r"$N_{traj}$="+f"{ntraj}",
+        color=color_cycle[i % len(color_cycle)],
+    )
 
-plt.xlabel(r"$N_L$", fontsize=18)
-plt.ylabel(r"$\varepsilon_{rel} ( \mathcal{J} )$", fontsize=18)
-plt.legend(fontsize=14)
-plt.xticks(fontsize=16)
-plt.yticks(fontsize=16)
-
-plt.savefig(f"results/propagation/yaqs/plots/rel_err_vs_L.pdf", dpi=300, bbox_inches='tight')
+ax.set_xlabel(r"$N_L$", labelpad=4)
+ax.set_ylabel(r"$\varepsilon_{rel} ( \mathcal{J} )$", labelpad=4)
+ax.legend(frameon=False, loc='best', handlelength=2)
+# Show top and right border (make sure they're visible)
+ax.spines['top'].set_visible(True)
+ax.spines['right'].set_visible(True)
+# Do not set title; leave for caption
+plt.tight_layout()
+plt.savefig(f"results/propagation/yaqs/plots/rel_err_vs_L.pdf", dpi=600, bbox_inches="tight", transparent=True)
+plt.close(fig)
 # %%
