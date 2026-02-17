@@ -151,7 +151,7 @@ for const in const_list:
 # %%
 #%%
 module="yaqs"
-params = "d_3L"
+params = "d_3"
 
 method_list = ["cma"]
 
@@ -209,7 +209,7 @@ for const in const_list:
 
         fig, ax = plt.subplots(figsize=(5, 4))
         ax.plot(L_list, error_list, marker='o')
-        ax.set_xlabel(r"$L$", labelpad=4)
+        ax.set_xlabel(r"$N_L$", labelpad=4)
         ax.set_ylabel(r"$\log_{10}\left( \sqrt{J} \right)$", labelpad=4)
         # Show top and right border
         ax.spines['top'].set_visible(True)

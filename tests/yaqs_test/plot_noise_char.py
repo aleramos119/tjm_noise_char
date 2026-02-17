@@ -438,6 +438,7 @@ for i, L in enumerate(L_list):
 
 
 
+
 # %%
 
 
@@ -489,4 +490,100 @@ ax.spines['right'].set_visible(True)
 plt.tight_layout()
 plt.savefig(f"results/propagation/yaqs/plots/rel_err_vs_L.pdf", dpi=600, bbox_inches="tight", transparent=True)
 plt.close(fig)
+
+
+
+# %%
+%matplotlib inline
+# Create interpolated function from rel_err (for irregular grids)
+from scipy.interpolate import CloughTocher2DInterpolator, LinearNDInterpolator, RBFInterpolator
+
+# Prepare data for irregular grid interpolation
+# Create meshgrid of all (sample_list, L_list) combinations
+X, Y = np.meshgrid(sample_list, L_list)
+# Flatten to create points array: each row is (n_samples, L)
+points = np.column_stack([X.ravel(), Y.ravel()])
+# Flatten rel_err to match the points
+values = rel_err.ravel()
+
+# Choose interpolation order:
+# 'linear' - order 1, faster but less smooth
+# 'cubic' - order 3, smoother (CloughTocher)
+# 'rbf' - radial basis function, can use different kernels
+interp_order = 'linear'  # Change to 'linear' or 'rbf' if desired
+
+if interp_order == 'linear':
+    interp_base = LinearNDInterpolator(points, values)
+elif interp_order == 'cubic':
+    interp_base = CloughTocher2DInterpolator(points, values)
+elif interp_order == 'rbf':
+    # RBF interpolation with different kernels: 'linear', 'thin_plate_spline', 'cubic', 'quintic', 'gaussian'
+    # For 'gaussian' kernel, epsilon must be specified (controls width of Gaussian)
+    # Scale-invariant kernels (cubic, linear, thin_plate_spline, quintic) don't need epsilon
+    # Calculate epsilon based on data scale, or use a fixed value
+    # epsilon ~ typical distance between points
+    x_range = np.max(sample_list) - np.min(sample_list)
+    y_range = np.max(L_list) - np.min(L_list)
+    epsilon = np.sqrt(x_range**2 + y_range**2) / len(points)  # adaptive epsilon
+    # Or use a fixed value: epsilon = 1.0
+    interp_base = RBFInterpolator(points, values, kernel='thin_plate_spline')
+else:
+    raise ValueError(f"Unknown interpolation order: {interp_order}. Choose 'linear', 'cubic', or 'rbf'")
+
+# Create a wrapper function that handles different calling conventions
+def interp_rel_err(x, y):
+    """
+    Interpolate rel_err at given (x, y) points.
+    
+    Parameters
+    ----------
+    x : scalar or array-like
+        sample_list values (number of trajectories)
+    y : scalar or array-like
+        L_list values (system sizes)
+    
+    Returns
+    -------
+    scalar or array
+        Interpolated rel_err values
+    """
+    x = np.asarray(x)
+    y = np.asarray(y)
+    
+    # Handle broadcasting for arrays
+    if x.ndim == 0 and y.ndim == 0:
+        # Both scalars
+        query_points = np.array([[x, y]])
+    elif x.ndim == 0:
+        # x is scalar, y is array
+        query_points = np.column_stack([np.full_like(y, x), y])
+    elif y.ndim == 0:
+        # y is scalar, x is array
+        query_points = np.column_stack([x, np.full_like(x, y)])
+    else:
+        # Both arrays - create meshgrid
+        X, Y = np.meshgrid(x, y)
+        query_points = np.column_stack([X.ravel(), Y.ravel()])
+        result = interp_base(query_points)
+        return result.reshape(len(y), len(x))
+    
+    result = interp_base(query_points)
+    return result[0] if result.size == 1 else result
+
+# Example usage:
+# rel_err_interpolated = interp_rel_err(n_samples, L)  # returns scalar or array
+# For example:
+# rel_err_interpolated = interp_rel_err(375, 35)  # interpolate for n_samples=375, L=35
+
+site_points=np.linspace(100, 1000, 100)
+site_values=interp_rel_err(site_points,50)
+
+
+plt.plot(site_points, site_values, '-')
+plt.plot(sample_list, rel_err[2, :], 'o')
+plt.show()
+# %%
+sample_list
+# %%
+interp_rel_err(547,40)
 # %%
