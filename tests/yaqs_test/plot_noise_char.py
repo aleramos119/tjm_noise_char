@@ -480,7 +480,7 @@ for i, ntraj in enumerate(sample_list):
         color=color_cycle[i % len(color_cycle)],
     )
 
-ax.set_xlabel(r"$N_L$", labelpad=4)
+ax.set_xlabel(r"$N_{site}$", labelpad=4)
 ax.set_ylabel(r"$\varepsilon_{rel} ( \mathcal{J} )$", labelpad=4)
 ax.legend(frameon=False, loc='best', handlelength=2)
 # Show top and right border (make sure they're visible)
