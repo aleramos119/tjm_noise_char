@@ -1059,7 +1059,7 @@ def plot_optimization_grid(L1: int, L2: int, module: str, method: str, params: s
 
     # Add column labels
     for col_idx, L in enumerate(L_list):
-        axes[0, col_idx].text(0.5, 1.05, f"$({chr(97+col_idx)}) \\quad N_L={L}$", 
+        axes[0, col_idx].text(0.5, 1.05, f"({chr(97+col_idx)})"+r"$\quad N_{site}=$"+f"{L}", 
                              transform=axes[0, col_idx].transAxes,
                              ha='center', va='bottom', fontsize=18)
 
@@ -1075,5 +1075,5 @@ def plot_optimization_grid(L1: int, L2: int, module: str, method: str, params: s
 
 # %%
 # Example usage:
-plot_optimization_grid(L1=2, L2=16, module="yaqs", method="cma", params="d_3L", const="4e6", xlim=0.1, legend=False)
+plot_optimization_grid(L1=10, L2=160, module="yaqs", method="cma", params="d_3", const="4e6", xlim=0.1, legend=False)
 # %%

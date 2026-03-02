@@ -151,7 +151,7 @@ for const in const_list:
 # %%
 #%%
 module="yaqs"
-params = "d_3L"
+params = "d_3"
 
 method_list = ["cma"]
 
