@@ -151,7 +151,7 @@ for const in const_list:
 # %%
 #%%
 module="yaqs"
-params = "d_3"
+params = "d_3L"
 
 method_list = ["cma"]
 
@@ -185,6 +185,12 @@ mpl.rcParams.update({
     'pdf.fonttype': 42,
     'ps.fonttype': 42,
 })
+
+
+plt.rc('text', usetex=True)
+plt.rc('font', family='serif')
+plt.rcParams["mathtext.fontset"] = "cm"
+
 
 for const in const_list:
     for method in method_list:

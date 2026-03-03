@@ -847,21 +847,28 @@ def plot_optimization_grid(L1: int, L2: int, module: str, method: str, params: s
     """
     import matplotlib as mpl
 
+
+    label_size=22
+
     # Set scientific plotting defaults
     mpl.rcParams.update({
         'figure.figsize': (10, 12),
         'axes.linewidth': 1.5,
-        'axes.labelsize': 18,
-        'axes.titlesize': 17,
-        'xtick.labelsize': 16,
-        'ytick.labelsize': 16,
-        'legend.fontsize': 16,
+        'axes.labelsize': label_size,
+        'axes.titlesize': label_size,
+        'xtick.labelsize': label_size,
+        'ytick.labelsize': label_size,
+        'legend.fontsize': label_size,
         'lines.linewidth': 2,
         'lines.markersize': 7,
         'font.family': 'serif',
         'pdf.fonttype': 42,
         'ps.fonttype': 42,
     })
+
+    plt.rc('text', usetex=True)
+    plt.rc('font', family='serif')
+    plt.rcParams["mathtext.fontset"] = "cm"
 
     fig, axes = plt.subplots(
     3, 2,
@@ -988,10 +995,12 @@ def plot_optimization_grid(L1: int, L2: int, module: str, method: str, params: s
         if d > 0:
             for i in range(d):
                 ax.plot(
-                    data[:, 0], data[:, 2 + i], 
-                    label=rf"$\gamma_{{{i+1}}}$",
+                    data[:, 0], data[:, 2 + i],
+                    label=rf"$\gamma_{{{['X', 'Y', 'Z'][i] if i < 3 else i+1}}}$",
                     color=color_cycle[i % len(color_cycle)],
                 )
+            if params=="d_3":
+                ax.legend(frameon=False, loc='best', handlelength=2)
             if gammas is not None and len(gammas) > 0:
                 ax.axhline(
                     gammas[0], 
@@ -1059,9 +1068,11 @@ def plot_optimization_grid(L1: int, L2: int, module: str, method: str, params: s
 
     # Add column labels
     for col_idx, L in enumerate(L_list):
-        axes[0, col_idx].text(0.5, 1.05, f"({chr(97+col_idx)})"+r"$\quad N_{site}=$"+f"{L}", 
-                             transform=axes[0, col_idx].transAxes,
-                             ha='center', va='bottom', fontsize=18)
+        axes[0, col_idx].set_title(f"({chr(97+col_idx)})"+r"$\quad N_{site}=$"+f"{L}", pad=16)
+    # for col_idx, L in enumerate(L_list):
+    #     axes[0, col_idx].text(0.5, 1.05, f"({chr(97+col_idx)})"+r"$\quad N_{site}=$"+f"{L}", 
+    #                          transform=axes[0, col_idx].transAxes,
+    #                          ha='center', va='bottom')
 
     plt.tight_layout()
 

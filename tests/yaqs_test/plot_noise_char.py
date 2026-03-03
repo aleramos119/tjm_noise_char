@@ -307,7 +307,7 @@ n_t, n_obs_L, L, ntraj = split_data.shape
 
 rng = np.random.default_rng(42)  # change or remove seed for different draws
 
-n_samp_avg = 1000
+n_samp_avg = 5000
 split_data_avg = np.zeros((n_t, n_obs_L, L, n_samp_avg))
 for j in range(n_samp_avg):
     idx = rng.choice(ntraj, size=n_samples, replace=True)
@@ -352,6 +352,9 @@ mpl.rcParams.update({
     'pdf.fonttype': 42,
     'ps.fonttype': 42,
 })
+plt.rc('text', usetex=True)
+plt.rc('font', family='serif')
+plt.rcParams["mathtext.fontset"] = "cm"
 
 fig, ax = plt.subplots(figsize=(5, 4))
 im = ax.imshow(C, vmin=0, vmax=1e-4, origin="lower")  # set origin lower so i and i' increase to right and up
@@ -361,7 +364,7 @@ cbar.ax.tick_params(labelsize=13)  # Set colorbar tick font size
 # Remove the exponent only at the top of the colorbar
 cbar.ax.yaxis.get_offset_text().set_visible(False)
 
-ax.set_title(r"$|Cov(Y_{i}, Y_{i'})|$", fontsize=17)
+ax.set_title(r"$|$"+"Cov"+r"$(Y_{i}, Y_{i'})|$", fontsize=17)
 ax.set_xlabel(r"$i$", labelpad=4)
 ax.set_ylabel(r"$i'$", labelpad=4)
 # Show top and right border (make sure they're visible)
@@ -473,7 +476,7 @@ for i, ntraj in enumerate(sample_list):
     )
 
 ax.set_xlabel(r"$N_{site}$", labelpad=4)
-ax.set_ylabel(r"$\varepsilon_{rel} ( \mathcal{J} )$", labelpad=4)
+ax.set_ylabel(r"$\varepsilon_{rel} ( J )$", labelpad=4)
 ax.legend(frameon=False, loc='best', handlelength=2)
 # Show top and right border (make sure they're visible)
 ax.spines['top'].set_visible(True)
