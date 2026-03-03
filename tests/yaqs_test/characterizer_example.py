@@ -70,6 +70,8 @@ if __name__ == '__main__':
         from auxiliar.scikit_tt_propagator import Propagator
     if module == "yaqs":
         from mqt.yaqs.noise_char.propagation import Propagator
+    if module == "qutip":
+        from auxiliar.qutip_propagator import Propagator
 
 
 
