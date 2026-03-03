@@ -700,7 +700,7 @@ if __name__ == "__main__":
 
 
     H_0 = MPO()
-    H_0.ising(L, J, g)
+    H_0.init_ising(L, J, g)
 
 
     # Define the initial state
@@ -757,7 +757,6 @@ if __name__ == "__main__":
         compact_noise_model=ref_noise_model,
         init_state=init_state
     )
-    # %%
-    # scikit_init_state=propagator.scikit_tt_init_state(init_state)
-    # print("scikit_init_state shape:", scikit_init_state.col_dims, scikit_init_state.row_dims)
-    # %%
+
+
+# %%
