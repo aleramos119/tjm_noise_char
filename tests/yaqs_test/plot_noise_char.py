@@ -397,9 +397,9 @@ plt.plot(full_data_avg[time_i,obs_idx,:], full_data_avg[time_j,obs_idx,:], 'o', 
 ##############################################################
 
 
-L_list=[3, 20, 50, 100]
+L_list=[10, 20, 40, 80, 160]
 
-sample_list=[100, 250, 500, 1000]
+sample_list=[125, 250, 500, 1000]
 
 
 method="yaqs"
@@ -437,18 +437,6 @@ for i, L in enumerate(L_list):
 
 
 
-
-
-# %%
-
-
-for i, L in enumerate(L_list):
-    plt.plot(sample_list, rel_err[i, :], 'o-', label=f"L={L}")
-plt.xlabel("Number of trajectories")
-plt.ylabel("Relative error (Loss)")
-plt.legend()
-
-plt.savefig(f"results/propagation/yaqs/plots/rel_err_vs_ntraj.png", dpi=300, bbox_inches='tight')
 # %%
 
 # --- Publication-quality plotting for relative error vs L ---
@@ -469,6 +457,10 @@ mpl.rcParams.update({
     'pdf.fonttype': 42,
     'ps.fonttype': 42,
 })
+
+plt.rc('text', usetex=True)
+plt.rc('font', family='serif')
+plt.rcParams["mathtext.fontset"] = "cm"
 
 fig, ax = plt.subplots(figsize=(5, 4))
 color_cycle = plt.rcParams['axes.prop_cycle'].by_key()['color']
@@ -491,6 +483,16 @@ plt.tight_layout()
 plt.savefig(f"results/propagation/yaqs/plots/rel_err_vs_L.pdf", dpi=600, bbox_inches="tight", transparent=True)
 plt.close(fig)
 
+# %%
+
+
+for i, L in enumerate(L_list):
+    plt.plot(sample_list, rel_err[i, :], 'o-', label=r"$N_{site}=$" + f"{L}")
+plt.xlabel(r"$N_{traj}$", labelpad=4)
+plt.ylabel(r"$\varepsilon_{rel} ( \mathcal{J} )$", labelpad=4)
+plt.legend()
+
+plt.savefig(f"results/propagation/yaqs/plots/rel_err_vs_ntraj.pdf", dpi=600, bbox_inches='tight')
 
 
 # %%
