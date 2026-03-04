@@ -80,6 +80,11 @@ if __name__ == '__main__':
     work_dir_path.mkdir(parents=True, exist_ok=True)
 
 
+    conf_file = work_dir_path / "opt_config.json"
+    with open(conf_file) as f:
+        config = json.load(f)
+
+
 
     ## Defining Hamiltonian and observable list
 
@@ -112,9 +117,17 @@ if __name__ == '__main__':
 
     order=1
 
-    sim_params = AnalogSimParams(observables=obs_list, elapsed_time=T, dt=dt, num_traj=4000, max_bond_dim=max_bond_dim, threshold=threshold, order=order, sample_timesteps=True)
+    num_traj = 4000
 
+    if "ntraj" in config:
+        num_traj = config["ntraj"]
 
+    
+    if num_traj == 1 and module == "qutip":
+        sim_params = AnalogSimParams(observables=obs_list, elapsed_time=T, dt=dt, num_traj=1, max_bond_dim=max_bond_dim, threshold=threshold, order=order, sample_timesteps=True)
+
+    else:
+        sim_params = AnalogSimParams(observables=obs_list, elapsed_time=T, dt=dt, num_traj=4000, max_bond_dim=max_bond_dim, threshold=threshold, order=order, sample_timesteps=True)
 
 
 
@@ -196,9 +209,7 @@ if __name__ == '__main__':
 
     N=int(np.ceil(const/(n_t*n_obs)))
 
-    conf_file = work_dir_path / "opt_config.json"
-    with open(conf_file) as f:
-        config = json.load(f)
+    
 
     method = config["method"]
 
