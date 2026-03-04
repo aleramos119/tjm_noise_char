@@ -448,9 +448,12 @@ class Propagator:
         self.qutip_initial_state = self.init_state_2_qutip_init_state(self.init_state)
         
         self.times = self.sim_params.times
+        
+        if self.sim_params.num_traj > 1:
+            result_lindblad = qt.mcsolve(self.qutip_hamiltonian, self.qutip_initial_state, self.times, self.qutip_noise_model, self.qutip_obs_list, progress_bar=True, ntraj=self.sim_params.num_traj, num_cpus=available_cpus()-1)
 
-        result_lindblad = qt.mcsolve(self.qutip_hamiltonian, self.qutip_initial_state, self.times, self.qutip_noise_model, self.qutip_obs_list, progress_bar=True, ntraj=self.sim_params.num_traj, num_cpus=available_cpus()-1)
-
+        else:
+            result_lindblad = qt.mesolve(self.qutip_hamiltonian, self.qutip_initial_state, self.times, self.qutip_noise_model, self.qutip_obs_list, progress_bar=True)
 
         self.obs_array = np.array(result_lindblad.expect)
 
