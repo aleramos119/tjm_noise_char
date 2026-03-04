@@ -151,7 +151,7 @@ for const in const_list:
 # %%
 #%%
 module="yaqs"
-params = "d_3L"
+params = "d_3"
 
 method_list = ["cma"]
 
@@ -187,6 +187,7 @@ mpl.rcParams.update({
 })
 
 
+
 plt.rc('text', usetex=True)
 plt.rc('font', family='serif')
 plt.rcParams["mathtext.fontset"] = "cm"
@@ -209,7 +210,7 @@ for const in const_list:
                 continue
 
             L_list.append(L)
-            loss = np.genfromtxt(file)[:,1][-1]
+            loss = np.mean(np.genfromtxt(file)[:,1][-100:])
 
             error_list.append(np.log10(np.sqrt(loss)))
 
@@ -218,15 +219,17 @@ for const in const_list:
         ax.set_xlabel(r"$N_{site}$", labelpad=4)
         if params == "d_3L":
             ax.set_xticks([i for i in range(2,17,2)])
+            ax.set_yticks(np.linspace(-2.3, -2.45, 4))
         ax.set_ylabel(r"$\log_{10}\left( \sqrt{J} \right)$", labelpad=4)
         # Show top and right border
         ax.spines['top'].set_visible(True)
         ax.spines['right'].set_visible(True)
+
         # Format y ticks with less significant digits
-        yticks = ax.get_yticks()
-        reduced_yticks = yticks[::2]
-        ax.set_yticks(reduced_yticks)
-        ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda y, _: '{:.2g}'.format(y)))
+        # yticks = ax.get_yticks()
+        # reduced_yticks = yticks[::2]
+        # ax.set_yticks(reduced_yticks)
+        # ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda y, _: '{:.3g}'.format(y)))
         plt.tight_layout()
         plt.savefig(f"results/characterizer_gradient_free/loss_vs_L_loss_scale_{module}_{params}.pdf", dpi=600, bbox_inches='tight', transparent=True)
         plt.close(fig)
