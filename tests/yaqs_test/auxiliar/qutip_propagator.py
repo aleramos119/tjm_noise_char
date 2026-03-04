@@ -62,6 +62,11 @@ qutip_operator_dict = {
             "create": qt.create(2),
             "destroy": qt.destroy(2),
             "id": qt.qeye(2),
+            "raising": qt.create(2),
+            "lowering": qt.destroy(2),
+            "pauli_z": qt.sigmaz(),
+            "pauli_x": qt.sigmax(),
+            "pauli_y": qt.sigmay()
         }
 
 
@@ -305,6 +310,8 @@ class Propagator:
     def hamiltonian_2_qutip_hamiltonian(self, hamiltonian: MPO):
 
         J, g = self.extract_J_g(hamiltonian)
+
+        L=self.sites
 
         hamiltonian = 0
         for i in range(L-1):
