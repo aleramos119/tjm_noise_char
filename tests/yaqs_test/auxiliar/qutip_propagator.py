@@ -56,12 +56,12 @@ def noise_model_to_operator_list(noise_model: NoiseModel) -> list[Observable]:
 
 
 qutip_operator_dict = {
-            "X": qt.sigmax(),
-            "Y": qt.sigmay(),
-            "Z": qt.sigmaz(),
-            "Create": qt.create(2),
-            "Destroy": qt.destroy(2),
-            "Id": qt.qeye(2),
+            "x": qt.sigmax(),
+            "y": qt.sigmay(),
+            "z": qt.sigmaz(),
+            "create": qt.create(2),
+            "destroy": qt.destroy(2),
+            "id": qt.qeye(2),
         }
 
 
