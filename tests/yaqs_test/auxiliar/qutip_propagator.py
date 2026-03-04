@@ -449,7 +449,7 @@ class Propagator:
         
         self.times = self.sim_params.times
 
-        result_lindblad = qt.mesolve(self.qutip_hamiltonian, self.qutip_initial_state, self.times, self.qutip_noise_model, self.qutip_obs_list, progress_bar=True)
+        result_lindblad = qt.mcsolve(self.qutip_hamiltonian, self.qutip_initial_state, self.times, self.qutip_noise_model, self.qutip_obs_list, progress_bar=True, ntraj=self.sim_params.num_traj, num_cpus=available_cpus()-1)
 
 
         self.obs_array = np.array(result_lindblad.expect)
