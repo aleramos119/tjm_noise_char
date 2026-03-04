@@ -726,7 +726,12 @@ plt.legend()
 
 # %%
 
-for current_dir, subdirs, files in os.walk("results/characterizer_gradient_free/loss_scale_True_reduced"):
+# for current_dir, subdirs, files in os.walk("results/characterizer_gradient_free/loss_scale_True_reduced"):
+#         # If the directory has no subdirectories, treat it as a leaf node
+#         if not subdirs:
+#             plot_gamma_optimization(current_dir)
+
+for current_dir, subdirs, files in os.walk("/home/aramos/Dokumente/Work/simulation_of_open_quantum_systems/tjm_noise_char/tests/yaqs_test/test/bayesian_test_loss_scale_True"):
         # If the directory has no subdirectories, treat it as a leaf node
         if not subdirs:
             plot_gamma_optimization(current_dir)
@@ -788,10 +793,10 @@ from pdf2image import convert_from_path
 
 
 method="bayesian"
-list1 = [0.0001, 0.001, 0.005]
-par1_name="std"
-list2 = [0.1,0.5,1,4,8]
-par2_name="beta"
+list1 = [15,20,25,30,35,40]
+par1_name="beta"
+list2 = ["1e-5","1e-6","1e-7","1e-8"]
+par2_name="std"
 ntraj=2000
 
 
@@ -803,7 +808,7 @@ fig, axes = plt.subplots(len(list1), len(list2), figsize=(12, 12))
 # Iterate through the 9 combinations
 for (p1, p2), ax in zip(itertools.product(list1, list2), axes.flatten()):
 
-    folder=Path(f"test/{method}_parameter_test/method_{method}/ntraj_{ntraj}/{par1_name}_{p1}/{par2_name}_{p2}") 
+    folder=Path(f"test/bayesian_test_loss_scale_True/module_qutip/method_{method}/{par1_name}_{p1}/{par2_name}_{p2}") 
 
     pdf_path = folder / "loss_x_history.pdf"
 
@@ -823,7 +828,7 @@ for (p1, p2), ax in zip(itertools.product(list1, list2), axes.flatten()):
         ax.axis("off")
 
 plt.tight_layout()
-plt.savefig(f"test/{method}_parameter_test/method_{method}/ntraj_{ntraj}/{method}_parameter_scan_ntraj_{ntraj}.png", dpi=300, bbox_inches='tight')
+plt.savefig(f"test/bayesian_test_loss_scale_True/{method}_parameter_scan.png", dpi=300, bbox_inches='tight')
 plt.show()
 plt.close()
 # %%
