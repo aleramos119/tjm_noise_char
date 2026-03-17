@@ -151,7 +151,7 @@ for const in const_list:
 # %%
 #%%
 module="yaqs"
-params = "d_3"
+params = "d_3L"
 
 method_list = ["cma"]
 
@@ -216,7 +216,7 @@ for const in const_list:
 
         fig, ax = plt.subplots(figsize=(5, 4))
         ax.plot(L_list, error_list, marker='o')
-        ax.set_xlabel(r"$N_{site}$", labelpad=4)
+        ax.set_xlabel(r"$N_{\mathrm{site}}$", labelpad=4)
         if params == "d_3L":
             ax.set_xticks([i for i in range(2,17,2)])
             ax.set_yticks(np.linspace(-2.3, -2.45, 4))

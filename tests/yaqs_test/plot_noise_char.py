@@ -471,18 +471,18 @@ for i, ntraj in enumerate(sample_list):
     ax.plot(
         L_list, rel_err[:,i], 
         'o-', 
-        label=r"$N_{traj}$="+f"{ntraj}",
+        label=r"$N_{\mathrm{traj}}$="+f"{ntraj}",
         color=color_cycle[i % len(color_cycle)],
     )
 
-ax.set_xlabel(r"$N_{site}$", labelpad=4)
-ax.set_ylabel(r"$\varepsilon_{rel} ( J )$", labelpad=4)
+ax.set_xlabel(r"$N_{\mathrm{site}}$", labelpad=4)
+ax.set_ylabel(r"$\varepsilon_{\mathrm{rel}} ( J )$", labelpad=4)
 ax.legend(frameon=False, loc='best', handlelength=2)
 # Show top and right border (make sure they're visible)
 ax.spines['top'].set_visible(True)
 ax.spines['right'].set_visible(True)
 # Do not set title; leave for caption
-plt.tight_layout()
+# plt.tight_layout()
 plt.savefig(f"results/propagation/yaqs/plots/rel_err_vs_L.pdf", dpi=600, bbox_inches="tight", transparent=True)
 plt.close(fig)
 
@@ -490,9 +490,9 @@ plt.close(fig)
 
 
 for i, L in enumerate(L_list):
-    plt.plot(sample_list, rel_err[i, :], 'o-', label=r"$N_{site}=$" + f"{L}")
-plt.xlabel(r"$N_{traj}$", labelpad=4)
-plt.ylabel(r"$\varepsilon_{rel} ( \mathcal{J} )$", labelpad=4)
+    plt.plot(sample_list, rel_err[i, :], 'o-', label=r"$N_{\mathrm{site}}=$" + f"{L}")
+plt.xlabel(r"$N_{\mathrm{traj}}$", labelpad=4)
+plt.ylabel(r"$\varepsilon_{\mathrm{rel}} ( J )$", labelpad=4)
 plt.legend()
 
 plt.savefig(f"results/propagation/yaqs/plots/rel_err_vs_ntraj.pdf", dpi=600, bbox_inches='tight')

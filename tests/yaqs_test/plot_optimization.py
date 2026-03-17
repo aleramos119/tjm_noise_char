@@ -840,7 +840,7 @@ N=int(np.ceil(const/(n_t*n_obs)))
 print(N)
 # %%
 
-from matplotlib.gridspec import GridSpec
+
 
 def plot_optimization_grid(L1: int, L2: int, module: str, method: str, params: str, 
                            const: str, xlim: float, output_file: str = None, 
@@ -1042,9 +1042,9 @@ def plot_optimization_grid(L1: int, L2: int, module: str, method: str, params: s
             # Ensure we have enough columns
             if ref_traj.shape[1] > traj_col and opt_traj.shape[1] > traj_col:
                 ax.plot(ref_traj[:, 0], ref_traj[:, traj_col], 
-                        label=r"$\langle O_{11} \rangle^{(ref)}$", color="tab:blue")
+                        label=r"$\langle O_{11} \rangle^{\mathrm{(ref)}}$", color="tab:blue")
                 ax.plot(opt_traj[:, 0], opt_traj[:, traj_col], 
-                        label=r"$\langle O_{11} \rangle^{(opt)}$", 
+                        label=r"$\langle O_{11} \rangle^{\mathrm{(opt)}}$", 
                         linestyle='--', color="tab:orange")
   
 
@@ -1073,7 +1073,7 @@ def plot_optimization_grid(L1: int, L2: int, module: str, method: str, params: s
 
     # Add column labels
     for col_idx, L in enumerate(L_list):
-        axes[0, col_idx].set_title(f"({chr(97+col_idx)})"+r"$\quad N_{site}=$"+f"{L}", pad=16)
+        axes[0, col_idx].set_title(f"({chr(97+col_idx)})"+r"$\quad N_{\mathrm{site}}=$"+f"{L}", pad=16)
     # for col_idx, L in enumerate(L_list):
     #     axes[0, col_idx].text(0.5, 1.05, f"({chr(97+col_idx)})"+r"$\quad N_{site}=$"+f"{L}", 
     #                          transform=axes[0, col_idx].transAxes,
@@ -1091,5 +1091,5 @@ def plot_optimization_grid(L1: int, L2: int, module: str, method: str, params: s
 
 # %%
 # Example usage:
-plot_optimization_grid(L1=10, L2=160, module="yaqs", method="cma", params="d_3", const="4e6", xlim=0.1, legend=False)
+plot_optimization_grid(L1=2, L2=16, module="yaqs", method="cma", params="d_3L", const="4e6", xlim=0.1, legend=False)
 # %%
