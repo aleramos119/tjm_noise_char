@@ -150,10 +150,11 @@ for const in const_list:
 
 # %%
 #%%
-module="yaqs"
-params = "d_3L"
 
-method_list = ["cma"]
+params = "d_3"
+
+module_list = ["yaqs"]
+method_list = ["cma", "bayesian"]
 
 if params == "d_3":
     L_list_initial = [10,20,40,80,160]
@@ -193,46 +194,63 @@ plt.rc('font', family='serif')
 plt.rcParams["mathtext.fontset"] = "cm"
 
 
-for const in const_list:
-    for method in method_list:
-        error_list = []
-        L_list = []
-        for L in L_list_initial:
-            directory = f"results/characterizer_gradient_free/loss_scale_True_reduced/module_{module}/method_{method}/params_{params}/const_{const}/L_{L}/xlim_{xlim}/"
-            file = directory + "loss_x_history.txt"
+
+prop_dict = {
+    "yaqs": "TJM",
+    "scikit": "TJM",
+    "qutip": "Qutip",
+}
+
+opt_dict = {
+    "cma": "CMA-ES",
+    "bayesian": "BO",
+}
 
 
-            print(f"Doing module={module}, method={method}, params={params}, const={const}, L={L}")
+
+fig, ax = plt.subplots(figsize=(5, 4))
 
 
-            if not os.path.exists(file):
-                print(f"File {file} does not exist")
-                continue
+for module in module_list:
+    for const in const_list:
+        for method in method_list:
+            error_list = []
+            L_list = []
+            for L in L_list_initial:
+                directory = f"results/characterizer_gradient_free/loss_scale_True_reduced/module_{module}/method_{method}/params_{params}/const_{const}/L_{L}/xlim_{xlim}/"
+                file = directory + "loss_x_history.txt"
 
-            L_list.append(L)
-            loss = np.mean(np.genfromtxt(file)[:,1][-100:])
 
-            error_list.append(np.log10(np.sqrt(loss)))
+                print(f"Doing module={module}, method={method}, params={params}, const={const}, L={L}")
 
-        fig, ax = plt.subplots(figsize=(5, 4))
-        ax.plot(L_list, error_list, marker='o')
-        ax.set_xlabel(r"$N_{\mathrm{site}}$", labelpad=4)
-        if params == "d_3L":
-            ax.set_xticks([i for i in range(2,17,2)])
-            ax.set_yticks(np.linspace(-2.3, -2.45, 4))
-        ax.set_ylabel(r"$\log_{10}\left( \sqrt{J} \right)$", labelpad=4)
-        # Show top and right border
-        ax.spines['top'].set_visible(True)
-        ax.spines['right'].set_visible(True)
 
-        # Format y ticks with less significant digits
-        # yticks = ax.get_yticks()
-        # reduced_yticks = yticks[::2]
-        # ax.set_yticks(reduced_yticks)
-        # ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda y, _: '{:.3g}'.format(y)))
-        plt.tight_layout()
-        plt.savefig(f"results/characterizer_gradient_free/loss_vs_L_loss_scale_{module}_{params}.pdf", dpi=600, bbox_inches='tight', transparent=True)
-        plt.close(fig)
+                if not os.path.exists(file):
+                    print(f"File {file} does not exist")
+                    continue
+
+                L_list.append(L)
+                loss = np.mean(np.genfromtxt(file)[:,1][-100:])
+
+                error_list.append(np.log10(np.sqrt(loss)))
+
+
+            ax.plot(L_list, error_list, marker='o', label=f"{opt_dict[method]}_{prop_dict[module]}")
+            ax.set_xlabel(r"$N_{\mathrm{site}}$", labelpad=4)
+            ax.legend(frameon=False, loc='best', handlelength=2)
+            if params == "d_3L":
+                ax.set_xticks([i for i in range(2,17,2)])
+                ax.set_yticks(np.linspace(-2.3, -2.45, 4))
+            ax.set_ylabel(r"$\log_{10}\left( \sqrt{J} \right)$", labelpad=4)
+            # Show top and right border
+            ax.spines['top'].set_visible(True)
+            ax.spines['right'].set_visible(True)
+
+            # Format y ticks with less significant digits
+            # yticks = ax.get_yticks()
+            # reduced_yticks = yticks[::2]
+            # ax.set_yticks(reduced_yticks)
+            # ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda y, _: '{:.3g}'.format(y)))
+plt.tight_layout()
+plt.savefig(f"results/characterizer_gradient_free/loss_vs_L_loss_scale_{params}.pdf", dpi=600, bbox_inches='tight', transparent=True)
+plt.close(fig)
 # %%
-
-

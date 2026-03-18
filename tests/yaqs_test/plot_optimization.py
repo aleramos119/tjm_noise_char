@@ -731,7 +731,7 @@ plt.legend()
 #         if not subdirs:
 #             plot_gamma_optimization(current_dir)
 
-for current_dir, subdirs, files in os.walk("/home/aramos/Dokumente/Work/simulation_of_open_quantum_systems/tjm_noise_char/tests/yaqs_test/test/bayesian_test_loss_scale_True"):
+for current_dir, subdirs, files in os.walk("/home/aramos/Dokumente/Work/simulation_of_open_quantum_systems/tjm_noise_char/tests/yaqs_test/results/characterizer_gradient_free/loss_scale_True_reduced/"):
         # If the directory has no subdirectories, treat it as a leaf node
         if not subdirs:
             plot_gamma_optimization(current_dir)
