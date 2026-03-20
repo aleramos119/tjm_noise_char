@@ -764,10 +764,16 @@ import numpy as np
 L=10
 N_list=[50, 100, 200, 500, 1000]
 
+N_ob=3
+N_site=L
+N_time=61
+
+factor=1/(N_site*N_ob*N_time)
+
 for N in N_list:
     directory=f"test/loss_scan/gamma_ref_0.01_d_3/L_{L}/N_{N}/T_6/obs_Z/noise_X/"
     gamma_list = np.genfromtxt(directory + f"gamma_list.txt")
-    loss_list = np.genfromtxt(directory + f"loss_list.txt")
+    loss_list = np.genfromtxt(directory + f"loss_list.txt")*factor
 
     plt.plot(gamma_list, loss_list, 'o-')
     plt.xlim(0, 0.1)

@@ -411,6 +411,10 @@ n_samp_avg=5000
 
 rel_err=np.zeros((len(L_list), len(sample_list)))
 
+loss_array=np.zeros((len(L_list), len(sample_list)))
+
+std_array=np.zeros((len(L_list), len(sample_list)))
+
 rng = np.random.default_rng(42)  # change or remove seed for different draws
 
 
@@ -420,21 +424,30 @@ for i, L in enumerate(L_list):
 
     n_t, n_obs_L, L, ntraj_max = split_data.shape
 
-    # Add new axis to ref_traj to enable broadcasting: (n_t, n_obs_L, L) -> (n_t, n_obs_L, L, 1)
-    ref_traj_expanded = ref_traj[..., np.newaxis]  # or ref_traj[:, :, :, np.newaxis]
-    loss_data = np.sum((split_data - ref_traj_expanded)**2, axis=(0,1,2))
+    split_data_avg = np.zeros((n_t, n_obs_L, L, n_samp_avg))
 
 
 
     for j, n_samples in enumerate(sample_list):
 
 
-        idx = rng.choice(ntraj_max, size=(n_samp_avg, n_samples), replace=True)
+        loss_data_samples = np.zeros(n_samp_avg)
 
-        loss_data_samples = np.mean(loss_data[idx], axis=1)
+
+        for k in range(n_samp_avg):
+            idx = rng.choice(ntraj, size=n_samples, replace=True)
+            # average over the sampled trajectories (axis=2)
+            split_data_avg[:, :, :, k] = np.mean(split_data[:, :, :, idx], axis=3)
+            loss_data_samples[k] = np.sum((split_data_avg[:, :, :, k] - ref_traj)**2, axis=(0,1,2))/(n_t*n_obs_L*L)
+
+
 
 
         rel_err[i, j] = np.std(loss_data_samples)/np.mean(loss_data_samples)
+
+        loss_array[i, j] = np.mean(loss_data_samples)
+
+        std_array[i, j] = np.std(loss_data_samples)
 
 
 
@@ -591,4 +604,31 @@ plt.show()
 sample_list
 # %%
 interp_rel_err(547,40)
+# %%
+import numpy as np
+from scipy.optimize import curve_fit
+import matplotlib.pyplot as plt
+
+# Example data
+x_data = L_list
+y_data = rel_err[:,1]
+
+# Define model function
+def model(x, a):
+    return a/np.sqrt(x)
+
+# Fit model
+params, covariance = curve_fit(model, x_data, y_data)
+
+a=params[0]
+
+print(a)
+# Plot result
+x_fit = np.linspace(10, 160, 100)
+y_fit = model(x_fit, 1.2)
+
+plt.scatter(x_data, y_data, label="data")
+plt.plot(x_fit, y_fit, label="fit")
+plt.legend()
+plt.show()
 # %%
