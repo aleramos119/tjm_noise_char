@@ -424,21 +424,27 @@ for i, L in enumerate(L_list):
 
     n_t, n_obs_L, L, ntraj_max = split_data.shape
 
-    split_data_avg = np.zeros((n_t, n_obs_L, L, n_samp_avg))
+    # split_data_avg = np.zeros((n_t, n_obs_L, L, n_samp_avg))
 
 
 
     for j, n_samples in enumerate(sample_list):
 
-
         loss_data_samples = np.zeros(n_samp_avg)
 
+        # idx shape: (n_samp_avg, n_samples)
+        idx = rng.choice(ntraj_max, size=(n_samp_avg, n_samples), replace=True)
 
-        for k in range(n_samp_avg):
-            idx = rng.choice(ntraj, size=n_samples, replace=True)
-            # average over the sampled trajectories (axis=2)
-            split_data_avg[:, :, :, k] = np.mean(split_data[:, :, :, idx], axis=3)
-            loss_data_samples[k] = np.sum((split_data_avg[:, :, :, k] - ref_traj)**2, axis=(0,1,2))/(n_t*n_obs_L*L)
+        # Process in chunks to avoid allocating (n_t, n_obs_L, L, n_samp_avg, n_samples) at once
+        max_mem_bytes = 500 * 1024**2  # 500 MB per chunk
+        chunk_size = max(1, int(max_mem_bytes / (n_t * n_obs_L * L * n_samples * 8)))
+        for start in range(0, n_samp_avg, chunk_size):
+            end = min(start + chunk_size, n_samp_avg)
+            # shape: (n_t, n_obs_L, L, end-start, n_samples) -> mean -> (n_t, n_obs_L, L, end-start)
+            chunk_avg = np.mean(split_data[:, :, :, idx[start:end]], axis=4)
+            loss_data_samples[start:end] = np.sum(
+                (chunk_avg - ref_traj[:, :, :, np.newaxis])**2, axis=(0, 1, 2)
+            ) / (n_t * n_obs_L * L)
 
 
 
@@ -482,21 +488,21 @@ fig, ax = plt.subplots(figsize=(5, 4))
 color_cycle = plt.rcParams['axes.prop_cycle'].by_key()['color']
 for i, ntraj in enumerate(sample_list):
     ax.plot(
-        L_list, rel_err[:,i], 
+        L_list, std_array[:,i], 
         'o-', 
         label=r"$N_{\mathrm{traj}}$="+f"{ntraj}",
         color=color_cycle[i % len(color_cycle)],
     )
 
 ax.set_xlabel(r"$N_{\mathrm{site}}$", labelpad=4)
-ax.set_ylabel(r"$\varepsilon_{\mathrm{rel}} ( J )$", labelpad=4)
+ax.set_ylabel(r"$\sigma ( J )$", labelpad=4)
 ax.legend(frameon=False, loc='best', handlelength=2)
 # Show top and right border (make sure they're visible)
 ax.spines['top'].set_visible(True)
 ax.spines['right'].set_visible(True)
 # Do not set title; leave for caption
 # plt.tight_layout()
-plt.savefig(f"results/propagation/yaqs/plots/rel_err_vs_L.pdf", dpi=600, bbox_inches="tight", transparent=True)
+plt.savefig(f"results/propagation/yaqs/plots/std_vs_L.pdf", dpi=600, bbox_inches="tight", transparent=True)
 plt.close(fig)
 
 # %%
