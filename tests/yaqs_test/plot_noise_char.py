@@ -415,6 +415,10 @@ loss_array=np.zeros((len(L_list), len(sample_list)))
 
 std_array=np.zeros((len(L_list), len(sample_list)))
 
+loss_data_all=np.zeros((len(L_list), len(sample_list), n_samp_avg))
+
+
+
 rng = np.random.default_rng(42)  # change or remove seed for different draws
 
 
@@ -436,7 +440,7 @@ for i, L in enumerate(L_list):
         idx = rng.choice(ntraj_max, size=(n_samp_avg, n_samples), replace=True)
 
         # Process in chunks to avoid allocating (n_t, n_obs_L, L, n_samp_avg, n_samples) at once
-        max_mem_bytes = 500 * 1024**2  # 500 MB per chunk
+        max_mem_bytes = 1024 * 1024**2  # 500 MB per chunk
         chunk_size = max(1, int(max_mem_bytes / (n_t * n_obs_L * L * n_samples * 8)))
         for start in range(0, n_samp_avg, chunk_size):
             end = min(start + chunk_size, n_samp_avg)
@@ -447,7 +451,7 @@ for i, L in enumerate(L_list):
             ) / (n_t * n_obs_L * L)
 
 
-
+        loss_data_all[i, j] = loss_data_samples
 
         rel_err[i, j] = np.std(loss_data_samples)/np.mean(loss_data_samples)
 
@@ -456,10 +460,12 @@ for i, L in enumerate(L_list):
         std_array[i, j] = np.std(loss_data_samples)
 
 
-
-
+#%%
+std_log_array = np.std(np.log10(np.sqrt(loss_data_all)), axis=2)
 
 # %%
+print(std_log_array)
+#%%
 
 # --- Publication-quality plotting for relative error vs L ---
 import matplotlib as mpl
@@ -488,7 +494,7 @@ fig, ax = plt.subplots(figsize=(5, 4))
 color_cycle = plt.rcParams['axes.prop_cycle'].by_key()['color']
 for i, ntraj in enumerate(sample_list):
     ax.plot(
-        L_list, std_array[:,i], 
+        L_list, std_log_array[:,i], 
         'o-', 
         label=r"$N_{\mathrm{traj}}$="+f"{ntraj}",
         color=color_cycle[i % len(color_cycle)],
@@ -502,7 +508,7 @@ ax.spines['top'].set_visible(True)
 ax.spines['right'].set_visible(True)
 # Do not set title; leave for caption
 # plt.tight_layout()
-plt.savefig(f"results/propagation/yaqs/plots/std_vs_L.pdf", dpi=600, bbox_inches="tight", transparent=True)
+plt.savefig(f"results/propagation/yaqs/plots/std_log_vs_L.pdf", dpi=600, bbox_inches="tight", transparent=True)
 plt.close(fig)
 
 # %%
@@ -638,3 +644,25 @@ plt.plot(x_fit, y_fit, label="fit")
 plt.legend()
 plt.show()
 # %%
+
+# loss_data_all=np.zeros((len(L_list), len(sample_list), n_samp_avg))
+for i in range(5):
+    data=np.log10(np.sqrt(loss_data_all[i,0]))
+    std=np.std(data)
+    plt.plot(data, label=f"std={std}")
+
+plt.legend()
+# %%
+np.std(np.log10(np.sqrt(loss_data_all[0,0])))
+# %%
+std_list=[]
+for L in L_list:
+    loss=np.genfromtxt(f"/home/aramos/Dokumente/Work/simulation_of_open_quantum_systems/tjm_noise_char/tests/yaqs_test/results/characterizer_gradient_free/loss_scale_True_reduced/module_yaqs/method_cma/params_d_3/const_4e6/L_{L}/xlim_0.1/loss_x_history.txt")[:,1]
+    std_list.append(np.std(loss[-200:]))
+# %%
+%matplotlib qt
+plt.plot(L_list,std_list,'o-')
+# %%
+
+# %%
+std_list
