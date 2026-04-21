@@ -459,14 +459,17 @@ for i, L in enumerate(L_list):
 
         std_array[i, j] = np.std(loss_data_samples)
 
+#%%
+std_array[-1, -1]
+#%%
+plt.plot(loss_data_samples,'o')
 
 #%%
 std_log_array = np.std(np.log10(np.sqrt(loss_data_all)), axis=2)
 
-# %%
-print(std_log_array)
-#%%
 
+# %%
+%matplotlib qt
 # --- Publication-quality plotting for relative error vs L ---
 import matplotlib as mpl
 
@@ -508,8 +511,8 @@ ax.spines['top'].set_visible(True)
 ax.spines['right'].set_visible(True)
 # Do not set title; leave for caption
 # plt.tight_layout()
-plt.savefig(f"results/propagation/yaqs/plots/std_log_vs_L.pdf", dpi=600, bbox_inches="tight", transparent=True)
-plt.close(fig)
+plt.savefig(f"results/propagation/yaqs/plots/std_vs_L.pdf", dpi=600, bbox_inches="tight", transparent=True)
+# plt.close(fig)
 
 # %%
 
