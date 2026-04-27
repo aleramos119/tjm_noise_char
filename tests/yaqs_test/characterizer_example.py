@@ -22,6 +22,7 @@ from mqt.yaqs.core.data_structures.simulation_parameters import AnalogSimParams,
 
 from mqt.yaqs.core.libraries.gate_library import X, Y, Z, Create, Destroy
 
+import re
 import sys
 
 import json
@@ -135,6 +136,8 @@ if __name__ == '__main__':
 
     #%%
     ## Defining reference noise model and reference trajectory
+    m = re.search(r'crosstalk_\w+', params)
+    crosstalk_name = m.group() if m else None
     gamma_reference = 0.01
     if "d_3L" in params:
         proc =  [{"name": "pauli_x", "sites": [i], "strength": gamma_reference} for i in range(L)]
@@ -146,9 +149,9 @@ if __name__ == '__main__':
         proc += [{"name": "pauli_z", "sites": [i for i in range(L)], "strength": gamma_reference}]
     if "crosstalk" in params:
         if "d_3L" in params:
-            proc += [{"name": "crosstalk_zz", "sites": [i, i+1], "strength": gamma_reference} for i in range(L-1)]
+            proc += [{"name": crosstalk_name, "sites": [i, i+1], "strength": gamma_reference} for i in range(L-1)]
         else:
-            proc += [{"name": "crosstalk_zz", "sites": [[i, i+1] for i in range(L-1)], "strength": gamma_reference}]
+            proc += [{"name": crosstalk_name, "sites": [[i, i+1] for i in range(L-1)], "strength": gamma_reference}]
     ref_noise_model =  CompactNoiseModel(proc)
 
 
@@ -194,13 +197,13 @@ if __name__ == '__main__':
         proc += [{"name": "pauli_y", "sites": [i], "strength": gamma_guess[i+L]}    for i in range(L)]
         proc += [{"name": "pauli_z", "sites": [i], "strength": gamma_guess[i+2*L]}  for i in range(L)]
         if "crosstalk" in params:
-            proc += [{"name": "crosstalk_zz", "sites": [i, i+1], "strength": gamma_guess[i+3*L]} for i in range(L-1)]
+            proc += [{"name": crosstalk_name, "sites": [i, i+1], "strength": gamma_guess[i+3*L]} for i in range(L-1)]
     else:
         proc =  [{"name": "pauli_x", "sites": [i for i in range(L)], "strength": gamma_guess[0]}]
         proc += [{"name": "pauli_y", "sites": [i for i in range(L)], "strength": gamma_guess[1]}]
         proc += [{"name": "pauli_z", "sites": [i for i in range(L)], "strength": gamma_guess[2]}]
         if "crosstalk" in params:
-            proc += [{"name": "crosstalk_zz", "sites": [[i, i+1] for i in range(L-1)], "strength": gamma_guess[3]}]
+            proc += [{"name": crosstalk_name, "sites": [[i, i+1] for i in range(L-1)], "strength": gamma_guess[3]}]
     guess_noise_model = CompactNoiseModel(proc)
 
 
