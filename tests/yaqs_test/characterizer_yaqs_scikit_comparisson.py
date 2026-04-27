@@ -46,22 +46,24 @@ class SimulationParameters:
     scikit_tt_solver: dict = {"solver": 'tdvp1', "method": 'krylov', "dimension": 5}
 
 
-    def __init__(self, L : int, gamma_rel : list | float, gamma_deph : list | float):
+    def __init__(self, L : int, gamma_rel : list | float, gamma_deph : list | float, gamma_cross: list | float = 0.0):
 
         self.L = L
 
-        self.set_gammas(gamma_rel, gamma_deph)
+        self.set_gammas(gamma_rel, gamma_deph, gamma_cross)
 
-        
 
-    def set_gammas(self, gamma_rel : list | float, gamma_deph : list | float):
+
+    def set_gammas(self, gamma_rel : list | float, gamma_deph : list | float, gamma_cross: list | float = 0.0):
 
         if isinstance(gamma_rel, list) and len(gamma_rel) != self.L:
             raise ValueError("gamma_rel must be a list of length L.")
         if isinstance(gamma_deph, list) and len(gamma_deph) != self.L:
             raise ValueError("gamma_deph must be a list of length L.")
+        if isinstance(gamma_cross, list) and len(gamma_cross) != self.L - 1:
+            raise ValueError("gamma_cross must be a list of length L-1.")
 
-        if isinstance(gamma_rel, float): 
+        if isinstance(gamma_rel, float):
             self.gamma_rel = [gamma_rel] * self.L
         else:
             self.gamma_rel = list(gamma_rel)
@@ -70,6 +72,11 @@ class SimulationParameters:
             self.gamma_deph = [gamma_deph] * self.L
         else:
             self.gamma_deph = list(gamma_deph)
+
+        if isinstance(gamma_cross, float):
+            self.gamma_cross = [gamma_cross] * (self.L - 1)
+        else:
+            self.gamma_cross = list(gamma_cross)
 
     def set_solver(self, solver: str = 'tdvp1', local_solver: str = 'krylov_5'):
         if solver not in ('tdvp1', 'tdvp2'):
@@ -122,19 +129,14 @@ def qutip_traj(sim_params_class: SimulationParameters):
 
     # Construct collapse operators
     c_ops = []
-    gammas = []
+    gamma_cross = sim_params_class.gamma_cross
 
-    # Relaxation operators
-    for i in range(L):
-        c_ops.append(np.sqrt(gamma_rel[i]) * qt.tensor([sx if n==i else qt.qeye(2) for n in range(L)]))
-        gammas.append(gamma_rel)
-
-    # # Dephasing operators
-    # for i in range(L):
-    #     c_ops.append(np.sqrt(gamma_deph[i]) * qt.tensor([sz if n==i else qt.qeye(2) for n in range(L)]))
-    #     gammas.append(gamma_deph)
-
-    #c_ops = [rel0, rel1, rel2,... rel(L-1), deph0, deph1,..., deph(L-1)]
+    # XX crosstalk operators on adjacent pairs
+    for i in range(L - 1):
+        op_list = [qt.qeye(2)] * L
+        op_list[i] = sx
+        op_list[i + 1] = sx
+        c_ops.append(np.sqrt(gamma_cross[i]) * qt.tensor(op_list))
 
     # Initial state
     psi0 = qt.tensor([qt.basis(2, 0) for _ in range(L)])
@@ -181,9 +183,6 @@ def scikit_tt_traj(sim_params_class: SimulationParameters, propagator):
     L = sim_params_class.L
     J = sim_params_class.J
     g = sim_params_class.g
-    gamma_rel = sim_params_class.gamma_rel
-    gamma_deph = sim_params_class.gamma_deph
-
     rank = sim_params_class.rank
     N = sim_params_class.N
 
@@ -214,8 +213,10 @@ def scikit_tt_traj(sim_params_class: SimulationParameters, propagator):
     cores[-1] = tt.build_core([I, Z, -g*X])
     hamiltonian = TT(cores)# jump operators and parameters
 
-    jump_operator_list = [[X] for _ in range(L)]
-    jump_parameter_list = [[gamma_rel[i]] for i in range(L)]
+    gamma_cross = sim_params_class.gamma_cross
+    # 2-site XX crosstalk: scikit-tt TJM takes per-site lists; use first site of each pair
+    jump_operator_list = [[X] if i < L - 1 else [] for i in range(L)]
+    jump_parameter_list = [[gamma_cross[i]] if i < L - 1 else [] for i in range(L)]
 
 
     obs_list=[]
@@ -318,14 +319,13 @@ if __name__ == '__main__':
 
 
     ## Defining Hamiltonian and observable list
-    L=2
+    L=3
 
     J=1
     g=0.5
 
 
-    H_0 = MPO()
-    H_0.init_ising(L, J, g)
+    H_0 = MPO.ising(L, J, g)
 
 
     # Define the initial state
@@ -340,11 +340,11 @@ if __name__ == '__main__':
     #%%
     ## Defining simulation parameters
 
-    T=1.5
+    T=1
 
-    dt=0.1
+    dt=0.05
 
-    N=4000
+    N=1000
 
     max_bond_dim=8
 
@@ -352,7 +352,7 @@ if __name__ == '__main__':
 
     order=1
 
-    sim_params = AnalogSimParams(observables=obs_list, elapsed_time=T, dt=dt, num_traj=N, max_bond_dim=max_bond_dim, threshold=threshold, order=order, sample_timesteps=True)
+    sim_params = AnalogSimParams(observables=obs_list, elapsed_time=T, dt=dt, num_traj=N, max_bond_dim=max_bond_dim, threshold=threshold, order=order, sample_timesteps=True, solver="Lindblad")
 
 
 
@@ -361,12 +361,10 @@ if __name__ == '__main__':
 
     #%%
     ## Defining reference noise model and reference trajectory
-    gamma_rel = 0.1
-    gamma_deph = 0.1
-    # ref_noise_model =  CompactNoiseModel([{"name": "lowering", "sites": [i for i in range(L)], "strength": gamma_rel}] + [{"name": "pauli_z", "sites": [i for i in range(L)], "strength": gamma_deph}])
-    ref_noise_model =  CompactNoiseModel( [{"name": "pauli_x", "sites": [i for i in range(L)], "strength": gamma_deph} ])
-
-    # ref_noise_model =  CompactNoiseModel([{"name": noise_operator, "sites": [i], "strength": gamma_rel} for i in range(L)] )
+    gamma_cross = 0.02
+    ref_noise_model = CompactNoiseModel([
+        {"name": "crosstalk_xy", "sites": [[i+2,i] for i in range(L-2)], "strength": gamma_cross}
+    ])
 
 
     ## Writing reference gammas to file
@@ -390,35 +388,34 @@ if __name__ == '__main__':
 
     yaqs_obs_array=yaqs_propagator.obs_array
 
-    yaqs_d_on_d_gk_array = yaqs_propagator.d_on_d_gk_array
 
 
-    #%%
-    from auxiliar.scikit_tt_propagator import Propagator
+
+    # #%%
+    # from auxiliar.scikit_tt_propagator import Propagator
     
-    scikit_propagator = Propagator(
-        sim_params=sim_params,
-        hamiltonian=H_0,
-        compact_noise_model=ref_noise_model,
-        init_state=init_state
-    )
+    # scikit_propagator = Propagator(
+    #     sim_params=sim_params,
+    #     hamiltonian=H_0,
+    #     compact_noise_model=ref_noise_model,
+    #     init_state=init_state
+    # )
 
-    scikit_propagator.set_observable_list(obs_list)
+    # scikit_propagator.set_observable_list(obs_list)
 
 
-    print("Computing reference trajectory ... ")
+    # print("Computing reference trajectory ... ")
 
-    scikit_propagator.run(ref_noise_model)
+    # scikit_propagator.run(ref_noise_model)
 
-    scikit_obs_array=scikit_propagator.obs_array
-    scikit_d_on_d_gk_array = scikit_propagator.d_on_d_gk_array
+    # scikit_obs_array=scikit_propagator.obs_array
 
 
     #%%
 
     local_solver="krylov_5"
 
-    sim_params = SimulationParameters(L,gamma_rel,gamma_deph)
+    sim_params = SimulationParameters(L, gamma_rel=0.0, gamma_deph=0.0, gamma_cross=gamma_cross)
     sim_params.N = N
     sim_params.T = T
     sim_params.dt = dt
@@ -432,7 +429,7 @@ if __name__ == '__main__':
     # scikit_time, scikit_ref_traj=scikit_tt_traj(sim_params, propagator=scikit_propagator)
 
 
-    # qutip_time, qutip_ref_traj=qutip_traj(sim_params)
+    qutip_time, qutip_ref_traj=qutip_traj(sim_params)
 
 
 #%%
@@ -440,24 +437,24 @@ if __name__ == '__main__':
 
 #%%
 # %matplotlib qt
-i = 0
+i = 6
 
 plt.plot( yaqs_propagator.sim_params.times, yaqs_obs_array[i, :],'-', label=f"propagator_yaqs obs_{str(i)}")
-plt.plot( yaqs_propagator.sim_params.times, scikit_obs_array[i, :], 'x', label=f"propagator_scikit obs_{str(i)}")
+# plt.plot( yaqs_propagator.sim_params.times, scikit_obs_array[i, :], 'x', label=f"propagator_scikit obs_{str(i)}")
 # plt.plot( yaqs_propagator.sim_params.times, scikit_ref_traj.T[i, :], '-', label=f"scikit obs_{str(i)}")
-# plt.plot( yaqs_propagator.sim_params.times, qutip_ref_traj.T[i, :], '-', label=f"qutip obs_{str(i)}")
+plt.plot( yaqs_propagator.sim_params.times, qutip_ref_traj.T[i, :], '-', label=f"qutip obs_{str(i)}")
 
 
 plt.legend()
 plt.show()
-# #%%
-i = 0
-j=2
+#%%
+# i = 0
+# j=2
 
-plt.plot( yaqs_propagator.sim_params.times, yaqs_d_on_d_gk_array[i,j, :], label=f"yaqs obs_{str(i)}")
-plt.plot( scikit_propagator.sim_params.times, scikit_d_on_d_gk_array[i,j, :], '--', label=f"scikit obs_{str(i)}")
-plt.legend()
-plt.show()
+# plt.plot( yaqs_propagator.sim_params.times, yaqs_d_on_d_gk_array[i,j, :], label=f"yaqs obs_{str(i)}")
+# plt.plot( scikit_propagator.sim_params.times, scikit_d_on_d_gk_array[i,j, :], '--', label=f"scikit obs_{str(i)}")
+# plt.legend()
+# plt.show()
 
 
 
