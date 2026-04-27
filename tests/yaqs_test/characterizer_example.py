@@ -94,8 +94,7 @@ if __name__ == '__main__':
     g=1
 
 
-    H_0 = MPO()
-    H_0.init_ising(L, J, g)
+    H_0 = MPO.ising(L, J, g)
 
 
     # Define the initial state
@@ -123,7 +122,7 @@ if __name__ == '__main__':
         num_traj = config["ntraj"]
 
     
-    if num_traj == 1 and module == "qutip":
+    if module == "qutip":
         sim_params = AnalogSimParams(observables=obs_list, elapsed_time=T, dt=dt, num_traj=1, max_bond_dim=max_bond_dim, threshold=threshold, order=order, sample_timesteps=True)
 
     else:
@@ -235,7 +234,7 @@ if __name__ == '__main__':
 
 
     loss=LossClass(
-            ref_traj=ref_traj, propagator=opt_propagator, num_traj = n_traj_func, working_dir=work_dir, print_to_file=True, loss_scale=loss_scale
+            ref_traj=ref_traj, propagator=opt_propagator, num_traj = n_traj_func, working_dir=work_dir, print_to_file=True
         )
 
 
