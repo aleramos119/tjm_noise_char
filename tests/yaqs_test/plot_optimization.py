@@ -107,6 +107,15 @@ def plot_gamma_optimization(folder: str) -> None:
 
 
 #%%
+for current_dir, subdirs, files in os.walk("/home/aramos/Dokumente/Work/simulation_of_open_quantum_systems/tjm_noise_char/tests/yaqs_test/results/characterizer_gradient_free/loss_scale_True_reduced/module_yaqs/method_bayesian/"):
+        # If the directory has no subdirectories, treat it as a leaf node
+        if not subdirs:
+            plot_gamma_optimization(current_dir)
+
+
+
+
+#%%
 L_list_initial=[10,20,40, 80, 100]
 
 folder="results/optimization/d_2/"
@@ -731,10 +740,6 @@ plt.legend()
 #         if not subdirs:
 #             plot_gamma_optimization(current_dir)
 
-for current_dir, subdirs, files in os.walk("/home/aramos/Dokumente/Work/simulation_of_open_quantum_systems/tjm_noise_char/tests/yaqs_test/results/characterizer_gradient_free/loss_scale_True_reduced/"):
-        # If the directory has no subdirectories, treat it as a leaf node
-        if not subdirs:
-            plot_gamma_optimization(current_dir)
 
 # %%
 
@@ -1004,21 +1009,38 @@ def plot_optimization_grid(L1: int, L2: int, module: str, method: str, params: s
         ax = axes[1, col_idx]
         color_cycle = plt.rcParams['axes.prop_cycle'].by_key()['color']
         if d > 0:
-            for i in range(d):
-                ax.plot(
-                    data[:, 0], data[:, 2 + i],
-                    label=rf"$\gamma_{{{['X', 'Y', 'Z'][i] if i < 3 else i+1}}}$",
-                    color=color_cycle[i % len(color_cycle)],
-                )
-            if params=="d_3":
+            if params == "d_3L":
+                pauli_labels = ['X', 'Y', 'Z']
+                for p, label in enumerate(pauli_labels):
+                    color = color_cycle[p % len(color_cycle)]
+                    group = data[:, 2 + p * L : 2 + (p + 1) * L]  # shape (n_iter, L)
+                    mean = group.mean(axis=1)
+                    std = group.std(axis=1)
+                    ax.plot(data[:, 0], mean,
+                            label=rf"$\bar{{\gamma}}_{{{label}}}$", color=color)
+                    ax.fill_between(data[:, 0], mean - std, mean + std,
+                                    alpha=0.3, color=color, linewidth=0)
+                    if gammas is not None and len(gammas) == 3 * L:
+                        ref_mean = gammas[p * L : (p + 1) * L].mean()
+                        ax.axhline(ref_mean, color=color,
+                                   linestyle='--', linewidth=2, alpha=0.7)
                 ax.legend(frameon=False, loc='best', handlelength=2)
-            if gammas is not None and len(gammas) > 0:
-                ax.axhline(
-                    gammas[0], 
-                    color="black",
-                    linestyle='--', linewidth=2,
-                    alpha=0.7
-                )
+            else:
+                for i in range(d):
+                    ax.plot(
+                        data[:, 0], data[:, 2 + i],
+                        label=rf"$\gamma_{{{pauli_labels[i] if i < 3 else i+1}}}$",
+                        color=color_cycle[i % len(color_cycle)],
+                    )
+                if params == "d_3":
+                    ax.legend(frameon=False, loc='best', handlelength=2)
+                if gammas is not None and len(gammas) > 0:
+                    ax.axhline(
+                        gammas[0],
+                        color="black",
+                        linestyle='--', linewidth=2,
+                        alpha=0.7
+                    )
         ax.set_xlabel("Iterations", labelpad=4)
         if col_idx == 0:
             ax.set_ylabel(r"$\gamma$", labelpad=4)
