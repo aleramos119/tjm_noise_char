@@ -22,8 +22,7 @@ def run_single_trajectory(args):
     threshold = 1e-6
     order = 1
 
-    H_0 = MPO()
-    H_0.init_ising(L, J, g)
+    H_0=MPO.ising(L, J, g)
 
     init_state = MPS(L, state='zeros')
 
@@ -82,6 +81,7 @@ if __name__ == '__main__':
     args = [(k, L, work_dir, gamma_x, gamma_y, gamma_z) for k in range(N)]
 
     with ProcessPoolExecutor(max_workers=n_cpus) as executor:
-        executor.map(run_single_trajectory, args)
+        for _ in executor.map(run_single_trajectory, args):
+            pass
 
     print(f"Written {N} individual trajectories to {work_dir}.")
