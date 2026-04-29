@@ -149,7 +149,7 @@ if __name__ == '__main__':
         proc += [{"name": "pauli_z", "sites": [i for i in range(L)], "strength": gamma_reference}]
     if "crosstalk" in params:
         if "d_3L" in params:
-            proc += [{"name": crosstalk_name, "sites": [i, i+1], "strength": gamma_reference} for i in range(L-1)]
+            proc += [{"name": crosstalk_name, "sites": [[i, i+1]], "strength": gamma_reference} for i in range(L-1)]
         else:
             proc += [{"name": crosstalk_name, "sites": [[i, i+1] for i in range(L-1)], "strength": gamma_reference}]
     ref_noise_model =  CompactNoiseModel(proc)
