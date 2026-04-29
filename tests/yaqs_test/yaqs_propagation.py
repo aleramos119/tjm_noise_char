@@ -13,6 +13,7 @@ from mqt.yaqs.core.libraries.gate_library import X, Y, Z
 
 def run_single_trajectory(args):
     k, L, work_dir, gamma_x, gamma_y, gamma_z = args
+    print(f"[traj {k}] Starting ...", flush=True)
 
     T = 6
     J = 1
@@ -52,7 +53,9 @@ def run_single_trajectory(args):
     )
     propagator.set_observable_list(obs_list)
     propagator.run(noise_model)
-    propagator.write_traj(Path(work_dir) / f"traj_{k}.txt")
+    output_file = Path(work_dir) / f"traj_{k}.txt"
+    propagator.write_traj(output_file)
+    print(f"[traj {k}] Written to {output_file}", flush=True)
 
 
 if __name__ == '__main__':
