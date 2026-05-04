@@ -139,19 +139,20 @@ if __name__ == '__main__':
     m = re.search(r'crosstalk_\w+', params)
     crosstalk_name = m.group() if m else None
     gamma_reference = 0.01
+
+    proc=[]
     if "d_3L" in params:
-        proc =  [{"name": "pauli_x", "sites": [i], "strength": gamma_reference} for i in range(L)]
+        proc += [{"name": "pauli_x", "sites": [i], "strength": gamma_reference} for i in range(L)]
         proc += [{"name": "pauli_y", "sites": [i], "strength": gamma_reference} for i in range(L)]
         proc += [{"name": "pauli_z", "sites": [i], "strength": gamma_reference} for i in range(L)]
-    else:
-        proc =  [{"name": "pauli_x", "sites": [i for i in range(L)], "strength": gamma_reference}]
+    elif "d_3" in params:
+        proc += [{"name": "pauli_x", "sites": [i for i in range(L)], "strength": gamma_reference}]
         proc += [{"name": "pauli_y", "sites": [i for i in range(L)], "strength": gamma_reference}]
         proc += [{"name": "pauli_z", "sites": [i for i in range(L)], "strength": gamma_reference}]
-    if "crosstalk" in params:
-        if "d_3L" in params:
-            proc += [{"name": crosstalk_name, "sites": [[i, i+1]], "strength": gamma_reference} for i in range(L-1)]
-        else:
-            proc += [{"name": crosstalk_name, "sites": [[i, i+1] for i in range(L-1)], "strength": gamma_reference}]
+    if "Lcrosstalk" in params:
+        proc += [{"name": crosstalk_name, "sites": [[i, i+1]], "strength": gamma_reference} for i in range(L-1)]
+    elif "crosstalk" in params:
+        proc += [{"name": crosstalk_name, "sites": [[i, i+1] for i in range(L-1)], "strength": gamma_reference}]
     ref_noise_model =  CompactNoiseModel(proc)
 
 
@@ -192,18 +193,24 @@ if __name__ == '__main__':
     gamma_guess=x_low + np.random.rand(*x_low.shape) * (x_up - x_low)
 
 
+    proc=[]
+
+
     if "d_3L" in params:
-        proc =  [{"name": "pauli_x", "sites": [i], "strength": gamma_guess[i]}      for i in range(L)]
+        proc += [{"name": "pauli_x", "sites": [i], "strength": gamma_guess[i]}      for i in range(L)]
         proc += [{"name": "pauli_y", "sites": [i], "strength": gamma_guess[i+L]}    for i in range(L)]
         proc += [{"name": "pauli_z", "sites": [i], "strength": gamma_guess[i+2*L]}  for i in range(L)]
-        if "crosstalk" in params:
-            proc += [{"name": crosstalk_name, "sites": [[i, i+1]], "strength": gamma_guess[i+3*L]} for i in range(L-1)]
-    else:
-        proc =  [{"name": "pauli_x", "sites": [i for i in range(L)], "strength": gamma_guess[0]}]
+        crosstalk_offset = 3*L
+    elif "d_3" in params:
+        proc += [{"name": "pauli_x", "sites": [i for i in range(L)], "strength": gamma_guess[0]}]
         proc += [{"name": "pauli_y", "sites": [i for i in range(L)], "strength": gamma_guess[1]}]
         proc += [{"name": "pauli_z", "sites": [i for i in range(L)], "strength": gamma_guess[2]}]
-        if "crosstalk" in params:
-            proc += [{"name": crosstalk_name, "sites": [[i, i+1] for i in range(L-1)], "strength": gamma_guess[3]}]
+        crosstalk_offset = 3
+    if "Lcrosstalk" in params:
+        proc += [{"name": crosstalk_name, "sites": [[i, i+1]], "strength": gamma_guess[crosstalk_offset+i]} for i in range(L-1)]
+    elif "crosstalk" in params:
+        proc += [{"name": crosstalk_name, "sites": [[i, i+1] for i in range(L-1)], "strength": gamma_guess[crosstalk_offset]}]
+            
     guess_noise_model = CompactNoiseModel(proc)
 
 
