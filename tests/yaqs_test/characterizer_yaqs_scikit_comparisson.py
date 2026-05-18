@@ -384,7 +384,7 @@ if __name__ == '__main__':
 
     print("Computing reference trajectory ... ")
 
-    yaqs_propagator.run(ref_noise_model)
+    yaqs_propagator.run(ref_noise_model, 1)
 
     yaqs_obs_array=yaqs_propagator.obs_array
 

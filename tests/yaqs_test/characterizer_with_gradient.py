@@ -67,6 +67,8 @@ if __name__ == '__main__':
 
     loss_scale = bool(sys.argv[7])
 
+    n_neumann = int(sys.argv[8])
+
     if module == "scikit":
         from auxiliar.scikit_tt_propagator import Propagator
     if module == "yaqs":
@@ -103,6 +105,8 @@ if __name__ == '__main__':
 
 
     obs_list = [Observable(X(), site) for site in range(L)]  + [Observable(Y(), site) for site in range(L)] + [Observable(Z(), site) for site in range(L)]
+
+    # obs_list = [Observable(Z(), site) for site in range(L)]
 
 
 
@@ -174,7 +178,7 @@ if __name__ == '__main__':
 
     print("Computing reference trajectory ... ")
 
-    propagator.run(ref_noise_model, 1)
+    propagator.run(ref_noise_model, n_neumann)
 
     ref_traj = propagator.obs_traj
 
@@ -218,7 +222,8 @@ if __name__ == '__main__':
         sim_params=sim_params,
         hamiltonian=H_0,
         compact_noise_model=guess_noise_model,
-        init_state=init_state
+        init_state=init_state,
+        compute_gradient_obs=True,
     )
 
 
@@ -244,7 +249,7 @@ if __name__ == '__main__':
 
 
     loss=LossClass(
-            ref_traj=ref_traj, propagator=opt_propagator, num_traj = n_traj_func, working_dir=work_dir, print_to_file=True
+            ref_traj=ref_traj, propagator=opt_propagator, num_traj = n_traj_func, working_dir=work_dir, print_to_file=True, n_neumann=n_neumann
         )
 
 

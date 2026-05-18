@@ -52,7 +52,7 @@ def run_single_trajectory(args):
         init_state=init_state,
     )
     propagator.set_observable_list(obs_list)
-    propagator.run(noise_model)
+    propagator.run(noise_model, 1)
     output_file = Path(work_dir) / f"traj_{k}.txt"
     propagator.write_traj(output_file)
     print(f"[traj {k}] Written to {output_file}", flush=True)

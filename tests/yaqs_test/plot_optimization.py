@@ -107,7 +107,7 @@ def plot_gamma_optimization(folder: str) -> None:
 
 
 #%%
-for current_dir, subdirs, files in os.walk("/home/ale/Documents/Work/simulation_of_open_quantum_systems/tjm_noise_char/tests/yaqs_test/results/characterizer_gradient_free/loss_scale_True_reduced/module_yaqs/method_cma/"):
+for current_dir, subdirs, files in os.walk("/home/ale/Documents/Work/simulation_of_open_quantum_systems/tjm_noise_char/tests/yaqs_test/test/gradient_test"):
         # If the directory has no subdirectories, treat it as a leaf node
         if not subdirs:
             plot_gamma_optimization(current_dir)
