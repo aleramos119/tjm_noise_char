@@ -1,4 +1,6 @@
 #%%
+import sys
+
 import numpy as np
 
 from mqt.yaqs.noise_char.loss import LossClass
@@ -93,6 +95,8 @@ opt_propagator = Propagator(
 
 #%%
 
+scan_index = int(sys.argv[1]) if len(sys.argv) > 1 else 0
+
 loss = LossClass(
     ref_traj=ref_traj,
     propagator=opt_propagator,
@@ -111,5 +115,29 @@ print(f"  {'param':<8} {'analytical':>14} {'numeric':>14} {'rel_err':>12}")
 for i in range(len(gamma_eval)):
     rel_err = abs(loss.analytical_grad[i] - loss.numeric_grad[i]) / (abs(loss.numeric_grad[i]) + 1e-30)
     print(f"  x[{i}]     {loss.analytical_grad[i]:>14.6e} {loss.numeric_grad[i]:>14.6e} {rel_err:>12.3e}")
+
+#%%
+
+gamma_scan = np.arange(0, 0.055, 0.005)
+scan_results = np.zeros((len(gamma_scan), 2))
+
+scan_loss = LossClass(
+    ref_traj=ref_traj,
+    propagator=opt_propagator,
+    num_traj=lambda _: num_traj,
+    n_neumann=n_neumann,
+)
+
+print(f"\nScanning gamma[{scan_index}] from {gamma_scan[0]:.3f} to {gamma_scan[-1]:.3f}...")
+for k, g_val in enumerate(gamma_scan):
+    x_scan = gamma_eval.copy()
+    x_scan[scan_index] = g_val
+    f_scan, _, _ = scan_loss(x_scan)
+    scan_results[k] = [g_val, f_scan]
+    print(f"  gamma={g_val:.4f}  loss={f_scan:.6e}")
+
+scan_file = f"loss_scan_gamma{scan_index}.txt"
+np.savetxt(scan_file, scan_results, header=f"gamma[{scan_index}]  loss", fmt="%.6f  %.6e")
+print(f"\nScan saved to {scan_file}")
 
 # %%
