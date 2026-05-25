@@ -22,7 +22,7 @@ dt = 0.1
 max_bond_dim = 8
 threshold = 1e-6
 order = 1
-num_traj = 1000
+num_traj = 100
 n_neumann = 2
 epsilon = 1e-2
 

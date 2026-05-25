@@ -67,6 +67,8 @@ if __name__ == '__main__':
 
     loss_scale = bool(sys.argv[7])
 
+    neighbor_radius = int(sys.argv[8]) if len(sys.argv) > 8 else 1
+
     if module == "scikit":
         from auxiliar.scikit_tt_propagator import Propagator
     if module == "yaqs":
@@ -150,9 +152,11 @@ if __name__ == '__main__':
         proc += [{"name": "pauli_y", "sites": [i for i in range(L)], "strength": gamma_reference}]
         proc += [{"name": "pauli_z", "sites": [i for i in range(L)], "strength": gamma_reference}]
     if "Lcrosstalk" in params:
-        proc += [{"name": crosstalk_name, "sites": [[i, i+1]], "strength": gamma_reference} for i in range(L-1)]
+        for r in range(1, neighbor_radius + 1):
+            proc += [{"name": crosstalk_name, "sites": [[i, i+r]], "strength": gamma_reference} for i in range(L-r)]
     elif "crosstalk" in params:
-        proc += [{"name": crosstalk_name, "sites": [[i, i+1] for i in range(L-1)], "strength": gamma_reference}]
+        for r in range(1, neighbor_radius + 1):
+            proc += [{"name": crosstalk_name, "sites": [[i, i+r] for i in range(L-r)], "strength": gamma_reference}]
     ref_noise_model =  CompactNoiseModel(proc)
 
 
@@ -207,9 +211,13 @@ if __name__ == '__main__':
         proc += [{"name": "pauli_z", "sites": [i for i in range(L)], "strength": gamma_guess[2]}]
         crosstalk_offset = 3
     if "Lcrosstalk" in params:
-        proc += [{"name": crosstalk_name, "sites": [[i, i+1]], "strength": gamma_guess[crosstalk_offset+i]} for i in range(L-1)]
+        idx = crosstalk_offset
+        for r in range(1, neighbor_radius + 1):
+            proc += [{"name": crosstalk_name, "sites": [[i, i+r]], "strength": gamma_guess[idx+i]} for i in range(L-r)]
+            idx += L - r
     elif "crosstalk" in params:
-        proc += [{"name": crosstalk_name, "sites": [[i, i+1] for i in range(L-1)], "strength": gamma_guess[crosstalk_offset]}]
+        for r in range(1, neighbor_radius + 1):
+            proc += [{"name": crosstalk_name, "sites": [[i, i+r] for i in range(L-r)], "strength": gamma_guess[crosstalk_offset + r - 1]}]
             
     guess_noise_model = CompactNoiseModel(proc)
 
@@ -280,3 +288,6 @@ if __name__ == '__main__':
     print("Optimization complete.")
 
 
+#%%
+list(range(1, 1 + 1))
+# %%

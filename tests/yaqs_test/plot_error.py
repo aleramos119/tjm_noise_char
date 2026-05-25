@@ -58,14 +58,14 @@ def find_convergence_index(data, threshold):
 
 #%%
 module="yaqs"
-params = "d_3"
+params = "d_3_crosstalk_zz"
 
 method_list = ["cma"]
 
-if params == "d_3":
+if params == "d_3" or params=="d_3_crosstalk_zz":
     L_list_initial = [10,20,40,80,160]
 
-if params == "d_3L":
+if params == "d_3L" or params=="d_3L_Lcrosstalk_zz":
     L_list_initial = [2,4,8,16]
 
 
@@ -151,16 +151,17 @@ for const in const_list:
 # %%
 #%%
 
-params = "d_3"
+params = "d_3_crosstalk_zz"
 
 module_list = ["yaqs"]
 method_list = ["cma", "bayesian"]
 
-if params == "d_3":
+if params == "d_3" or params=="d_3_crosstalk_zz":
     L_list_initial = [10,20,40,80,160]
 
-if params == "d_3L":
+if params == "d_3L" or params=="d_3L_Lcrosstalk_zz":
     L_list_initial = [2,4,8,16]
+
 
 
 xlim = 0.1
