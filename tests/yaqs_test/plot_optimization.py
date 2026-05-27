@@ -853,7 +853,7 @@ print(N)
 
 
 
-def plot_optimization_grid(L1: int, L2: int, module: str, method: str, params: str, 
+def plot_optimization_grid(L1: int, L2: int, module: str, method: str, params: str, radius: int, 
                            const: str, xlim: float, output_file: str = None, 
                            traj_col: int = 1, legend: bool = True) -> None:
     """
@@ -909,7 +909,7 @@ def plot_optimization_grid(L1: int, L2: int, module: str, method: str, params: s
 
     # PRELOAD all data to determine axis scales first
     for col_idx, L in enumerate(L_list):
-        folder = f"results/characterizer_gradient_free/loss_scale_True_reduced/module_{module}/method_{method}/params_{params}/const_{const}/L_{L}/xlim_{xlim}/"
+        folder = f"results/characterizer_gradient_free/loss_scale_True_reduced/module_{module}/method_{method}/params_{params}_radius_{radius}/const_{const}/L_{L}/xlim_{xlim}/"
 
         loss_x_file = os.path.join(folder, "loss_x_history.txt")
         gammas_file = os.path.join(folder, "gammas.txt")
@@ -1012,17 +1012,26 @@ def plot_optimization_grid(L1: int, L2: int, module: str, method: str, params: s
 
             labels = []
             if "d_3L" in params:
-                labels += ["X" for i in range(L)]
-                labels += ["Y" for i in range(L)]
-                labels += ["Z" for i in range(L)]
+                labels += [r"$\gamma_{X}$" for i in range(L)]
+                labels += [r"$\gamma_{Y}$" for i in range(L)]
+                labels += [r"$\gamma_{Z}$" for i in range(L)]
             elif "d_3" in params:
-                labels += ["X"]
-                labels += ["Y"]
-                labels += ["Z"]
+                labels += [r"$\gamma_{X}$"]
+                labels += [r"$\gamma_{Y}$"]
+                labels += [r"$\gamma_{Z}$"]
             if "Lcrosstalk" in params:
-                labels += ["ZZ" for i in range(L-1)]
+                for r in range(1, radius + 1):
+                    labels += [rf"$\gamma_{{ZZ}},\,r_{{\max}}={r}$" for i in range(L-r)]
             elif "crosstalk" in params:
-                labels += ["ZZ"]
+                for r in range(1, radius + 1):
+                    labels += [rf"$\gamma_{{ZZ}},\,r_{{\max}}={r}$"]
+
+            ncols=len(data[0])
+            nlabels=len(labels)
+
+            if nlabels != (ncols-2)//2:
+                raise ValueError(f"Number of labels ({nlabels}) must equal (ncols-2)/2 = {(ncols-2)//2} (ncols={ncols})")
+
 
             # Build ordered list of unique labels (preserving first-appearance order)
             unique_labels = list(dict.fromkeys(labels))
@@ -1034,12 +1043,12 @@ def plot_optimization_grid(L1: int, L2: int, module: str, method: str, params: s
 
                 if len(indices) == 1:
                     ax.plot(data[:, 0], group[:, 0],
-                            label=rf"$\gamma_{{{lbl}}}$", color=color)
+                            label=lbl, color=color)
                 else:
                     mean = group.mean(axis=1)
                     std = group.std(axis=1)
                     ax.plot(data[:, 0], mean,
-                            label=rf"$\bar{{\gamma}}_{{{lbl}}}$", color=color)
+                            label=lbl.replace(r"\gamma", r"\bar{\gamma}"), color=color)
                     ax.fill_between(data[:, 0], mean - std, mean + std,
                                     alpha=0.3, color=color, linewidth=0)
 
@@ -1118,7 +1127,7 @@ def plot_optimization_grid(L1: int, L2: int, module: str, method: str, params: s
     plt.tight_layout()
 
     if output_file is None:
-        folder1 = f"results/characterizer_gradient_free/loss_scale_True_reduced/module_{module}/method_{method}/params_{params}/const_{const}/"
+        folder1 = f"results/characterizer_gradient_free/loss_scale_True_reduced/module_{module}/method_{method}/params_{params}_radius_{radius}/const_{const}/"
         output_file = os.path.join(folder1, f"optimization_grid_{params}_L{L1}_L{L2}.pdf")
 
     plt.savefig(output_file, dpi=600, bbox_inches='tight', transparent=True)
@@ -1127,6 +1136,6 @@ def plot_optimization_grid(L1: int, L2: int, module: str, method: str, params: s
 
 # %%
 # Example usage:
-plot_optimization_grid(L1=10, L2=160, module="yaqs", method="cma", params="d_3_crosstalk_zz", const="4e6", xlim=0.1, legend=False)
+plot_optimization_grid(L1=2, L2=16, module="yaqs", method="cma", params="d_3L_Lcrosstalk_zz", radius=1, const="4e6", xlim=0.1, legend=False)
 # %%
 
