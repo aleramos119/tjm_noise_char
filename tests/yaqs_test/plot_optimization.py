@@ -907,15 +907,21 @@ def plot_optimization_grid(L1: int, L2: int, module: str, method: str, params: s
 
     all_data = {}
 
+    if "crosstalk" in params:
+        params=params + f"_radius_{radius}"
+
     # PRELOAD all data to determine axis scales first
     for col_idx, L in enumerate(L_list):
-        folder = f"results/characterizer_gradient_free/loss_scale_True_reduced/module_{module}/method_{method}/params_{params}_radius_{radius}/const_{const}/L_{L}/xlim_{xlim}/"
+        folder = f"results/characterizer_gradient_free/loss_scale_True_reduced/module_{module}/method_{method}/params_{params}/const_{const}/L_{L}/xlim_{xlim}/"
 
         loss_x_file = os.path.join(folder, "loss_x_history.txt")
         gammas_file = os.path.join(folder, "gammas.txt")
         ref_traj_file = os.path.join(folder, "ref_traj.txt")
-        opt_traj_files = sorted(glob.glob(os.path.join(folder, "opt_traj_*.txt")))
-        opt_traj_file = opt_traj_files[0] if opt_traj_files else None
+        opt_traj_files = sorted(glob.glob(os.path.join(folder, "opt_traj_*.txt")),
+                                key=lambda f: int(os.path.splitext(os.path.basename(f))[0].split('_')[-1]))
+        opt_traj_file = opt_traj_files[-1] if opt_traj_files else None
+
+        # print(opt_traj_files)
 
         if not os.path.exists(loss_x_file):
             print(f"Warning: {loss_x_file} does not exist, skipping L={L}")
@@ -1054,8 +1060,8 @@ def plot_optimization_grid(L1: int, L2: int, module: str, method: str, params: s
 
                 if gammas is not None and len(gammas) == d:
                     ref_vals = gammas[indices]
-                    ax.axhline(ref_vals.mean(), color=color,
-                               linestyle='--', linewidth=2, alpha=0.7)
+                    ax.axhline(ref_vals.mean(), color="black",
+                               linestyle='--', linewidth=2, alpha=0.7, zorder=10)
 
             ax.legend(frameon=False, loc='best', handlelength=2)
         ax.set_xlabel("Iterations", labelpad=4)
@@ -1127,7 +1133,7 @@ def plot_optimization_grid(L1: int, L2: int, module: str, method: str, params: s
     plt.tight_layout()
 
     if output_file is None:
-        folder1 = f"results/characterizer_gradient_free/loss_scale_True_reduced/module_{module}/method_{method}/params_{params}_radius_{radius}/const_{const}/"
+        folder1 = f"results/characterizer_gradient_free/loss_scale_True_reduced/module_{module}/method_{method}/params_{params}/const_{const}/"
         output_file = os.path.join(folder1, f"optimization_grid_{params}_L{L1}_L{L2}.pdf")
 
     plt.savefig(output_file, dpi=600, bbox_inches='tight', transparent=True)
@@ -1136,6 +1142,6 @@ def plot_optimization_grid(L1: int, L2: int, module: str, method: str, params: s
 
 # %%
 # Example usage:
-plot_optimization_grid(L1=2, L2=16, module="yaqs", method="cma", params="d_3L_Lcrosstalk_zz", radius=1, const="4e6", xlim=0.1, legend=False)
+plot_optimization_grid(L1=10, L2=160, module="yaqs", method="cma", params="d_3_crosstalk_zz", radius=1, const="4e6", xlim=0.1, legend=False, traj_col=5)
 # %%
 
