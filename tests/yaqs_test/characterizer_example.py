@@ -178,7 +178,7 @@ if __name__ == '__main__':
 
     print("Computing reference trajectory ... ")
 
-    propagator.run(ref_noise_model, 1)
+    propagator.run(ref_noise_model)
 
     ref_traj = propagator.obs_traj
 
