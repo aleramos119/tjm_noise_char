@@ -233,7 +233,7 @@ class Propagator:
 
         # self.noise_list: list[Observable] = noise_model_to_operator_list(self.expanded_noise_model)
 
-        self.n_jump: int = len(self.expanded_noise_model)  # number of jump operators
+        self.n_jump: int = len(self.expanded_noise_model.processes)  # number of jump operators
 
         self.n_t: int = len(self.sim_params.times)  # number of time steps
 
