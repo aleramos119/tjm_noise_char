@@ -29,6 +29,8 @@ from mqt.yaqs.core.libraries.gate_library import GateLibrary, Zero
 
 import sys
 
+from torch.distributions.gamma import Gamma
+
 
 #%%
 
@@ -162,7 +164,7 @@ class Propagator:
         hamiltonian: MPO,
         compact_noise_model: CompactNoiseModel,
         init_state: MPS,
-        tjm: bool = True
+        compute_gradient_obs: bool = False,
     ) -> None:
         """Initialize a Propagation object for simulating open quantum system dynamics.
 
@@ -239,9 +241,9 @@ class Propagator:
 
         self.sites: int = self.hamiltonian.length  # number of sites in the chain
 
-        self.set_observables: bool = False
+        self.compute_gradient_obs: bool = compute_gradient_obs
 
-        self.tjm = tjm
+        self.set_observables: bool = False
 
         if max(proc["sites"][0] for proc in self.expanded_noise_model.processes) >= self.sites:
             msg = "Noise site index exceeds number of sites in the Hamiltonian."
@@ -251,14 +253,26 @@ class Propagator:
 
         c_ops = []
 
-
         for proc in noise_model.processes:
-            site = proc["sites"][0]
+            sites = proc["sites"]
             name = proc["name"]
             gamma = proc["strength"]
 
-            if site < self.sites:
-                c_ops.append(np.sqrt(gamma) * qt.tensor([qutip_operator_dict[name] if i==site else qt.qeye(2) for i in range(self.sites)]))
+            if len(sites) == 2:
+                # 2-site crosstalk: parse e.g. "crosstalk_zz" -> "z", "z"
+                suffix = name.split("_", 1)[1]
+                mid = len(suffix) // 2
+                op_a_name, op_b_name = suffix[:mid], suffix[mid:]
+                site_i, site_j = sites
+                if site_i < self.sites and site_j < self.sites:
+                    op_list = [qt.qeye(2)] * self.sites
+                    op_list[site_i] = qutip_operator_dict[op_a_name]
+                    op_list[site_j] = qutip_operator_dict[op_b_name]
+                    c_ops.append(np.sqrt(gamma) * qt.tensor(op_list))
+            else:
+                site = sites[0]
+                if site < self.sites:
+                    c_ops.append(np.sqrt(gamma) * qt.tensor([qutip_operator_dict[name] if i == site else qt.qeye(2) for i in range(self.sites)]))
 
         return c_ops
 
@@ -384,7 +398,15 @@ class Propagator:
 
         self.set_observables = True
 
-    def run(self, noise_model: CompactNoiseModel) -> None:
+    def run(
+        self,
+        noise_model: CompactNoiseModel,
+        *,
+        n_neumann: int = 1,
+        compress: bool = False,
+        tol: float = 1e-12,
+        max_bond_dim: int | None = None,
+    ) -> None:
         """Run the propagation routine with augmented Lindblad-derived operators.
 
         Parameters
