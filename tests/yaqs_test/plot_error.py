@@ -151,16 +151,16 @@ for const in const_list:
 # %%
 #%%
 
-params = "d_3_crosstalk_zz"
+params = "d_3L_Lcrosstalk_zz_radius_4"
 
-module_list = ["yaqs"]
-method_list = ["cma", "bayesian"]
+module_list = ["yaqs","qutip"]
+method_list = ["cma"]
 
-if params == "d_3" or params=="d_3_crosstalk_zz":
+if params == "d_3" or params=="d_3_crosstalk_zz_radius_4":
     L_list_initial = [10,20,40,80,160]
 
-if params == "d_3L" or params=="d_3L_Lcrosstalk_zz":
-    L_list_initial = [2,4,8,16]
+if params == "d_3L" or params=="d_3L_Lcrosstalk_zz_radius_4":
+    L_list_initial = [4,8,16]
 
 
 
@@ -252,6 +252,8 @@ for module in module_list:
             # ax.set_yticks(reduced_yticks)
             # ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda y, _: '{:.3g}'.format(y)))
 plt.tight_layout()
-plt.savefig(f"results/characterizer_gradient_free/loss_vs_L_loss_scale_{params}.pdf", dpi=600, bbox_inches='tight', transparent=True)
+out_file=f"results/characterizer_gradient_free/loss_scale_True_reduced/module_{module}/method_{method}/params_{params}/const_{const}/loss_vs_L_loss_scale_{params}.pdf"
+print("Out_file: ",out_file)
+plt.savefig(out_file, dpi=600, bbox_inches='tight', transparent=True)
 plt.close(fig)
 # %%

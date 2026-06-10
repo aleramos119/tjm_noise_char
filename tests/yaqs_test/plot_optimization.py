@@ -107,7 +107,7 @@ def plot_gamma_optimization(folder: str) -> None:
 
 
 #%%
-for current_dir, subdirs, files in os.walk("/home/ale/Documents/Work/simulation_of_open_quantum_systems/tjm_noise_char/tests/yaqs_test/test/gradient_test/reduced"):
+for current_dir, subdirs, files in os.walk("/home/ale/Documents/Work/simulation_of_open_quantum_systems/tjm_noise_char/tests/yaqs_test/results/characterizer_gradient_free/loss_scale_True_reduced/"):
         # If the directory has no subdirectories, treat it as a leaf node
         if not subdirs:
             plot_gamma_optimization(current_dir)
@@ -912,7 +912,7 @@ def plot_optimization_grid(L1: int, L2: int, module: str, method: str, params: s
 
     # PRELOAD all data to determine axis scales first
     for col_idx, L in enumerate(L_list):
-        folder = f"results/characterizer_gradient_free/loss_scale_True_reduced/module_{module}/method_{method}/params_{params}/const_{const}/L_{L}/xlim_{xlim}/"
+        folder = f"results/characterizer_gradient_free/loss_scale_True_reduced/module_{module}/method_{method}/params_{params}_radius_{radius}/const_{const}/L_{L}/xlim_{xlim}/"
 
         loss_x_file = os.path.join(folder, "loss_x_history.txt")
         gammas_file = os.path.join(folder, "gammas.txt")
@@ -1018,19 +1018,19 @@ def plot_optimization_grid(L1: int, L2: int, module: str, method: str, params: s
 
             labels = []
             if "d_3L" in params:
-                labels += [r"$\gamma_{X}$" for i in range(L)]
-                labels += [r"$\gamma_{Y}$" for i in range(L)]
-                labels += [r"$\gamma_{Z}$" for i in range(L)]
+                labels += [r"$\gamma^{X}$" for i in range(L)]
+                labels += [r"$\gamma^{Y}$" for i in range(L)]
+                labels += [r"$\gamma^{Z}$" for i in range(L)]
             elif "d_3" in params:
-                labels += [r"$\gamma_{X}$"]
-                labels += [r"$\gamma_{Y}$"]
-                labels += [r"$\gamma_{Z}$"]
+                labels += [r"$\gamma^{X}$"]
+                labels += [r"$\gamma^{Y}$"]
+                labels += [r"$\gamma^{Z}$"]
             if "Lcrosstalk" in params:
                 for r in range(1, radius + 1):
-                    labels += [rf"$\gamma_{{ZZ}},\,r_{{\max}}={r}$" for i in range(L-r)]
+                    labels += [rf"$\gamma^{{ZZ}}$" for i in range(L-r)]
             elif "crosstalk" in params:
                 for r in range(1, radius + 1):
-                    labels += [rf"$\gamma_{{ZZ}},\,r_{{\max}}={r}$"]
+                    labels += [rf"$\gamma^{{ZZ}}$"]
 
             ncols=len(data[0])
             nlabels=len(labels)
@@ -1041,6 +1041,7 @@ def plot_optimization_grid(L1: int, L2: int, module: str, method: str, params: s
 
             # Build ordered list of unique labels (preserving first-appearance order)
             unique_labels = list(dict.fromkeys(labels))
+            n_labels=len(unique_labels)
 
             for color_idx, lbl in enumerate(unique_labels):
                 color = color_cycle[color_idx % len(color_cycle)]
@@ -1060,10 +1061,21 @@ def plot_optimization_grid(L1: int, L2: int, module: str, method: str, params: s
 
                 if gammas is not None and len(gammas) == d:
                     ref_vals = gammas[indices]
-                    ax.axhline(ref_vals.mean(), color="black",
+                    ax.axhline(ref_vals.mean(), color='black',
                                linestyle='--', linewidth=2, alpha=0.7, zorder=10)
 
-            ax.legend(frameon=False, loc='best', handlelength=2)
+            from matplotlib.lines import Line2D
+            h, l = ax.get_legend_handles_labels()
+            # With ncol=2 and row-major fill, 8 items → 4 rows × 2 cols.
+            # Col 1 gets indices 0,2,4,6 and col 2 gets 1,3,5,7.
+            # To show 3 in col 1 and 4 in col 2, place blank at index 6.
+            # Desired order: col1=[l0,l1,l2,blank], col2=[l3,l4,l5,l6]
+            # Interleaved (row-major): l0,l3, l1,l4, l2,l5, blank,l6
+            order = [i for i in range(3)] + [i for i in range(3,n_labels)]
+            blank = Line2D([], [], color='none', label='')
+            h_ord = [blank if i == -1 else h[i] for i in order]
+            l_ord = [''   if i == -1 else l[i] for i in order]
+            ax.legend(h_ord, l_ord, frameon=False, loc='upper right', handlelength=2, fontsize=20, ncol=1)
         ax.set_xlabel("Iterations", labelpad=4)
         if col_idx == 0:
             ax.set_ylabel(r"$\gamma$", labelpad=4)
@@ -1099,7 +1111,7 @@ def plot_optimization_grid(L1: int, L2: int, module: str, method: str, params: s
                         linestyle='--', color="tab:orange")
   
 
-                ax.legend(frameon=False, loc='best', handlelength=2)
+                ax.legend(frameon=False, loc='lower right', handlelength=2)
         else:
             ax.text(0.5, 0.5, "Trajectory files\nnot found", 
                    ha="center", va="center", transform=ax.transAxes)
@@ -1133,7 +1145,7 @@ def plot_optimization_grid(L1: int, L2: int, module: str, method: str, params: s
     plt.tight_layout()
 
     if output_file is None:
-        folder1 = f"results/characterizer_gradient_free/loss_scale_True_reduced/module_{module}/method_{method}/params_{params}/const_{const}/"
+        folder1 = f"results/characterizer_gradient_free/loss_scale_True_reduced/module_{module}/method_{method}/params_{params}_radius_{radius}/const_{const}/"
         output_file = os.path.join(folder1, f"optimization_grid_{params}_L{L1}_L{L2}.pdf")
 
     plt.savefig(output_file, dpi=600, bbox_inches='tight', transparent=True)
@@ -1142,6 +1154,6 @@ def plot_optimization_grid(L1: int, L2: int, module: str, method: str, params: s
 
 # %%
 # Example usage:
-plot_optimization_grid(L1=10, L2=160, module="yaqs", method="cma", params="d_3_crosstalk_zz", radius=1, const="4e6", xlim=0.1, legend=False, traj_col=5)
+plot_optimization_grid(L1=10, L2=160, module="yaqs", method="cma", params="d_3_crosstalk_zz", radius=4, const="4e6", xlim=0.1, legend=False)
 # %%
 
