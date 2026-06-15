@@ -12,7 +12,7 @@ from mqt.yaqs.core.libraries.gate_library import X, Y, Z
 
 
 def run_single_trajectory(args):
-    k, L, work_dir, gamma_x, gamma_y, gamma_z = args
+    k, L, work_dir, noise_model = args
     print(f"[traj {k}] Starting ...", flush=True)
 
     T = 6
@@ -39,12 +39,6 @@ def run_single_trajectory(args):
         sample_timesteps=True,
     )
 
-    noise_model = CompactNoiseModel([
-        {"name": "pauli_x", "sites": [i for i in range(L)], "strength": gamma_x},
-        {"name": "pauli_y", "sites": [i for i in range(L)], "strength": gamma_y},
-        {"name": "pauli_z", "sites": [i for i in range(L)], "strength": gamma_z},
-    ])
-
     propagator = Propagator(
         sim_params=sim_params,
         hamiltonian=H_0,
@@ -66,22 +60,29 @@ if __name__ == '__main__':
     gamma_x  = float(sys.argv[4])
     gamma_y  = float(sys.argv[5])
     gamma_z  = float(sys.argv[6])
-    n_cpus   = int(sys.argv[7])
+    gamma_ct = float(sys.argv[7])
+    n_cpus   = int(sys.argv[8])
+    neighbor_radius = 4
 
     work_dir_path = Path(work_dir)
     work_dir_path.mkdir(parents=True, exist_ok=True)
 
-    ## Writing reference gammas to file
-    ref_noise_model = CompactNoiseModel([
+    ## Defining the noise model
+    proc = [
         {"name": "pauli_x", "sites": [i for i in range(L)], "strength": gamma_x},
         {"name": "pauli_y", "sites": [i for i in range(L)], "strength": gamma_y},
         {"name": "pauli_z", "sites": [i for i in range(L)], "strength": gamma_z},
-    ])
-    np.savetxt(work_dir + "/gammas.txt", ref_noise_model.strength_list, header="##", fmt="%.6f")
+    ]
+    for r in range(1, neighbor_radius + 1):
+        proc += [{"name": "crosstalk_zz", "sites": [[i, i + r] for i in range(L - r)], "strength": gamma_ct}]
+    noise_model = CompactNoiseModel(proc)
+
+    ## Writing reference gammas to file
+    np.savetxt(work_dir + "/gammas.txt", noise_model.strength_list, header="##", fmt="%.6f")
 
     print(f"Computing {N} trajectories on {n_cpus} CPUs ...")
 
-    args = [(k, L, work_dir, gamma_x, gamma_y, gamma_z) for k in range(N)]
+    args = [(k, L, work_dir, noise_model) for k in range(N)]
 
     with ProcessPoolExecutor(max_workers=n_cpus) as executor:
         for _ in executor.map(run_single_trajectory, args):

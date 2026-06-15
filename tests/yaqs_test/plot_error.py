@@ -160,7 +160,7 @@ if params == "d_3" or params=="d_3_crosstalk_zz_radius_4":
     L_list_initial = [10,20,40,80,160]
 
 if params == "d_3L" or params=="d_3L_Lcrosstalk_zz_radius_4":
-    L_list_initial = [4,8,16]
+    L_list_initial = [2,4,8,16]
 
 
 
@@ -230,17 +230,17 @@ for module in module_list:
                     continue
 
                 L_list.append(L)
-                loss = np.mean(np.genfromtxt(file)[:,1][-100:])
+                loss = np.min(np.genfromtxt(file)[:,1][:])
 
                 error_list.append(np.log10(np.sqrt(loss)))
 
 
             ax.plot(L_list, error_list, marker='o', label=f"{opt_dict[method]}_{prop_dict[module]}")
             ax.set_xlabel(r"$N_{\mathrm{site}}$", labelpad=4)
-            ax.legend(frameon=False, loc='best', handlelength=2)
-            if params == "d_3L":
+            ax.legend(frameon=False, loc='lower right', handlelength=2)
+            if "L" in params:
                 ax.set_xticks([i for i in range(2,17,2)])
-                ax.set_yticks(np.linspace(-2.3, -2.45, 4))
+                ax.set_yticks(np.linspace(-2.3, -2.8, 6))
             ax.set_ylabel(r"$\log_{10}\left( \sqrt{J} \right)$", labelpad=4)
             # Show top and right border
             ax.spines['top'].set_visible(True)
@@ -248,7 +248,7 @@ for module in module_list:
 
             # Format y ticks with less significant digits
             # yticks = ax.get_yticks()
-            # reduced_yticks = yticks[::2]
+            # reduced_yticks = y ticks[::2]
             # ax.set_yticks(reduced_yticks)
             # ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda y, _: '{:.3g}'.format(y)))
 plt.tight_layout()
@@ -256,4 +256,4 @@ out_file=f"results/characterizer_gradient_free/loss_scale_True_reduced/module_{m
 print("Out_file: ",out_file)
 plt.savefig(out_file, dpi=600, bbox_inches='tight', transparent=True)
 plt.close(fig)
-# %%
+    # %%
