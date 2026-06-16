@@ -37,119 +37,309 @@ def load_traj(folder, L):
     print(f"Loaded {ntraj} trajectories from {folder}.")
 
     split_data = full_data.reshape(n_t, n_obs_L, L, ntraj)
-    ref_traj = np.mean(split_data, axis=3)
 
-    return split_data, ref_traj, time
+    traj_data = np.transpose(split_data,(2,1,0,3))
 
-#%%
-split_data, ref_traj, time = load_traj("/home/ale/Documents/Work/simulation_of_open_quantum_systems/tjm_noise_char/tests/yaqs_test/results/propagation/yaqs/L_10", 10)
-#%%
+    ref_traj = np.mean(traj_data, axis=3)
 
-
-# %%
-n_samples=500
+    return traj_data, ref_traj, time
 
 
-L=50
-n_obs_L=3
-n_obs=n_obs_L*L
-n_t=61
+def sample_y_ijk(traj_data, ref_traj, ntraj_size, n_samples, rng=None):
+    """Draw samples of Y_ijk = (X_ijk - ref_traj_ijk)^2.
+
+    X_ijk is the average of traj_data over a random subset of `ntraj_size`
+    trajectories. Indices i, j, k correspond to L, n_obs_L and n_t.
+
+    traj_data : (L, n_obs_L, n_t, ntraj)
+    ref_traj  : (L, n_obs_L, n_t)
+    returns   : (L, n_obs_L, n_t, n_samples)
+    """
+    if rng is None:
+        rng = np.random.default_rng()
+
+    L, n_obs_L, n_t, ntraj = traj_data.shape
+
+    # W[t, s] = number of times trajectory t is drawn in sample s (bootstrap).
+    W = rng.multinomial(ntraj_size, np.full(ntraj, 1.0 / ntraj),
+                        size=n_samples).T          # (ntraj, n_samples)
+
+    # X[..., s] = average of traj_data over sample s's draws.
+    x = traj_data @ W / ntraj_size                 # (L, n_obs_L, n_t, n_samples)
+    y = (x - ref_traj[..., None]) ** 2
 
 
-method="yaqs"
+    cost=y.mean(axis=(0, 1, 2))
+
+    return x, y, cost
+
+def compute_stats(traj_data, ref_traj, ntraj_size, n_samples, rng=None,
+                  chunk_size=250):
+    """Memory-efficient version of sample_y_ijk + compute_constant.
+
+    Computes, over the bootstrap sample axis, everything the analysis needs
+    without ever materializing the full (L, n_obs_L, n_t, n_samples) arrays:
+
+        cost        : (n_samples,)  per-sample mean of Y_ijk
+        sigma_max_2 : max_ijk Var(X_ijk)
+        c_max       : max_ijk (1 + |mu_ijk| + 2 |mu^ref_ijk|)
+
+    Samples are drawn in chunks of `chunk_size`, so peak memory scales with
+    chunk_size instead of n_samples.
+    """
+    if rng is None:
+        rng = np.random.default_rng()
+
+    L, n_obs_L, n_t, ntraj = traj_data.shape
+    p = np.full(ntraj, 1.0 / ntraj)
+
+    cost = np.empty(n_samples)
+    sum_x = np.zeros((L, n_obs_L, n_t))     # running sum   of X over samples
+    sumsq_x = np.zeros((L, n_obs_L, n_t))   # running sum   of X^2 over samples
+
+    start = 0
+    while start < n_samples:
+        m = min(chunk_size, n_samples - start)
+
+        # W[t, s] = number of times trajectory t is drawn in sample s.
+        W = rng.multinomial(ntraj_size, p, size=m).T       # (ntraj, m)
+
+        x = traj_data @ W / ntraj_size                     # (L, n_obs_L, n_t, m)
+
+        cost[start:start + m] = ((x - ref_traj[..., None]) ** 2).mean(axis=(0, 1, 2))
+        sum_x += x.sum(axis=3)
+        sumsq_x += (x ** 2).sum(axis=3)
+
+        start += m
+
+    mu = sum_x / n_samples                       # E[X_ijk]
+    var_x = sumsq_x / n_samples - mu ** 2        # Var[X_ijk]  (ddof=0, matches std())
+
+    sigma_max_2 = var_x.max()
+    c_max = (1.0 + np.abs(mu) + 2.0 * np.abs(ref_traj)).max()
+
+    return cost, sigma_max_2, c_max
 
 
-split_data, ref_traj, time = load_traj("yaqs", L)
+def compute_constant(x, ref_traj):
+    """Compute the constants sigma_max and c_max from the X_ijk samples.
 
-n_t, n_obs_L, L, ntraj = split_data.shape
+    x        : (L, n_obs_L, n_t, n_samples)  samples of X_ijk
+    ref_traj : (L, n_obs_L, n_t)             reference means mu^ref_ijk
 
+    sigma_max = max_ijk std(X_ijk)
+    c_max     = max_ijk ( 1 + |mu_ijk| + 2 |mu^ref_ijk| )
+    """
+    mu = x.mean(axis=3)                 # (L, n_obs_L, n_t)  expectation of X_ijk
+    sigma = x.std(axis=3)              # (L, n_obs_L, n_t)  std of X_ijk
 
-rng = np.random.default_rng(42)  # change or remove seed for different draws
+    sigma_max = sigma.max()
+    c_max = (1.0 + np.abs(mu) + 2.0 * np.abs(ref_traj)).max()
 
-n_samp_avg = 5000
-split_data_avg = np.zeros((n_t, n_obs_L, L, n_samp_avg))
-for j in range(n_samp_avg):
-    idx = rng.choice(ntraj, size=n_samples, replace=True)
-    # average over the sampled trajectories (axis=2)
-    split_data_avg[:, :, :, j] = np.mean(split_data[:, :, :, idx], axis=3)
+    sigma_max_2=sigma_max**2
 
-
-
-delta_data = split_data_avg**2
-
-
-#%%
-import matplotlib.pyplot as plt
-import matplotlib as mpl
-
-%matplotlib qt
-
-obs_idx = 2
-L_index = 0
-time_idx = 60
+    return sigma_max_2, c_max
 
 
-# flattened_data = delta_data.reshape(n_t* n_obs, n_samp_avg)
-transposed_data = delta_data.transpose(2,1,0,3)[:,0,29,:]
-final_data = transposed_data.reshape(L, n_samp_avg)
+def baund(nsite, ntraj, c_max, d):
 
-C = np.abs(np.cov(final_data))
-
-# --- Publication-quality plotting for covariance matrix ---
-# Set scientific plotting defaults
-mpl.rcParams.update({
-    'figure.figsize': (5, 4),
-    'axes.linewidth': 1.5,
-    'axes.labelsize': 16,
-    'axes.titlesize': 17,
-    'xtick.labelsize': 13,
-    'ytick.labelsize': 13,
-    'legend.fontsize': 13,
-    'lines.linewidth': 2,
-    'lines.markersize': 7,
-    'font.family': 'serif',
-    'pdf.fonttype': 42,
-    'ps.fonttype': 42,
-})
-plt.rc('text', usetex=True)
-plt.rc('font', family='serif')
-plt.rcParams["mathtext.fontset"] = "cm"
-
-fig, ax = plt.subplots(figsize=(5, 4))
-im = ax.imshow(C, vmin=0, vmax=1e-4, origin="lower")  # set origin lower so i and i' increase to right and up
-cbar = plt.colorbar(im, format="%.1e", ax=ax)
-cbar.ax.tick_params(labelsize=13)  # Set colorbar tick font size
-
-# Remove the exponent only at the top of the colorbar
-cbar.ax.yaxis.get_offset_text().set_visible(False)
-
-ax.set_title(r"$|$"+"Cov"+r"$(Y_{i}, Y_{i'})|$", fontsize=17)
-ax.set_xlabel(r"$i$", labelpad=4)
-ax.set_ylabel(r"$i'$", labelpad=4)
-# Show top and right border (make sure they're visible)
-ax.spines['top'].set_visible(True)
-ax.spines['right'].set_visible(True)
-# Do not set title; leave for caption
-plt.tight_layout()
-plt.savefig(f"results/propagation/yaqs/plots/L_{L}/correlation_matrix_ntraj_{n_samples}.pdf", dpi=600, bbox_inches="tight", transparent=True)
-plt.close(fig)
-
-#%%
-import gc
-gc.collect()
+    return c_max*(2**d+1)/(nsite*ntraj)
 
 
-# %%
-time_i= 27
-time_j= 35
-obs_idx_i= 1
-obs_idx_j= 1
+
+def compute_cov_mat(y, j, k, jp=None, kp=None):
+    """|Cov(Y_ijk, Y_i'j'k')| over the sample axis, with jk and j'k' fixed.
+
+    y  : (L, n_obs_L, n_t, n_samples)
+    j, k   : fixed observable / time indices for the first variable (i axis)
+    jp, kp : fixed indices for the second variable (i' axis); default to j, k
+
+    returns : (L, L) matrix C, with C[i, i'] = |Cov(Y_ijk, Y_i'j'k')|
+    """
+    if jp is None:
+        jp = j
+    if kp is None:
+        kp = k
+
+    a = y[:, j, k, :]      # (L, n_samples)  -> i axis
+    b = y[:, jp, kp, :]    # (L, n_samples)  -> i' axis
+
+    a = a - a.mean(axis=1, keepdims=True)
+    b = b - b.mean(axis=1, keepdims=True)
+
+    n_samples = y.shape[3]
+    C = a @ b.T / (n_samples - 1)        # (L, L) cross-covariance
+
+    return np.abs(C)
 
 
-plt.plot(full_data_avg[time_i,obs_idx,:], full_data_avg[time_j,obs_idx,:], 'o', alpha=0.5)
-# plt.xlim(0.3, 0.8)
-# plt.ylim(0.3, 0.8)
+def scan_max_cov_distance(y, threshold):
+    """Scan over (j, k, j', k') for the longest-reaching site correlation.
 
+    For every choice of observable/time indices (j, k) and (j', k') the
+    correlation matrix R[i, i'] = |Corr(Y_ijk, Y_i'j'k')| is formed over the
+    sample axis. The "reach" of that matrix is the largest site separation
+    |i - i'| at which |R[i, i']| still exceeds `threshold`.
+
+    Correlation (covariance normalised by the two standard deviations) is used
+    instead of raw covariance because the Y_ijk magnitudes are tiny and vary
+    across indices, which makes an absolute covariance cutoff impractical.
+
+    The function returns the (j, k, j', k') whose matrix has the largest reach.
+
+    y         : (L, n_obs_L, n_t, n_samples)
+    threshold : correlation in [0, 1] defining a 'significant' correlation
+
+    returns   : dict with
+        j, k, jp, kp : the selected indices
+        dist         : the maximum |i - i'| above threshold for that matrix
+        C            : the (L, L) covariance matrix |Cov(Y_ijk, Y_i'j'k')|
+        R            : the (L, L) correlation matrix |Corr(Y_ijk, Y_i'j'k')|
+    """
+    L, n_obs_L, n_t, n_samples = y.shape
+    P = n_obs_L * n_t
+
+    # Flatten (j, k) -> p and center over the sample axis once.
+    A = y.reshape(L, P, n_samples)
+    A = A - A.mean(axis=2, keepdims=True)            # (L, P, n_samples)
+
+    # std[i, p] of each Y_ip over the sample axis (constant series -> 0 corr).
+    std = np.sqrt(np.einsum('ips,ips->ip', A, A) / (n_samples - 1))   # (L, P)
+    std = np.where(std > 0, std, np.inf)
+
+    idx = np.arange(L)
+    dist = np.abs(idx[:, None] - idx[None, :])        # (L, L) site separations
+
+    best = {"dist": -1, "j": 0, "k": 0, "jp": 0, "kp": 0, "C": None, "R": None}
+    for p in range(P):
+        a = A[:, p, :]                                # (L, n_samples) -> i axis
+        # C[q, i, i'] = Cov(Y_ip, Y_i'q) for all q at once.
+        C = np.einsum('is,jqs->qij', a, A) / (n_samples - 1)          # (P, L, L)
+        # Normalise to correlation: divide by std_p[i] * std_q[i'].
+        denom = std[:, p][None, :, None] * std.T[:, None, :]          # (P, L, L)
+        R = np.abs(C) / denom
+
+        # Largest separation above threshold for each q (-1 if none qualify).
+        reach = np.where(R > threshold, dist[None], -1).reshape(P, -1).max(axis=1)
+        q = int(reach.argmax())
+
+        if reach[q] > best["dist"]:
+            j, k = divmod(p, n_t)
+            jp, kp = divmod(q, n_t)
+            best = {"dist": int(reach[q]), "j": j, "k": k, "jp": jp, "kp": kp,
+                    "C": np.abs(C[q]), "R": R[q].copy()}
+
+    return best
+
+
+def plot_cov_mat(C, vmax=1e-4, save_path=None):
+    """Publication-quality plot of an absolute covariance matrix |Cov(Y_i, Y_i')|.
+
+    C         : (L, L) matrix to display
+    vmax      : upper limit of the color scale (lower limit fixed at 0)
+    save_path : if given, save the figure there (pdf); otherwise show it
+    """
+    import matplotlib.pyplot as plt
+    import matplotlib as mpl
+
+    # Set scientific plotting defaults
+    mpl.rcParams.update({
+        'figure.figsize': (5, 4),
+        'axes.linewidth': 1.5,
+        'axes.labelsize': 16,
+        'axes.titlesize': 17,
+        'xtick.labelsize': 13,
+        'ytick.labelsize': 13,
+        'legend.fontsize': 13,
+        'lines.linewidth': 2,
+        'lines.markersize': 7,
+        'font.family': 'serif',
+        'pdf.fonttype': 42,
+        'ps.fonttype': 42,
+    })
+    plt.rc('text', usetex=True)
+    plt.rc('font', family='serif')
+    plt.rcParams["mathtext.fontset"] = "cm"
+
+    fig, ax = plt.subplots(figsize=(5, 4))
+    im = ax.imshow(C, vmin=0, vmax=vmax, origin="lower")  # origin lower so i, i' increase to right and up
+    cbar = plt.colorbar(im, format="%.1e", ax=ax)
+    cbar.ax.tick_params(labelsize=13)  # Set colorbar tick font size
+
+    # Remove the exponent only at the top of the colorbar
+    cbar.ax.yaxis.get_offset_text().set_visible(False)
+
+    ax.set_title(r"$|$"+"Cov"+r"$(Y_{i}, Y_{i'})|$", fontsize=17)
+    ax.set_xlabel(r"$i$", labelpad=4)
+    ax.set_ylabel(r"$i'$", labelpad=4)
+    # Show top and right border
+    ax.spines['top'].set_visible(True)
+    ax.spines['right'].set_visible(True)
+    plt.tight_layout()
+
+    if save_path is not None:
+        plt.savefig(save_path, dpi=600, bbox_inches="tight", transparent=True)
+        plt.close(fig)
+    else:
+        plt.show()
+
+    return fig, ax
+
+
+def plot_var_vs_L(L_list, var_array, sample_list, save_path=None):
+    """Plot the variance of J versus the number of sites, one curve per N_traj.
+
+    L_list     : list of N_site values (x axis)
+    var_array  : (len(L_list), len(sample_list)) variance of J
+    sample_list: list of N_traj values (one curve each)
+    save_path  : if given, save the figure (pdf); otherwise show it
+    """
+    import matplotlib.pyplot as plt
+    import matplotlib as mpl
+
+    # Set scientific plotting defaults
+    mpl.rcParams.update({
+        'figure.figsize': (5, 4),
+        'axes.linewidth': 1.5,
+        'axes.labelsize': 16,
+        'axes.titlesize': 17,
+        'xtick.labelsize': 13,
+        'ytick.labelsize': 13,
+        'legend.fontsize': 13,
+        'lines.linewidth': 2,
+        'lines.markersize': 7,
+        'font.family': 'serif',
+        'pdf.fonttype': 42,
+        'ps.fonttype': 42,
+    })
+    plt.rc('text', usetex=True)
+    plt.rc('font', family='serif')
+    plt.rcParams["mathtext.fontset"] = "cm"
+
+    fig, ax = plt.subplots(figsize=(5, 4))
+    color_cycle = plt.rcParams['axes.prop_cycle'].by_key()['color']
+    for i, ntraj in enumerate(sample_list):
+        ax.plot(
+            L_list, var_array[:, i],
+            'o-',
+            label=r"$N_{\mathrm{traj}}$="+f"{ntraj}",
+            color=color_cycle[i % len(color_cycle)],
+        )
+
+    ax.set_xlabel(r"$N_{\mathrm{site}}$", labelpad=4)
+    ax.set_ylabel(r"$\mathrm{Var}( J )$", labelpad=4)
+    ax.legend(frameon=False, loc='best', handlelength=2)
+    # Show top and right border
+    ax.spines['top'].set_visible(True)
+    ax.spines['right'].set_visible(True)
+
+    if save_path is not None:
+        plt.savefig(save_path, dpi=600, bbox_inches="tight", transparent=True)
+        plt.close(fig)
+    else:
+        plt.show()
+
+    return fig, ax
 
 
 
@@ -161,78 +351,46 @@ plt.plot(full_data_avg[time_i,obs_idx,:], full_data_avg[time_j,obs_idx,:], 'o', 
 
 L_list=[10, 20, 40, 80, 160]
 
-sample_list=[125, 250, 500, 1000]
-
-
-method="yaqs"
+ntraj_list=[125, 250, 500, 1000]
 
 n_samp_avg=5000
 
-rel_err=np.zeros((len(L_list), len(sample_list)))
+var_array=np.zeros((len(L_list), len(ntraj_list)))
 
-loss_array=np.zeros((len(L_list), len(sample_list)))
+cmax_array=np.zeros((len(L_list), len(ntraj_list)))
 
-std_array=np.zeros((len(L_list), len(sample_list)))
-
-loss_data_all=np.zeros((len(L_list), len(sample_list), n_samp_avg))
-
-
-
-rng = np.random.default_rng(42)  # change or remove seed for different draws
+rng = np.random.default_rng(42)
 
 
 for i, L in enumerate(L_list):
 
-    split_data, ref_traj, time = load_traj(method, L)
-
-    n_t, n_obs_L, L, ntraj_max = split_data.shape
-
-    # split_data_avg = np.zeros((n_t, n_obs_L, L, n_samp_avg))
+    folder=f"/home/ale/Documents/Work/simulation_of_open_quantum_systems/tjm_noise_char/tests/yaqs_test/results/propagation/yaqs/L_{L}/"
 
 
+    traj_data, ref_traj, time = load_traj(folder, L)
 
-    for j, n_samples in enumerate(sample_list):
+    for j, ntraj in enumerate(ntraj_list):
 
-        loss_data_samples = np.zeros(n_samp_avg)
+        cost, sigma_max_2, c_max = compute_stats(traj_data, ref_traj, ntraj,
+                                                 n_samp_avg, rng=rng)
 
-        # idx shape: (n_samp_avg, n_samples)
-        idx = rng.choice(ntraj_max, size=(n_samp_avg, n_samples), replace=True)
+        var_array[i, j] = cost.var()
 
-        # Process in chunks to avoid allocating (n_t, n_obs_L, L, n_samp_avg, n_samples) at once
-        max_mem_bytes = 1024 * 1024**2  # 500 MB per chunk
-        chunk_size = max(1, int(max_mem_bytes / (n_t * n_obs_L * L * n_samples * 8)))
-        for start in range(0, n_samp_avg, chunk_size):
-            end = min(start + chunk_size, n_samp_avg)
-            # shape: (n_t, n_obs_L, L, end-start, n_samples) -> mean -> (n_t, n_obs_L, L, end-start)
-            chunk_avg = np.mean(split_data[:, :, :, idx[start:end]], axis=4)
-            loss_data_samples[start:end] = np.sum(
-                (chunk_avg - ref_traj[:, :, :, np.newaxis])**2, axis=(0, 1, 2)
-            ) / (n_t * n_obs_L * L)
+        cmax_array[i, j] = c_max
 
-
-        loss_data_all[i, j] = loss_data_samples
-
-        rel_err[i, j] = np.std(loss_data_samples)/np.mean(loss_data_samples)
-
-        loss_array[i, j] = np.mean(loss_data_samples)
-
-        std_array[i, j] = np.std(loss_data_samples)
 
 #%%
-std_array[-1, -1]
-#%%
-plt.plot(loss_data_samples,'o')
+# --- Variance vs L: measured vs bound (d=4) ---
+d = 4
 
-#%%
-std_log_array = np.std(np.log10(np.sqrt(loss_data_all)), axis=2)
+bound_array = np.zeros((len(L_list), len(ntraj_list)))
+for i, L in enumerate(L_list):
+    for j, ntraj in enumerate(ntraj_list):
+        bound_array[i, j] = baund(L, ntraj, cmax_array[i, j], d)
 
 
-# %%
-%matplotlib qt
-# --- Publication-quality plotting for relative error vs L ---
 import matplotlib as mpl
 
-# Set scientific plotting defaults
 mpl.rcParams.update({
     'figure.figsize': (5, 4),
     'axes.linewidth': 1.5,
@@ -240,191 +398,84 @@ mpl.rcParams.update({
     'axes.titlesize': 17,
     'xtick.labelsize': 13,
     'ytick.labelsize': 13,
-    'legend.fontsize': 13,
+    'legend.fontsize': 11,
     'lines.linewidth': 2,
     'lines.markersize': 7,
     'font.family': 'serif',
     'pdf.fonttype': 42,
     'ps.fonttype': 42,
 })
-
 plt.rc('text', usetex=True)
 plt.rc('font', family='serif')
 plt.rcParams["mathtext.fontset"] = "cm"
 
 fig, ax = plt.subplots(figsize=(5, 4))
 color_cycle = plt.rcParams['axes.prop_cycle'].by_key()['color']
-for i, ntraj in enumerate(sample_list):
-    ax.plot(
-        L_list, std_log_array[:,i], 
-        'o-', 
-        label=r"$N_{\mathrm{traj}}$="+f"{ntraj}",
-        color=color_cycle[i % len(color_cycle)],
-    )
+for j, ntraj in enumerate(ntraj_list):
+    color = color_cycle[j % len(color_cycle)]
+    # measured standard deviation
+    ax.plot(L_list, np.sqrt(var_array[:, j]), 'o-', color=color,
+            label=r"$N_{\mathrm{traj}}$="+f"{ntraj}")
+    # bound (d=4)
+    ax.plot(L_list, np.sqrt(bound_array[:, j]), '--', color=color)
 
 ax.set_xlabel(r"$N_{\mathrm{site}}$", labelpad=4)
-ax.set_ylabel(r"$\sigma ( J )$", labelpad=4)
+ax.set_ylabel(r"$\sigma( J )$", labelpad=4)
+ax.set_yscale('log')
+# solid = measured, dashed = bound
+# ax.plot([], [], 'k-', label="measured")
+ax.plot([], [], 'k--', label=f"bound ($d={d}$)")
 ax.legend(frameon=False, loc='best', handlelength=2)
-# Show top and right border (make sure they're visible)
 ax.spines['top'].set_visible(True)
 ax.spines['right'].set_visible(True)
-# Do not set title; leave for caption
-# plt.tight_layout()
-plt.savefig(f"results/propagation/yaqs/plots/std_vs_L.pdf", dpi=600, bbox_inches="tight", transparent=True)
-# plt.close(fig)
-
-# %%
-
-
-for i, L in enumerate(L_list):
-    plt.plot(sample_list, rel_err[i, :], 'o-', label=r"$N_{\mathrm{site}}=$" + f"{L}")
-plt.xlabel(r"$N_{\mathrm{traj}}$", labelpad=4)
-plt.ylabel(r"$\varepsilon_{\mathrm{rel}} ( J )$", labelpad=4)
-plt.legend()
-
-plt.savefig(f"results/propagation/yaqs/plots/rel_err_vs_ntraj.pdf", dpi=600, bbox_inches='tight')
+plt.tight_layout()
+plt.savefig("results/propagation/yaqs/plots/std_vs_L_bound.pdf",
+            dpi=600, bbox_inches="tight", transparent=True)
 
 
 # %%
-%matplotlib inline
-# Create interpolated function from rel_err (for irregular grids)
-from scipy.interpolate import CloughTocher2DInterpolator, LinearNDInterpolator, RBFInterpolator
+##############################################################
+##   Longest-reaching covariance over (j, k, j', k')  (L = 40)
+##############################################################
 
-# Prepare data for irregular grid interpolation
-# Create meshgrid of all (sample_list, L_list) combinations
-X, Y = np.meshgrid(sample_list, L_list)
-# Flatten to create points array: each row is (n_samples, L)
-points = np.column_stack([X.ravel(), Y.ravel()])
-# Flatten rel_err to match the points
-values = rel_err.ravel()
+L_cov = 40
+ntraj_cov = 1000        # bootstrap subset size for X_ijk
+n_samp_cov = 5000       # number of bootstrap samples
 
-# Choose interpolation order:
-# 'linear' - order 1, faster but less smooth
-# 'cubic' - order 3, smoother (CloughTocher)
-# 'rbf' - radial basis function, can use different kernels
-interp_order = 'linear'  # Change to 'linear' or 'rbf' if desired
+rng = np.random.default_rng(42)
 
-if interp_order == 'linear':
-    interp_base = LinearNDInterpolator(points, values)
-elif interp_order == 'cubic':
-    interp_base = CloughTocher2DInterpolator(points, values)
-elif interp_order == 'rbf':
-    # RBF interpolation with different kernels: 'linear', 'thin_plate_spline', 'cubic', 'quintic', 'gaussian'
-    # For 'gaussian' kernel, epsilon must be specified (controls width of Gaussian)
-    # Scale-invariant kernels (cubic, linear, thin_plate_spline, quintic) don't need epsilon
-    # Calculate epsilon based on data scale, or use a fixed value
-    # epsilon ~ typical distance between points
-    x_range = np.max(sample_list) - np.min(sample_list)
-    y_range = np.max(L_list) - np.min(L_list)
-    epsilon = np.sqrt(x_range**2 + y_range**2) / len(points)  # adaptive epsilon
-    # Or use a fixed value: epsilon = 1.0
-    interp_base = RBFInterpolator(points, values, kernel='thin_plate_spline')
-else:
-    raise ValueError(f"Unknown interpolation order: {interp_order}. Choose 'linear', 'cubic', or 'rbf'")
+folder = f"/home/ale/Documents/Work/simulation_of_open_quantum_systems/tjm_noise_char/tests/yaqs_test/results/propagation/yaqs/L_{L_cov}/"
+traj_data, ref_traj, time = load_traj(folder, L_cov)
 
-# Create a wrapper function that handles different calling conventions
-def interp_rel_err(x, y):
-    """
-    Interpolate rel_err at given (x, y) points.
-    
-    Parameters
-    ----------
-    x : scalar or array-like
-        sample_list values (number of trajectories)
-    y : scalar or array-like
-        L_list values (system sizes)
-    
-    Returns
-    -------
-    scalar or array
-        Interpolated rel_err values
-    """
-    x = np.asarray(x)
-    y = np.asarray(y)
-    
-    # Handle broadcasting for arrays
-    if x.ndim == 0 and y.ndim == 0:
-        # Both scalars
-        query_points = np.array([[x, y]])
-    elif x.ndim == 0:
-        # x is scalar, y is array
-        query_points = np.column_stack([np.full_like(y, x), y])
-    elif y.ndim == 0:
-        # y is scalar, x is array
-        query_points = np.column_stack([x, np.full_like(x, y)])
-    else:
-        # Both arrays - create meshgrid
-        X, Y = np.meshgrid(x, y)
-        query_points = np.column_stack([X.ravel(), Y.ravel()])
-        result = interp_base(query_points)
-        return result.reshape(len(y), len(x))
-    
-    result = interp_base(query_points)
-    return result[0] if result.size == 1 else result
-
-# Example usage:
-# rel_err_interpolated = interp_rel_err(n_samples, L)  # returns scalar or array
-# For example:
-# rel_err_interpolated = interp_rel_err(375, 35)  # interpolate for n_samples=375, L=35
-
-site_points=np.linspace(100, 1000, 100)
-site_values=interp_rel_err(site_points,50)
+_, y, _ = sample_y_ijk(traj_data, ref_traj, ntraj_cov, n_samp_cov, rng=rng)
 
 
-plt.plot(site_points, site_values, '-')
-plt.plot(sample_list, rel_err[2, :], 'o')
-plt.show()
-# %%
-sample_list
-# %%
-interp_rel_err(547,40)
-# %%
-import numpy as np
-from scipy.optimize import curve_fit
-import matplotlib.pyplot as plt
+#%%
+threshold = 0.3e-8         # |correlation| in [0, 1] defining a 'significant' correlation
 
-# Example data
-x_data = L_list
-y_data = rel_err[:,1]
+best = scan_max_cov_distance(y, threshold)
 
-# Define model function
-def model(x, a):
-    return a/np.sqrt(x)
+print(f"Largest correlation reach above |corr| = {threshold:g}:")
+print(f"  (j, k)   = ({best['j']}, {best['k']})")
+print(f"  (j', k') = ({best['jp']}, {best['kp']})")
+print(f"  max |i - i'| = {best['dist']}")
 
-# Fit model
-params, covariance = curve_fit(model, x_data, y_data)
+save_path = f"results/propagation/yaqs/plots/cov_mat_maxdist_L{L_cov}.pdf"
+plot_cov_mat(best["C"], vmax=best["C"].max(), save_path=save_path)
 
-a=params[0]
 
-print(a)
-# Plot result
-x_fit = np.linspace(10, 160, 100)
-y_fit = model(x_fit, 1.2)
-
-plt.scatter(x_data, y_data, label="data")
-plt.plot(x_fit, y_fit, label="fit")
-plt.legend()
-plt.show()
-# %%
-
-# loss_data_all=np.zeros((len(L_list), len(sample_list), n_samp_avg))
-for i in range(5):
-    data=np.log10(np.sqrt(loss_data_all[i,0]))
-    std=np.std(data)
-    plt.plot(data, label=f"std={std}")
-
-plt.legend()
-# %%
-np.std(np.log10(np.sqrt(loss_data_all[0,0])))
-# %%
-std_list=[]
-for L in L_list:
-    loss=np.genfromtxt(f"/home/aramos/Dokumente/Work/simulation_of_open_quantum_systems/tjm_noise_char/tests/yaqs_test/results/characterizer_gradient_free/loss_scale_True_reduced/module_yaqs/method_cma/params_d_3/const_4e6/L_{L}/xlim_0.1/loss_x_history.txt")[:,1]
-    std_list.append(np.std(loss[-200:]))
-# %%
-%matplotlib qt
-plt.plot(L_list,std_list,'o-')
-# %%
 
 # %%
-std_list
+
+cov_mat=np.zeros([L_cov,L_cov])
+
+for i in range(L_cov):
+    for j in range(L_cov):
+        cov_mat[i,j]=abs(np.cov(y[i,0,41,:],y[j,0,45,:])[0,1])
+
+plt.imshow(cov_mat,vmax=1e-8)
+
+# %%
+plt.plot([abs(np.cov(y[20,0,43,:],y[i,0,46,:])[0,1]) for i in range(40)])
+plt.ylim([0,2e-8])
+# %%
