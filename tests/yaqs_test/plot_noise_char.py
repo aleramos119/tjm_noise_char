@@ -75,14 +75,22 @@ def sample_y_ijk(traj_data, ref_traj, ntraj_size, n_samples, rng=None):
 
 def compute_stats(traj_data, ref_traj, ntraj_size, n_samples, rng=None,
                   chunk_size=250):
-    """Memory-efficient version of sample_y_ijk + compute_constant.
+    """Memory-efficient bootstrap statistics for the cost-function bound.
 
     Computes, over the bootstrap sample axis, everything the analysis needs
     without ever materializing the full (L, n_obs_L, n_t, n_samples) arrays:
 
-        cost        : (n_samples,)  per-sample mean of Y_ijk
-        sigma_max_2 : max_ijk Var(X_ijk)
-        c_max       : max_ijk (1 + |mu_ijk| + 2 |mu^ref_ijk|)
+        cost      : (n_samples,)  per-sample mean of Y_ijk
+        c_1mP_bar : (1/N) sum_ijk c_ijk (1 - P_i(t_k))
+
+    Here (see main.tex, Sec. "Estimation of the Standard Deviation of the
+    Cost-Function"):
+
+        c_ijk     = (M_ijk + |mu_ijk| + 2 |mu_ijk - mu^ref_ijk|)^2   (M=1, Pauli)
+        P_i(t_k)  = (1 + <X_i>^2 + <Y_i>^2 + <Z_i>^2) / 2            local purity
+
+    P_i is the purity of the single-site reduced state, reconstructed from the
+    Bloch vector (the three Pauli reference means stored along n_obs_L).
 
     Samples are drawn in chunks of `chunk_size`, so peak memory scales with
     chunk_size instead of n_samples.
@@ -95,7 +103,6 @@ def compute_stats(traj_data, ref_traj, ntraj_size, n_samples, rng=None,
 
     cost = np.empty(n_samples)
     sum_x = np.zeros((L, n_obs_L, n_t))     # running sum   of X over samples
-    sumsq_x = np.zeros((L, n_obs_L, n_t))   # running sum   of X^2 over samples
 
     start = 0
     while start < n_samples:
@@ -108,17 +115,22 @@ def compute_stats(traj_data, ref_traj, ntraj_size, n_samples, rng=None,
 
         cost[start:start + m] = ((x - ref_traj[..., None]) ** 2).mean(axis=(0, 1, 2))
         sum_x += x.sum(axis=3)
-        sumsq_x += (x ** 2).sum(axis=3)
 
         start += m
 
     mu = sum_x / n_samples                       # E[X_ijk]
-    var_x = sumsq_x / n_samples - mu ** 2        # Var[X_ijk]  (ddof=0, matches std())
 
-    sigma_max_2 = var_x.max()
-    c_max = (1.0 + np.abs(mu) + 2.0 * np.abs(ref_traj)).max()
+    # c_ijk = (M + |mu| + 2 |mu - mu^ref|)^2, with M = 1 for Pauli observables.
+    c = (1.0 + np.abs(mu) + 2.0 * np.abs(mu - ref_traj)) ** 2      # (L, n_obs_L, n_t)
 
-    return cost, sigma_max_2, c_max
+    # Local single-site purity P_i(t_k) = (1 + |Bloch vector|^2) / 2, using the
+    # three Pauli reference means as the Bloch vector components.
+    P = 0.5 * (1.0 + (ref_traj ** 2).sum(axis=1))                 # (L, n_t)
+
+    # Proper average of the product c_ijk (1 - P_i(t_k)) over sites/obs/times.
+    c_1mP_bar = (c * (1.0 - P[:, None, :])).mean()
+
+    return cost, c_1mP_bar
 
 
 def compute_constant(x, ref_traj):
@@ -141,9 +153,17 @@ def compute_constant(x, ref_traj):
     return sigma_max_2, c_max
 
 
-def baund(nsite, ntraj, c_max, d):
+def bound(nsite, ntraj, c_1mP_bar, ell):
+    """Variance bound from main.tex, Eq. (sigma_J_bound):
 
-    return c_max*(2**d+1)/(nsite*ntraj)
+        Var(J) <= C / (N_traj N_site),   C = 2 (2 ell + 1) * c_1mP_bar,
+
+    where c_1mP_bar = (1/N) sum_ijk c_ijk (1 - P_i(t_k)) and ell is the maximum
+    covariance distance. Returns the variance bound (take sqrt for sigma).
+    """
+    C = 2.0 * (2 * ell + 1) * c_1mP_bar
+
+    return C / (nsite * ntraj)
 
 
 
@@ -357,36 +377,36 @@ n_samp_avg=5000
 
 var_array=np.zeros((len(L_list), len(ntraj_list)))
 
-cmax_array=np.zeros((len(L_list), len(ntraj_list)))
+c_1mP_array=np.zeros((len(L_list), len(ntraj_list)))
 
 rng = np.random.default_rng(42)
 
 
 for i, L in enumerate(L_list):
 
-    folder=f"/home/ale/Documents/Work/simulation_of_open_quantum_systems/tjm_noise_char/tests/yaqs_test/results/propagation/yaqs/L_{L}/"
+    folder=f"/home/aramos/Dokumente/Work/simulation_of_open_quantum_systems/tjm_noise_char/tests/yaqs_test/results/propagation/yaqs/L_{L}/"
 
 
     traj_data, ref_traj, time = load_traj(folder, L)
 
     for j, ntraj in enumerate(ntraj_list):
 
-        cost, sigma_max_2, c_max = compute_stats(traj_data, ref_traj, ntraj,
-                                                 n_samp_avg, rng=rng)
+        cost, c_1mP_bar = compute_stats(traj_data, ref_traj, ntraj,
+                                        n_samp_avg, rng=rng)
 
         var_array[i, j] = cost.var()
 
-        cmax_array[i, j] = c_max
+        c_1mP_array[i, j] = c_1mP_bar
 
 
 #%%
-# --- Variance vs L: measured vs bound (d=4) ---
-d = 4
+# --- Variance vs L: measured vs bound (main.tex, ell=4) ---
+ell = 4
 
 bound_array = np.zeros((len(L_list), len(ntraj_list)))
 for i, L in enumerate(L_list):
     for j, ntraj in enumerate(ntraj_list):
-        bound_array[i, j] = baund(L, ntraj, cmax_array[i, j], d)
+        bound_array[i, j] = bound(L, ntraj, c_1mP_array[i, j], ell)
 
 
 import matplotlib as mpl
@@ -416,15 +436,15 @@ for j, ntraj in enumerate(ntraj_list):
     # measured standard deviation
     ax.plot(L_list, np.sqrt(var_array[:, j]), 'o-', color=color,
             label=r"$N_{\mathrm{traj}}$="+f"{ntraj}")
-    # bound (d=4)
+    # bound (ell=4)
     ax.plot(L_list, np.sqrt(bound_array[:, j]), '--', color=color)
 
 ax.set_xlabel(r"$N_{\mathrm{site}}$", labelpad=4)
 ax.set_ylabel(r"$\sigma( J )$", labelpad=4)
-ax.set_yscale('log')
+# ax.set_yscale('log')
 # solid = measured, dashed = bound
 # ax.plot([], [], 'k-', label="measured")
-ax.plot([], [], 'k--', label=f"bound ($d={d}$)")
+ax.plot([], [], 'k--', label=r"bound ($\ell="+f"{ell}$)")
 ax.legend(frameon=False, loc='best', handlelength=2)
 ax.spines['top'].set_visible(True)
 ax.spines['right'].set_visible(True)
