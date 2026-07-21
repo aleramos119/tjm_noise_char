@@ -166,6 +166,227 @@ def bound(nsite, ntraj, c_1mP_bar, ell):
     return C / (nsite * ntraj)
 
 
+def bound_waterfall(traj_data, ref_traj, ntraj_size, n_samples, ell, rng=None):
+    """Decompose the cost-function variance bound into its approximation stages.
+
+    Each stage corresponds to one inequality used in main.tex, Sec.
+    "Estimation of the Standard Deviation of the Cost-Function". Every value is
+    an upper bound on Var[J] evaluated at a single (N_site, N_traj); comparing
+    consecutive stages shows how much each approximation inflates the bound.
+
+    Stages (a = (i, j, k) is the flattened site/observable/time index,
+    N = N_site N_ob N_time, band = { (a, b) : |i_a - i_b| <= ell }):
+
+        0  exact          Var[J]                         = (1/N^2) sum_ab Cov(Y_a,Y_b)
+        1  triangle       (1/N^2) sum_ab |Cov(Y_a,Y_b)|
+        2  finite dist    (1/N^2) sum_band |Cov(Y_a,Y_b)|         (drop |i-i'|>ell tail)
+        3  Cauchy-Schwarz (1/N^2) sum_band sqrt(V[Y_a] V[Y_b])
+        4  AM-GM + count  (2l+1)/N_site * mean_a V[Y_a]
+        5  Lemma V[Y]     (2l+1)/N_site * mean_a c_a sigma_a^2    (V[Y_a] <= c_a sigma_a^2)
+        6  purity         2(2l+1)/(N_site N_traj) * mean_a c_a (1-P_i)   (final bound)
+
+    Returns an ordered dict {stage_label: variance_value} (take sqrt for sigma).
+    """
+    x, y, cost = sample_y_ijk(traj_data, ref_traj, ntraj_size, n_samples, rng=rng)
+
+    L, n_obs_L, n_t, ns = y.shape
+    N = L * n_obs_L * n_t
+    N_traj = ntraj_size
+
+    # Flatten (i, j, k) -> a. reshape keeps order (L, n_obs_L, n_t), so the site
+    # index i is the slowest-varying axis.
+    Yf = y.reshape(N, ns)
+    site = np.repeat(np.arange(L), n_obs_L * n_t)          # (N,)  site of each a
+
+    VY = Yf.var(axis=1, ddof=1)                            # (N,) Var[Y_a]
+
+    # Full covariance matrix of Y over the sample axis.
+    Yc = Yf - Yf.mean(axis=1, keepdims=True)
+    Cov = Yc @ Yc.T / (ns - 1)                             # (N, N)
+
+    band = np.abs(site[:, None] - site[None, :]) <= ell    # (N, N) near-diagonal mask
+
+    # Per-a constants for the Lemma / purity stages.
+    mu = x.mean(axis=3)                                    # (L, n_obs_L, n_t)
+    sigma2 = x.var(axis=3, ddof=1)                         # sigma_a^2 = Var[X_a]
+    c = (1.0 + np.abs(mu) + 2.0 * np.abs(mu - ref_traj)) ** 2
+    P = 0.5 * (1.0 + (ref_traj ** 2).sum(axis=1))          # (L, n_t) local purity
+    one_mP = np.broadcast_to((1.0 - P)[:, None, :], (L, n_obs_L, n_t))
+
+    c_flat = c.reshape(N)
+    csig2 = (c * sigma2).reshape(N)
+    c_1mP = (c * 2.0 * one_mP / N_traj).reshape(N)
+
+    root = np.sqrt(VY)
+    pref = (2 * ell + 1) / L                               # (2l+1)/N_site
+
+    stages = {}
+    stages["exact Var[J]"]        = cost.var(ddof=1)
+    stages["triangle |Cov|"]      = np.abs(Cov).sum() / N ** 2
+    stages["finite dist (band)"]  = np.abs(Cov)[band].sum() / N ** 2
+    stages["Cauchy-Schwarz"]      = (np.outer(root, root) * band).sum() / N ** 2
+    stages["AM-GM + band count"]  = pref * VY.mean()
+    stages["Lemma V[Y]<=c s^2"]   = pref * csig2.mean()
+    stages["purity (final bound)"] = pref * c_1mP.mean()
+
+    return stages
+
+
+def plot_bound_waterfall(stages, L, ntraj, save_path=None):
+    """Bar chart of sigma = sqrt(Var-bound) at each approximation stage.
+
+    Each bar is annotated with the multiplicative inflation factor relative to
+    the previous stage, so the approximation that raises the bound the most is
+    immediately visible.
+    """
+    import matplotlib.pyplot as plt
+    import matplotlib as mpl
+
+    mpl.rcParams.update({
+        'axes.linewidth': 1.5,
+        'axes.labelsize': 15,
+        'axes.titlesize': 15,
+        'xtick.labelsize': 11,
+        'ytick.labelsize': 12,
+        'font.family': 'serif',
+        'pdf.fonttype': 42,
+        'ps.fonttype': 42,
+    })
+    plt.rc('text', usetex=True)
+    plt.rc('font', family='serif')
+    plt.rcParams["mathtext.fontset"] = "cm"
+
+    # LaTeX-safe display labels (usetex is on), in the fixed stage order.
+    display = {
+        "exact Var[J]":         r"exact $\mathrm{Var}[\hat{J}]$",
+        "triangle |Cov|":       r"triangle $|\mathrm{Cov}|$",
+        "finite dist (band)":   r"finite dist.\ (band)",
+        "Cauchy-Schwarz":       r"Cauchy--Schwarz",
+        "AM-GM + band count":   r"AM--GM $+$ band count",
+        "Lemma V[Y]<=c s^2":    r"Lemma $\mathrm{V}[Y]\leq c\sigma^2$",
+        "purity (final bound)": r"purity (final)",
+    }
+    keys = list(stages.keys())
+    labels = [display.get(k, k) for k in keys]
+    vals = np.array([stages[k] for k in keys])
+    sig = np.sqrt(vals)                       # sigma at each stage
+    factors = sig[1:] / sig[:-1]              # step-to-step inflation of sigma
+
+    fig, ax = plt.subplots(figsize=(8, 4.5))
+    xpos = np.arange(len(labels))
+    ax.bar(xpos, sig, color="#4C72B0", edgecolor="k", linewidth=1.0)
+    ax.set_yscale('log')
+
+    for i, s in enumerate(sig):
+        txt = f"{s:.2e}"
+        if i > 0:
+            txt += "\n" + rf"($\times{factors[i-1]:.2g}$)"
+        ax.text(xpos[i], s, txt, ha='center', va='bottom', fontsize=9)
+
+    ax.set_xticks(xpos)
+    ax.set_xticklabels(labels, rotation=30, ha='right')
+    ax.set_ylabel(r"$\sigma(\hat{J})$ bound")
+    ax.set_title(rf"Bound waterfall ($N_{{\mathrm{{site}}}}={L}$, "
+                 rf"$N_{{\mathrm{{traj}}}}={ntraj}$)")
+    ax.spines['top'].set_visible(True)
+    ax.spines['right'].set_visible(True)
+    plt.tight_layout()
+
+    if save_path is not None:
+        plt.savefig(save_path, dpi=600, bbox_inches="tight", transparent=True)
+        plt.close(fig)
+    else:
+        plt.show()
+
+    return fig, ax
+
+
+def plot_var_y_vs_bound(traj_data, ref_traj, ntraj_size, n_samples,
+                        i_site=None, j_obs=0, rng=None, save_path=None):
+    """Compare the measured V[Y_ijk] with its Lemma bound c_ijk * sigma_ijk^2.
+
+    This is the step (Lemma var_y_bound in main.tex) that dominates the looseness
+    of the cost-function bound. Left panel: both quantities vs time for a fixed
+    (site, observable). Right panel: distribution of the ratio
+    (c_ijk sigma_ijk^2) / V[Y_ijk] over all sites/observables/times.
+    """
+    import matplotlib.pyplot as plt
+    import matplotlib as mpl
+
+    mpl.rcParams.update({
+        'axes.linewidth': 1.5,
+        'axes.labelsize': 15,
+        'axes.titlesize': 14,
+        'xtick.labelsize': 12,
+        'ytick.labelsize': 12,
+        'legend.fontsize': 11,
+        'lines.linewidth': 2,
+        'font.family': 'serif',
+        'pdf.fonttype': 42,
+        'ps.fonttype': 42,
+    })
+    plt.rc('text', usetex=True)
+    plt.rc('font', family='serif')
+    plt.rcParams["mathtext.fontset"] = "cm"
+
+    x, y, _ = sample_y_ijk(traj_data, ref_traj, ntraj_size, n_samples, rng=rng)
+    L, n_obs_L, n_t, ns = y.shape
+
+    VY = y.var(axis=3, ddof=1)                                   # (L, n_obs, n_t)
+    mu = x.mean(axis=3)
+    sigma2 = x.var(axis=3, ddof=1)
+    c = (1.0 + np.abs(mu) + 2.0 * np.abs(mu - ref_traj)) ** 2
+    bound_y = c * sigma2                                         # c_ijk sigma_ijk^2
+
+    with np.errstate(divide='ignore', invalid='ignore'):
+        ratio = (bound_y / VY).ravel()                          # looseness factor (inf where V[Y]=0)
+
+    if i_site is None:
+        i_site = L // 2
+    t = np.arange(n_t)
+
+    fig, (ax0, ax1) = plt.subplots(1, 2, figsize=(10, 4))
+
+    # Left: V[Y] vs its bound over time, for one (site, observable).
+    ax0.plot(t, VY[i_site, j_obs], 'o-', color="#4C72B0", ms=4,
+             label=r"$\mathrm{V}[Y_{ijk}]$ (measured)")
+    ax0.plot(t, bound_y[i_site, j_obs], 's--', color="#C44E52", ms=4,
+             label=r"$c_{ijk}\,\sigma_{ijk}^2$ (bound)")
+    ax0.set_yscale('log')
+    ax0.set_xlabel(r"time index $k$")
+    ax0.set_ylabel(r"variance of $Y_{ijk}$")
+    ax0.set_title(rf"$i={i_site}$, $j={j_obs}$")
+    ax0.legend(frameon=False, handlelength=2)
+    ax0.spines['top'].set_visible(True)
+    ax0.spines['right'].set_visible(True)
+
+    # Right: distribution of the looseness ratio over all indices.
+    finite = np.isfinite(ratio) & (ratio > 0)
+    r = ratio[finite]
+    ax1.hist(np.log10(r), bins=50, color="#4C72B0", edgecolor="k", linewidth=0.5)
+    med = np.median(r)
+    ax1.axvline(np.log10(med), color="#C44E52", lw=2,
+                label=rf"median $= {med:.0f}\times$")
+    ax1.set_xlabel(r"$\log_{10}\left( c_{ijk}\sigma_{ijk}^2 \,/\, \mathrm{V}[Y_{ijk}] \right)$")
+    ax1.set_ylabel("count")
+    ax1.set_title("looseness of the Lemma bound")
+    ax1.legend(frameon=False)
+    ax1.spines['top'].set_visible(True)
+    ax1.spines['right'].set_visible(True)
+
+    plt.tight_layout()
+
+    if save_path is not None:
+        plt.savefig(save_path, dpi=600, bbox_inches="tight", transparent=True)
+        plt.close(fig)
+    else:
+        plt.show()
+
+    print(f"Lemma bound / V[Y] ratio: median={med:.1f}, "
+          f"mean={r.mean():.1f}, min={r.min():.2f}, max={r.max():.1f}")
+
+    return fig, (ax0, ax1)
+
 
 def compute_cov_mat(y, j, k, jp=None, kp=None):
     """|Cov(Y_ijk, Y_i'j'k')| over the sample axis, with jk and j'k' fixed.
@@ -451,6 +672,58 @@ ax.spines['right'].set_visible(True)
 plt.tight_layout()
 plt.savefig("results/propagation/yaqs/plots/std_vs_L_bound.pdf",
             dpi=600, bbox_inches="tight", transparent=True)
+
+
+# %%
+##############################################################
+##   Bound waterfall: contribution of each approximation
+##   (single N_site, N_traj) — which approximation raises it most?
+##############################################################
+
+L_wf = 20            # keep small: stage 1-3 build a full (N, N) covariance
+ntraj_wf = 500       # bootstrap subset size (N_traj)
+n_samp_wf = 5000     # number of bootstrap samples
+ell = 4              # maximum covariance distance
+
+rng = np.random.default_rng(42)
+
+folder = f"/home/aramos/Dokumente/Work/simulation_of_open_quantum_systems/tjm_noise_char/tests/yaqs_test/results/propagation/yaqs/L_{L_wf}/"
+traj_data, ref_traj, time = load_traj(folder, L_wf)
+
+stages = bound_waterfall(traj_data, ref_traj, ntraj_wf, n_samp_wf, ell, rng=rng)
+
+print(f"\nBound waterfall (N_site={L_wf}, N_traj={ntraj_wf}, ell={ell}):")
+prev = None
+for name, v in stages.items():
+    s = np.sqrt(v)
+    fac = "" if prev is None else f"  (x{s/prev:.3g})"
+    print(f"  {name:24s}  sigma = {s:.3e}{fac}")
+    prev = s
+
+save_path = f"results/propagation/yaqs/plots/bound_waterfall_L{L_wf}_ntraj{ntraj_wf}.pdf"
+plot_bound_waterfall(stages, L_wf, ntraj_wf, save_path=save_path)
+
+
+#%%
+##############################################################
+##   V[Y_ijk] vs its Lemma bound c_ijk sigma_ijk^2
+##   (the approximation that dominates the bound's looseness)
+##############################################################
+
+L_vy = 20            # system size
+ntraj_vy = 500       # bootstrap subset size (N_traj)
+n_samp_vy = 5000     # number of bootstrap samples
+i_site_vy = L_vy // 2   # site to show in the left panel
+j_obs_vy = 0            # observable to show (0=X, 1=Y, 2=Z)
+
+rng = np.random.default_rng(42)
+
+folder = f"/home/aramos/Dokumente/Work/simulation_of_open_quantum_systems/tjm_noise_char/tests/yaqs_test/results/propagation/yaqs/L_{L_vy}/"
+traj_data, ref_traj, time = load_traj(folder, L_vy)
+
+save_path = f"results/propagation/yaqs/plots/var_y_vs_bound_L{L_vy}_ntraj{ntraj_vy}.pdf"
+plot_var_y_vs_bound(traj_data, ref_traj, ntraj_vy, n_samp_vy,
+                    i_site=i_site_vy, j_obs=j_obs_vy, rng=rng, save_path=save_path)
 
 
 # %%
