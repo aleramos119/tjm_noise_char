@@ -388,6 +388,154 @@ def plot_var_y_vs_bound(traj_data, ref_traj, ntraj_size, n_samples,
     return fig, (ax0, ax1)
 
 
+def plot_bound_comparison(traj_data, ref_traj, ntraj_size, n_samples,
+                          i_site=None, j_obs=0, kappa=3.0, delta=0.0,
+                          delta_in_sigma=False, rng=None, save_path=None):
+    """Compare the old (sigma^2) and new (sigma^4) bounds on V[Y_ijk].
+
+    Old bound (main.tex, Lemma var_y_bound):
+        V[Y] <= c sigma^2,        c = (M + |mu| + 2|mu - mu_ref|)^2, M = 1
+
+    New bound (exact identity V[Y] = (mu4 - sigma^4) + 4 d mu3 + 4 d^2 sigma^2
+    with d = mu - mu_ref, closed with a kurtosis bound mu4 <= kappa sigma^4 and
+    |mu3| <= sqrt(kappa) sigma^3):
+        V[Y] <= (kappa - 1) sigma^4 + 4 sqrt(kappa) |d| sigma^3 + 4 d^2 sigma^2
+
+    `delta` shifts the reference, mu_ref -> ref_traj + delta, creating a genuine
+    model-reference mismatch d. This matters: the bootstrap reference is the mean
+    of the very trajectories being resampled, so d = 0 identically at delta = 0,
+    which is the ONLY regime where the bound is genuinely quartic. As shown in
+    variance_bound_tightening.tex (Sec. "Is a bound proportional to sigma^4
+    possible?"), for any fixed d != 0 the term 4 d^2 sigma^2 is linear in sigma^2
+    and dominates the quartic 2 sigma^4 once |d| > sigma/sqrt(2); since
+    sigma ~ 1/sqrt(N_traj), adding trajectories destroys the quartic regime.
+    Set delta_in_sigma=True to give `delta` in units of the typical sigma, so
+    delta=1 sits at the crossover and delta=10 is deep in the sigma^2 regime.
+
+    Left panel: both bounds vs the measured V[Y] over time for one
+    (site, observable), with the two competing terms 2 sigma^4 and 4 d^2 sigma^2
+    shown separately. Right panel: distribution of each bound's looseness ratio
+    (bound / measured) over all sites/observables/times.
+    """
+    import matplotlib.pyplot as plt
+    import matplotlib as mpl
+
+    mpl.rcParams.update({
+        'axes.linewidth': 1.5,
+        'axes.labelsize': 15,
+        'axes.titlesize': 14,
+        'xtick.labelsize': 12,
+        'ytick.labelsize': 12,
+        'legend.fontsize': 10,
+        'lines.linewidth': 2,
+        'font.family': 'serif',
+        'pdf.fonttype': 42,
+        'ps.fonttype': 42,
+    })
+    plt.rc('text', usetex=True)
+    plt.rc('font', family='serif')
+    plt.rcParams["mathtext.fontset"] = "cm"
+
+    x, _, _ = sample_y_ijk(traj_data, ref_traj, ntraj_size, n_samples, rng=rng)
+    L, n_obs_L, n_t, ns = x.shape
+
+    mu = x.mean(axis=3)
+    sigma2 = x.var(axis=3, ddof=1)                   # sigma^2
+
+    # Typical sigma, used both to interpret delta_in_sigma and to report d/sigma.
+    live = sigma2 > sigma2.max() * 1e-6              # drop t=0 where sigma = 0
+    sigma_typ = float(np.sqrt(np.median(sigma2[live])))
+
+    delta_abs = delta * sigma_typ if delta_in_sigma else float(delta)
+
+    # Shift the reference to create a real model-reference mismatch d.
+    ref_shift = ref_traj + delta_abs
+    y = (x - ref_shift[..., None]) ** 2
+    VY = y.var(axis=3, ddof=1)                       # measured V[Y_ijk]
+    d = mu - ref_shift                               # mismatch d = mu - mu_ref
+
+    c = (1.0 + np.abs(mu) + 2.0 * np.abs(d)) ** 2
+    bound_old = c * sigma2                                        # ~ sigma^2
+    term_quartic = (kappa - 1.0) * sigma2 ** 2                    # ~ sigma^4
+    term_offset = 4.0 * d ** 2 * sigma2                           # ~ sigma^2
+    bound_new = (term_quartic
+                 + 4.0 * np.sqrt(kappa) * np.abs(d) * sigma2 ** 1.5
+                 + term_offset)
+
+    with np.errstate(divide='ignore', invalid='ignore'):
+        r_old = (bound_old / VY).ravel()
+        r_new = (bound_new / VY).ravel()
+
+    if i_site is None:
+        i_site = L // 2
+    t = np.arange(n_t)
+
+    fig, (ax0, ax1) = plt.subplots(1, 2, figsize=(10, 4))
+
+    # Left: measured V[Y] against both bounds.
+    # Measured drawn thick underneath; the new bound lies almost on top of it.
+    ax0.plot(t, VY[i_site, j_obs], '-', color="#4C72B0", lw=4.5, alpha=0.8,
+             label=r"$\mathrm{V}[Y_{ijk}]$ (measured)")
+    ax0.plot(t, bound_old[i_site, j_obs], 's--', color="#C44E52", ms=4,
+             label=r"old: $c_{ijk}\sigma_{ijk}^2$")
+    ax0.plot(t, bound_new[i_site, j_obs], '^--', color="#55A868", ms=3.5,
+             lw=1.5, label=r"new: $(\kappa-1)\sigma_{ijk}^4 + \ldots$")
+    # The two competing terms of the new bound: which one dominates is the point.
+    ax0.plot(t, term_quartic[i_site, j_obs], ':', color="#55A868", lw=1.5,
+             label=r"\quad $(\kappa-1)\sigma_{ijk}^4$ only")
+    if delta_abs != 0.0:
+        ax0.plot(t, term_offset[i_site, j_obs], ':', color="#8172B2", lw=1.5,
+                 label=r"\quad $4d_{ijk}^2\sigma_{ijk}^2$ only")
+    ax0.set_yscale('log')
+    ax0.set_xlabel(r"time index $k$")
+    ax0.set_ylabel(r"variance of $Y_{ijk}$")
+    ax0.set_title(rf"$i={i_site}$, $j={j_obs}$, "
+                  rf"$\delta/\sigma={delta_abs/sigma_typ:.2f}$")
+    ax0.legend(frameon=False, handlelength=2)
+    ax0.spines['top'].set_visible(True)
+    ax0.spines['right'].set_visible(True)
+
+    # Right: looseness distribution of both bounds.
+    stats = {}
+    for r, col, lab in ((r_old, "#C44E52", "old ($\\sigma^2$)"),
+                        (r_new, "#55A868", "new ($\\sigma^4$)")):
+        good = np.isfinite(r) & (r > 0)
+        rg = r[good]
+        med = np.median(rg)
+        stats[lab] = (med, rg.mean(), rg.min(), rg.max())
+        ax1.hist(np.log10(rg), bins=50, color=col, edgecolor="k",
+                 linewidth=0.4, alpha=0.65,
+                 label=rf"{lab}, median $={med:.3g}\times$")
+        ax1.axvline(np.log10(med), color=col, lw=2)
+
+    ax1.axvline(0.0, color='k', ls=':', lw=1.5)     # bound == measured
+    ax1.set_xlabel(r"$\log_{10}\left( \mathrm{bound} \,/\, \mathrm{V}[Y_{ijk}] \right)$")
+    ax1.set_ylabel("count")
+    ax1.set_title("looseness of each bound")
+    ax1.legend(frameon=False)
+    ax1.spines['top'].set_visible(True)
+    ax1.spines['right'].set_visible(True)
+
+    plt.tight_layout()
+
+    if save_path is not None:
+        plt.savefig(save_path, dpi=600, bbox_inches="tight", transparent=True)
+        plt.close(fig)
+    else:
+        plt.show()
+
+    dom = np.median(term_offset[live]) / np.median(term_quartic[live])
+    print(f"delta = {delta_abs:.4g}  (delta/sigma = {delta_abs/sigma_typ:.3g}, "
+          f"typical sigma = {sigma_typ:.3g})")
+    print(f"  4d^2sigma^2 / (kappa-1)sigma^4 = {dom:.3g}  -> "
+          f"{'quartic regime' if dom < 1 else 'sigma^2 regime'}")
+    for lab, (med, mean, lo, hi) in stats.items():
+        print(f"{lab:16s} bound/V[Y]: median={med:.4g}  mean={mean:.4g}  "
+              f"min={lo:.4g}  max={hi:.4g}")
+
+    return fig, (ax0, ax1)
+
+
 def compute_cov_mat(y, j, k, jp=None, kp=None):
     """|Cov(Y_ijk, Y_i'j'k')| over the sample axis, with jk and j'k' fixed.
 
@@ -724,6 +872,44 @@ traj_data, ref_traj, time = load_traj(folder, L_vy)
 save_path = f"results/propagation/yaqs/plots/var_y_vs_bound_L{L_vy}_ntraj{ntraj_vy}.pdf"
 plot_var_y_vs_bound(traj_data, ref_traj, ntraj_vy, n_samp_vy,
                     i_site=i_site_vy, j_obs=j_obs_vy, rng=rng, save_path=save_path)
+
+
+#%%
+##############################################################
+##   Old (sigma^2) vs new (sigma^4) bound on V[Y_ijk]
+##############################################################
+
+L_cmp = 20            # system size
+ntraj_cmp = 500       # bootstrap subset size (N_traj)
+n_samp_cmp = 5000     # number of bootstrap samples
+i_site_cmp = L_cmp // 2  # site shown in the left panel
+j_obs_cmp = 0            # observable shown (0=X, 1=Y, 2=Z)
+# Kurtosis bound. kappa=3 is the Gaussian / large-N_traj sample-mean limit and
+# reproduces V[Y] to ~2% on average, but it is NOT a strict upper bound: the
+# measured kurtosis reaches ~5.4 at some indices, so kappa=3 is violated there
+# (min ratio ~0.5). Use kappa >= 6 for a rigorous bound on this data (still
+# ~2.5x from tight, vs ~4.7e4x for the old sigma^2 bound).
+kappa_cmp = 3.0
+
+
+rng = np.random.default_rng(42)
+
+folder = f"/home/aramos/Dokumente/Work/simulation_of_open_quantum_systems/tjm_noise_char/tests/yaqs_test/results/propagation/yaqs/L_{L_cmp}/"
+traj_data, ref_traj, time = load_traj(folder, L_cmp)
+
+#%%
+# Model-reference mismatch d, in units of the typical sigma (delta_in_sigma=True).
+# delta=0  : d = 0 identically (bootstrap artifact) -- the ONLY quartic regime.
+# delta=1  : the crossover, 4 d^2 sigma^2 == 2 sigma^4.
+# delta=10 : deep in the sigma^2 regime, quartic term irrelevant (~200x smaller).
+delta_cmp = 10.0
+
+save_path = (f"results/propagation/yaqs/plots/bound_comparison_L{L_cmp}"
+             f"_ntraj{ntraj_cmp}_delta{delta_cmp:g}.pdf")
+plot_bound_comparison(traj_data, ref_traj, ntraj_cmp, n_samp_cmp,
+                      i_site=i_site_cmp, j_obs=j_obs_cmp, kappa=kappa_cmp,
+                      delta=delta_cmp, delta_in_sigma=True,
+                      rng=rng, save_path=save_path)
 
 
 # %%
